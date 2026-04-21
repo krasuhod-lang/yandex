@@ -116,18 +116,23 @@ UX-flow: см. [`ux-flow.md`](./ux-flow.md)
 
 ### 4.1 Стек
 
-| Слой             | Технология                              |
-|------------------|-----------------------------------------|
-| Frontend         | Next.js + React + TypeScript            |
-| UI               | Tailwind CSS + shadcn/ui                |
-| Charts           | Apache ECharts (или Plotly как альтернатива) |
-| Tables           | TanStack Table                          |
-| State            | Zustand                                 |
-| Excel parsing    | SheetJS (`xlsx`)                        |
-| Validation       | Zod                                     |
-| Tests            | Vitest + React Testing Library + Playwright |
-| Lint / format    | ESLint + Prettier                       |
-| Deploy           | Vercel (preview на каждый PR)           |
+| Слой             | Технология (ТЗ)                         | Реализация v1                 |
+|------------------|-----------------------------------------|-------------------------------|
+| Frontend         | Next.js + React + TypeScript            | **Vite + React + TypeScript** |
+| UI               | Tailwind CSS + shadcn/ui                | Tailwind CSS + shadcn-style   |
+| Charts           | Apache ECharts (или Plotly как альтернатива) | **Recharts + SVG-чарты** |
+| Tables           | TanStack Table                          | TanStack Table                |
+| State            | Zustand                                 | Zustand                       |
+| Excel parsing    | SheetJS (`xlsx`)                        | **ExcelJS**                   |
+| Validation       | Zod                                     | Zod                           |
+| Tests            | Vitest + React Testing Library + Playwright | — (smoke-тест в headless-браузере) |
+| Lint / format    | ESLint + Prettier                       | — (v2)                        |
+| Deploy           | Vercel (preview на каждый PR)           | **Любой статический хостинг** (Vite static build) |
+
+> **Отклонения от рекомендаций ТЗ** (подробнее — в разделе «Технологии» [`README.md`](../README.md)):
+> - **Vite вместо Next.js** — для цели «залить на любой хостинг» нужен чистый статический `dist/`, а не Node.js-runtime. При желании мигрировать на Next.js это прямолинейно: вся логика находится в `src/lib/`, `src/store/` и components, а не в Next.js-специфичных API.
+> - **Recharts вместо ECharts** — меньший бандл и React-native API; воронка и heatmap реализованы как собственные SVG, что даёт корректный PNG/SVG-экспорт из коробки.
+> - **ExcelJS вместо SheetJS (`xlsx`)** — npm-версия `xlsx` имеет известные уязвимости (ReDoS, prototype pollution), а патченая версия распространяется только через CDN SheetJS, что несовместимо с обычным `npm install`.
 
 ### 4.2 Структура репозитория
 
