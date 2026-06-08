@@ -12,7 +12,7 @@
   --text:#1d1d1f;--muted:#6e6e73;--faint:#a1a1a6;--line:#d2d2d7;
   --blue:#0071e3;--green:#248a3d;--orange:#bf5b00;--red:#d70015;--violet:#6e5dc6;
   --shadow:0 18px 50px rgba(0,0,0,.08);--shadow-soft:0 8px 28px rgba(0,0,0,.06);
-  --radius:22px;--radius-sm:14px;--gap:18px;--max:1480px;
+  --radius:22px;--radius-sm:14px;--gap:20px;--pad:22px;--pad-sm:18px;--max:1480px;
 }
 [data-theme="dark"]{color-scheme:dark;--bg:#000;--surface:#1c1c1e;--surface-2:#242426;--surface-3:#2c2c2e;--text:#f5f5f7;--muted:#a1a1a6;--faint:#6e6e73;--line:#38383a;--shadow:0 22px 60px rgba(0,0,0,.36);--shadow-soft:0 8px 28px rgba(0,0,0,.24)}
 *{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;background:radial-gradient(circle at top,#fff 0,#f5f5f7 42%,#ededf2 100%);color:var(--text);font-family:var(--font);font-size:15px;line-height:1.45;-webkit-font-smoothing:antialiased}[data-theme="dark"] body{background:radial-gradient(circle at top,#1c1c1e 0,#000 55%)}
@@ -20,10 +20,10 @@ button,select{font:inherit}button{cursor:pointer}.app{min-height:100vh}.topbar{p
 .topbar-inner{max-width:var(--max);margin:0 auto;padding:16px 24px;display:flex;gap:18px;align-items:center;justify-content:space-between}.brand{display:flex;gap:12px;align-items:center}.mark{width:34px;height:34px;border-radius:10px;background:linear-gradient(145deg,#1d1d1f,#525257);display:grid;place-items:center;color:white;font-weight:700;letter-spacing:-.03em}.brand-title{font-weight:700;letter-spacing:-.02em}.brand-sub{font-size:12px;color:var(--muted)}
 .filters{display:flex;gap:10px;align-items:center;flex-wrap:wrap}.chip,select,.ghost-btn{border:1px solid var(--line);background:var(--surface);color:var(--text);border-radius:999px;padding:9px 12px;font-size:13px}.ghost-btn:hover,.chip.active{border-color:var(--blue);color:var(--blue)}.theme{width:38px;height:38px;border-radius:50%;border:1px solid var(--line);background:var(--surface);color:var(--text)}
 .tabs{max-width:var(--max);margin:0 auto;padding:0 24px;display:flex;gap:4px;overflow:auto;scrollbar-width:none}.tabs::-webkit-scrollbar{display:none}.tab{border:0;background:transparent;color:var(--muted);padding:13px 13px 14px;border-bottom:2px solid transparent;white-space:nowrap;font-size:13px;font-weight:600}.tab.active{color:var(--text);border-color:var(--text)}
-main{max-width:var(--max);margin:0 auto;padding:28px 24px 56px}.panel{display:none}.panel.active{display:block}.hero{display:grid;grid-template-columns:1.25fr .75fr;gap:var(--gap);margin-bottom:var(--gap)}.hero-card{background:linear-gradient(135deg,var(--surface),var(--surface-2));border:1px solid var(--line);border-radius:32px;padding:30px;box-shadow:var(--shadow);min-height:260px}.eyebrow{font-size:12px;text-transform:uppercase;letter-spacing:.12em;color:var(--muted);font-weight:700}.hero h1{margin:12px 0 12px;font-size:clamp(34px,4vw,62px);line-height:.96;letter-spacing:-.055em}.lead{max-width:780px;color:var(--muted);font-size:17px}.hero-side{display:grid;gap:var(--gap)}
-.grid{display:grid;gap:var(--gap)}.grid.kpis{grid-template-columns:repeat(4,minmax(0,1fr));margin-bottom:var(--gap)}.grid.two{grid-template-columns:1fr 1fr}.grid.three{grid-template-columns:repeat(3,minmax(0,1fr))}.grid.four{grid-template-columns:repeat(4,minmax(0,1fr))}.card{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:20px;box-shadow:var(--shadow-soft)}.card.tight{padding:16px}.card-title{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;margin-bottom:14px}.card-title h2,.card-title h3{margin:0;font-size:18px;letter-spacing:-.02em}.card-title p{margin:4px 0 0;color:var(--muted);font-size:13px}.metric-label{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;font-weight:700}.metric-value{font-size:32px;line-height:1.05;letter-spacing:-.045em;font-weight:750;margin-top:9px}.metric-sub{color:var(--muted);font-size:13px;margin-top:8px}.delta{font-size:12px;border-radius:999px;padding:4px 8px;font-weight:700}.delta.good{background:color-mix(in srgb,var(--green) 13%,transparent);color:var(--green)}.delta.warn{background:color-mix(in srgb,var(--orange) 15%,transparent);color:var(--orange)}.delta.bad{background:color-mix(in srgb,var(--red) 12%,transparent);color:var(--red)}
-.status{width:10px;height:10px;border-radius:50%;display:inline-block}.status.green{background:var(--green)}.status.yellow{background:var(--orange)}.status.red{background:var(--red)}.mini-list{display:grid;gap:10px}.mini-row{display:flex;justify-content:space-between;gap:16px;padding:10px 0;border-bottom:1px solid var(--line)}.mini-row:last-child{border-bottom:0}.mini-row span:first-child{color:var(--muted)}.mini-row b{font-variant-numeric:tabular-nums}.table-wrap{overflow:auto;border:1px solid var(--line);border-radius:18px;background:var(--surface)}table{width:100%;border-collapse:collapse;font-size:13px}th,td{padding:12px 14px;border-bottom:1px solid var(--line);text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums}th:first-child,td:first-child{text-align:left;font-weight:650}thead th{position:sticky;top:0;background:var(--surface-3);color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:.07em;z-index:1}tbody tr:hover{background:var(--surface-2)}tbody tr:last-child td{border-bottom:0}.positive{color:var(--green);font-weight:700}.negative{color:var(--red);font-weight:700}.accent{color:var(--blue);font-weight:700}.muted{color:var(--muted)}
-.progress{height:8px;background:var(--surface-3);border-radius:999px;overflow:hidden}.bar{height:100%;border-radius:999px;background:var(--blue)}.scenario-card,.partner-card,.alert-card{display:grid;gap:12px}.scenario-head,.partner-head,.alert-head{display:flex;justify-content:space-between;gap:12px;align-items:flex-start}.pill{border:1px solid var(--line);border-radius:999px;padding:5px 9px;font-size:12px;color:var(--muted);background:var(--surface-2)}.actions{display:flex;flex-wrap:wrap;gap:8px}.action{border:1px solid var(--line);background:var(--surface-2);border-radius:999px;padding:8px 10px;font-size:12px;color:var(--text)}.action:hover{border-color:var(--blue);color:var(--blue)}.flow{display:grid;grid-template-columns:repeat(5,1fr);gap:10px}.step{border:1px solid var(--line);border-radius:16px;padding:14px;background:var(--surface-2)}.step b{display:block;font-size:22px;letter-spacing:-.03em}.step span{color:var(--muted);font-size:12px}.divider-title{font-size:22px;letter-spacing:-.035em;margin:30px 0 14px}.drawer{position:fixed;top:0;right:0;bottom:0;width:min(460px,100%);background:var(--surface);border-left:1px solid var(--line);box-shadow:var(--shadow);transform:translateX(105%);transition:transform .22s ease;z-index:50;padding:24px;overflow:auto}.drawer.open{transform:translateX(0)}.drawer-close{float:right;border:1px solid var(--line);background:var(--surface-2);border-radius:999px;padding:8px 12px}.drawer h2{letter-spacing:-.035em}.footer{max-width:var(--max);margin:0 auto;padding:18px 24px 34px;color:var(--muted);font-size:12px;border-top:1px solid var(--line)}
+main{max-width:var(--max);margin:0 auto;padding:28px 24px 56px;display:flex;flex-direction:column;gap:var(--gap)}.panel{display:none;flex-direction:column;gap:var(--gap)}.panel.active{display:flex}.hero{display:grid;grid-template-columns:1.25fr .75fr;gap:var(--gap)}.hero-card{background:linear-gradient(135deg,var(--surface),var(--surface-2));border:1px solid var(--line);border-radius:var(--radius);padding:var(--pad);box-shadow:var(--shadow);min-height:240px;display:flex;flex-direction:column;gap:12px}.eyebrow{font-size:12px;text-transform:uppercase;letter-spacing:.12em;color:var(--muted);font-weight:700}.hero h1{margin:0;font-size:clamp(32px,3.6vw,52px);line-height:1.02;letter-spacing:-.045em}.lead{margin:0;max-width:780px;color:var(--muted);font-size:16px}.hero-side{display:grid;gap:var(--gap)}
+.grid{display:grid;gap:var(--gap)}.grid.kpis{grid-template-columns:repeat(4,minmax(0,1fr))}.grid.two{grid-template-columns:1fr 1fr}.grid.three{grid-template-columns:repeat(3,minmax(0,1fr))}.grid.four{grid-template-columns:repeat(4,minmax(0,1fr))}.card{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:var(--pad);box-shadow:var(--shadow-soft);display:flex;flex-direction:column;gap:14px;min-width:0}.card.tight{padding:var(--pad-sm);gap:8px}.card-title{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;margin:0}.card-title h2,.card-title h3{margin:0;font-size:17px;letter-spacing:-.02em}.card-title p{margin:4px 0 0;color:var(--muted);font-size:13px}.metric-label{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;font-weight:700}.metric-value{font-size:30px;line-height:1.05;letter-spacing:-.04em;font-weight:700;margin:0}.metric-sub{color:var(--muted);font-size:13px;margin:0}.delta{font-size:12px;border-radius:999px;padding:4px 8px;font-weight:700}.delta.good{background:color-mix(in srgb,var(--green) 13%,transparent);color:var(--green)}.delta.warn{background:color-mix(in srgb,var(--orange) 15%,transparent);color:var(--orange)}.delta.bad{background:color-mix(in srgb,var(--red) 12%,transparent);color:var(--red)}
+.status{width:10px;height:10px;border-radius:50%;display:inline-block;margin-right:6px;vertical-align:middle}.status.green{background:var(--green)}.status.yellow{background:var(--orange)}.status.red{background:var(--red)}.mini-list{display:grid;gap:10px}.mini-row{display:flex;justify-content:space-between;gap:16px;padding:10px 0;border-bottom:1px solid var(--line)}.mini-row:last-child{border-bottom:0}.mini-row span:first-child{color:var(--muted)}.mini-row b{font-variant-numeric:tabular-nums;text-align:right}.table-wrap{overflow:auto;border:1px solid var(--line);border-radius:var(--radius);background:var(--surface);box-shadow:var(--shadow-soft)}table{width:100%;border-collapse:collapse;font-size:13px}th,td{padding:12px 14px;border-bottom:1px solid var(--line);text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums}th:first-child,td:first-child{text-align:left;font-weight:600}thead th{position:sticky;top:0;background:var(--surface-3);color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:.07em;z-index:1}tbody tr:hover{background:var(--surface-2)}tbody tr:last-child td{border-bottom:0}.positive{color:var(--green);font-weight:700}.negative{color:var(--red);font-weight:700}.accent{color:var(--blue);font-weight:700}.muted{color:var(--muted)}
+.progress{height:8px;background:var(--surface-3);border-radius:999px;overflow:hidden}.bar{height:100%;border-radius:999px;background:var(--blue)}.scenario-card,.partner-card,.alert-card{gap:10px}.scenario-head,.partner-head,.alert-head{display:flex;justify-content:space-between;gap:12px;align-items:flex-start}.pill{border:1px solid var(--line);border-radius:999px;padding:5px 9px;font-size:12px;color:var(--muted);background:var(--surface-2);white-space:nowrap}.actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:auto}.action{border:1px solid var(--line);background:var(--surface-2);border-radius:999px;padding:8px 12px;font-size:12px;color:var(--text)}.action:hover{border-color:var(--blue);color:var(--blue)}.flow{display:grid;grid-template-columns:repeat(5,1fr);gap:var(--gap)}.step{border:1px solid var(--line);border-radius:var(--radius-sm);padding:16px;background:var(--surface);box-shadow:var(--shadow-soft)}.step b{display:block;font-size:22px;letter-spacing:-.03em}.step span{color:var(--muted);font-size:12px}.divider-title{font-size:20px;letter-spacing:-.03em;margin:8px 0 0;font-weight:700}.chart-legend{display:flex;flex-wrap:wrap;gap:14px;font-size:12px;color:var(--muted);margin:0}.chart-legend .lg{display:inline-flex;align-items:center;gap:6px}.chart-legend .sw{width:10px;height:10px;border-radius:3px;display:inline-block}.chart-box{position:relative;width:100%}.drawer{position:fixed;top:0;right:0;bottom:0;width:min(460px,100%);background:var(--surface);border-left:1px solid var(--line);box-shadow:var(--shadow);transform:translateX(105%);transition:transform .22s ease;z-index:50;padding:24px;overflow:auto}.drawer.open{transform:translateX(0)}.drawer-close{float:right;border:1px solid var(--line);background:var(--surface-2);border-radius:999px;padding:8px 12px}.drawer h2{letter-spacing:-.035em}.footer{max-width:var(--max);margin:24px auto 0;padding:18px 24px 34px;color:var(--muted);font-size:12px;border-top:1px solid var(--line)}
 @media(max-width:980px){.hero,.grid.two,.grid.three,.grid.four{grid-template-columns:1fr}.grid.kpis{grid-template-columns:repeat(2,1fr)}.flow{grid-template-columns:1fr}.topbar-inner{align-items:flex-start;flex-direction:column}.filters{width:100%}}@media(max-width:560px){main{padding:20px 14px}.tabs,.topbar-inner{padding-left:14px;padding-right:14px}.grid.kpis{grid-template-columns:1fr}.hero-card{padding:22px}.metric-value{font-size:28px}}
 </style>
 </head>
@@ -36,7 +36,7 @@ main{max-width:var(--max);margin:0 auto;padding:28px 24px 56px}.panel{display:no
         <div><div class="brand-title">Выручай.ру</div><div class="brand-sub">Операционный дашборд роста, продукта и руководителя</div></div>
       </div>
       <div class="filters" aria-label="Фильтры верхнего уровня">
-        <button class="chip active">Сегодня</button><button class="chip">7 дней</button><button class="chip">30 дней</button><button class="chip">Месяц к месяцу</button><button class="chip">Квартал к кварталу</button>
+        <button class="chip active" data-window="0">Весь период</button><button class="chip" data-window="1">Месяц</button><button class="chip" data-window="3">Квартал</button><button class="chip" data-window="6">Полугодие</button><button class="chip" data-window="12">Год</button>
         <select aria-label="Роль"><option>Все роли</option><option>Руководитель</option><option>Продукт</option><option>Рост</option><option>CRM</option><option>Операции</option></select>
         <select aria-label="Канал"><option>Все каналы</option><option>SEO</option><option>Яндекс.Директ</option><option>PR</option><option>Повторный</option></select>
         <select aria-label="Сценарий"><option>Все сценарии</option><option>До зарплаты</option><option>Есть долги</option><option>Хочу машину</option><option>Накопления</option><option>Страхование</option></select>
@@ -77,7 +77,7 @@ main{max-width:var(--max);margin:0 auto;padding:28px 24px 56px}.panel{display:no
         <div class="card"><div class="card-title"><div><h2>Выручка, расходы и прибыль</h2><p>Данные из PNL, тыс. ₽</p></div></div><canvas id="chartOverview" height="130"></canvas></div>
         <div class="card"><div class="card-title"><div><h2>Что делать сегодня</h2><p>Сигналы для масштабирования, ремонта или отключения</p></div></div><div id="actionsList" class="mini-list"></div></div>
       </div>
-      <div class="grid two" style="margin-top:var(--gap)">
+      <div class="grid two">
         <div class="card"><div class="card-title"><div><h2>Динамика инвестиций и окупаемости</h2><p>Накопленные вложения, выручка и прибыль, млн ₽</p></div></div><canvas id="chartInvestment" height="150"></canvas></div>
         <div class="card"><div class="card-title"><div><h2>Срок окупаемости</h2><p>Когда проект перекрывает накопленный убыток</p></div></div><div id="paybackList" class="mini-list"></div></div>
       </div>
@@ -158,10 +158,12 @@ main{max-width:var(--max);margin:0 auto;padding:28px 24px 56px}.panel{display:no
 
 <script>
 
-const MIN_CANVAS_WIDTH=320, DEFAULT_CANVAS_WIDTH=640, DEFAULT_CANVAS_HEIGHT=140;
-const CHART_LABEL_DENSITY=6, CHART_LABEL_MAX_LENGTH=6, CHART_LABEL_OFFSET=14;
+const MIN_CANVAS_WIDTH=320, DEFAULT_CANVAS_WIDTH=640, DEFAULT_CANVAS_HEIGHT=160;
 const HTML_ESCAPE_MAP={'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;',"'":'&#39;'};
 const ALLOWED_METRIC_CLASSES=new Set(['positive','negative','accent']);
+function niceNum(range,round){const exp=Math.floor(Math.log10(range)),frac=range/Math.pow(10,exp);let nf;if(round){nf=frac<1.5?1:frac<3?2:frac<7?5:10}else{nf=frac<=1?1:frac<=2?2:frac<=5?5:10}return nf*Math.pow(10,exp)}
+function niceTicks(min,max,count){const range=niceNum(Math.max(max-min,1),false),step=niceNum(range/Math.max(count-1,1),true),niceMin=Math.floor(min/step)*step,niceMax=Math.ceil(max/step)*step,ticks=[];for(let v=niceMin;v<=niceMax+step*.5;v+=step)ticks.push(Number(v.toFixed(10)));return {ticks,min:niceMin,max:niceMax}}
+function shortNum(v){const a=Math.abs(v);if(a>=1e9)return (v/1e9).toLocaleString('ru-RU',{maximumFractionDigits:1})+' млрд';if(a>=1e6)return (v/1e6).toLocaleString('ru-RU',{maximumFractionDigits:1})+' млн';if(a>=1e3)return (v/1e3).toLocaleString('ru-RU',{maximumFractionDigits:1})+' тыс';return Number(v).toLocaleString('ru-RU',{maximumFractionDigits:1})}
 class Chart{
  constructor(canvas,config){this.canvas=canvas;this.config=config;if(!canvas){console.warn('Chart canvas is missing');return}this.ctx=canvas.getContext('2d');this.draw()}
  destroy(){if(this.ctx)this.ctx.clearRect(0,0,this.canvas.width,this.canvas.height)}
@@ -169,27 +171,68 @@ class Chart{
   if(!this.ctx||!this.canvas)return;
   const ctx=this.ctx, cfg=this.config, dpr=window.devicePixelRatio||1;
   const rect=this.canvas.getBoundingClientRect();
-  const width=Math.max(MIN_CANVAS_WIDTH,rect.width||this.canvas.parentElement.clientWidth||DEFAULT_CANVAS_WIDTH), height=Number(this.canvas.getAttribute('height')||DEFAULT_CANVAS_HEIGHT);
-  this.canvas.width=width*dpr;this.canvas.height=height*dpr;ctx.setTransform(dpr,0,0,dpr,0,0);ctx.clearRect(0,0,width,height);
-  const colors=chartColors(); const pad={l:42,r:12,t:12,b:28}; const plotW=width-pad.l-pad.r, plotH=height-pad.t-pad.b;
+  const width=Math.max(MIN_CANVAS_WIDTH,rect.width||this.canvas.parentElement.clientWidth||DEFAULT_CANVAS_WIDTH);
+  const height=Number(this.canvas.getAttribute('height')||DEFAULT_CANVAS_HEIGHT);
+  this.canvas.width=width*dpr;this.canvas.height=height*dpr;this.canvas.style.width=width+'px';this.canvas.style.height=height+'px';
+  ctx.setTransform(dpr,0,0,dpr,0,0);ctx.clearRect(0,0,width,height);
+  const colors=chartColors();
   const datasets=cfg.data.datasets||[], labels=cfg.data.labels||[];
+  const legendH=datasets.some(d=>d.label)?22:0;
+  const xLabelH=24;
+  const pad={l:56,r:14,t:8+legendH,b:xLabelH};
+  // legend
+  if(legendH){
+   let lx=pad.l;const ly=4;ctx.font='12px '+chartFont();
+   datasets.forEach(ds=>{if(!ds.label)return;const rawColor=ds.borderColor||(Array.isArray(ds.backgroundColor)?ds.backgroundColor[0]:ds.backgroundColor)||colors.blue;let color=String(rawColor);if(/^#[0-9a-f]{8}$/i.test(color))color=color.slice(0,7);ctx.fillStyle=color;ctx.fillRect(lx,ly+3,10,10);ctx.fillStyle=colors.text;const text=ds.label;const w=ctx.measureText(text).width;ctx.fillText(text,lx+14,ly+13);lx+=14+w+16});
+  }
+  const plotW=width-pad.l-pad.r, plotH=height-pad.t-pad.b;
   const values=datasets.flatMap(ds=>(ds.data||[]).map(Number)).filter(Number.isFinite);
-  const min=Math.min(0,...values), max=Math.max(1,...values), valueRange=max-min||1; const scale=v=>pad.t+plotH-((v-min)/valueRange)*plotH;
-  ctx.strokeStyle=colors.line;ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(pad.l,pad.t);ctx.lineTo(pad.l,pad.t+plotH);ctx.lineTo(width-pad.r,pad.t+plotH);ctx.stroke();
-  const zeroY=scale(0);ctx.strokeStyle=colors.line;ctx.beginPath();ctx.moveTo(pad.l,zeroY);ctx.lineTo(width-pad.r,zeroY);ctx.stroke();
-  ctx.fillStyle=colors.muted;ctx.font='11px -apple-system, BlinkMacSystemFont, sans-serif';
-  labels.forEach((label,i)=>{if(i%Math.ceil(labels.length/CHART_LABEL_DENSITY)!==0)return;const x=pad.l+(i/(Math.max(labels.length-1,1)))*plotW;ctx.fillText(String(label).slice(0,CHART_LABEL_MAX_LENGTH),x-CHART_LABEL_OFFSET,height-8)});
+  const rawMin=Math.min(0,...values), rawMax=Math.max(1,...values);
+  const {ticks,min,max}=niceTicks(rawMin,rawMax,5);
+  const range=max-min||1;
+  const scale=v=>pad.t+plotH-((v-min)/range)*plotH;
+  // gridlines + Y labels
+  ctx.font='11px '+chartFont();ctx.textBaseline='middle';
+  ticks.forEach(t=>{const y=scale(t);ctx.strokeStyle=t===0?colors.line:colors.line+'66';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(pad.l,y);ctx.lineTo(width-pad.r,y);ctx.stroke();ctx.fillStyle=colors.muted;ctx.textAlign='right';ctx.fillText(shortNum(t),pad.l-8,y)});
+  // X axis labels
+  ctx.textBaseline='alphabetic';ctx.textAlign='center';ctx.fillStyle=colors.muted;
+  const step=Math.max(1,Math.ceil(labels.length*60/plotW));
+  labels.forEach((label,i)=>{if(i%step!==0&&i!==labels.length-1)return;const x=labels.length===1?pad.l+plotW/2:pad.l+(i/(labels.length-1))*plotW;const s=String(label);ctx.save();ctx.translate(x,height-6);if(s.length>4){ctx.rotate(-Math.PI/8);ctx.textAlign='right';ctx.fillText(s,0,0)}else{ctx.fillText(s,0,0)}ctx.restore()});
   const barSets=datasets.filter(ds=>(ds.type||cfg.type)!=='line'), lineSets=datasets.filter(ds=>(ds.type||cfg.type)==='line');
-  const groupW=plotW/Math.max(labels.length,1), barW=Math.max(3,groupW/Math.max(barSets.length+1,2));
-  barSets.forEach((ds,di)=>{(ds.data||[]).forEach((v,i)=>{
-   const raw=Number(v), y=scale(raw), top=Math.min(y,zeroY), h=Math.max(1,Math.abs(zeroY-y));
-   const x=pad.l+i*groupW+barW*di+barW*.5;
-   ctx.fillStyle=Array.isArray(ds.backgroundColor)?ds.backgroundColor[i]||colors.blue:ds.backgroundColor||colors.blue;
-   ctx.fillRect(x,top,barW,h)
-  })});
-  lineSets.forEach(ds=>{ctx.strokeStyle=ds.borderColor||colors.blue;ctx.lineWidth=2;ctx.beginPath();(ds.data||[]).forEach((v,i)=>{const x=pad.l+(i/(Math.max(labels.length-1,1)))*plotW,y=scale(Number(v));i?ctx.lineTo(x,y):ctx.moveTo(x,y)});ctx.stroke()});
+  const stacked=!!cfg.stacked;
+  const groupW=plotW/Math.max(labels.length,1);
+  if(stacked){
+   const posStack=new Array(labels.length).fill(0), negStack=new Array(labels.length).fill(0);
+   const barW=Math.max(2,groupW*.7);
+   barSets.forEach(ds=>{(ds.data||[]).forEach((v,i)=>{
+    const val=Number(v)||0;const base=val>=0?posStack[i]:negStack[i];const y=scale(base+val),y0=scale(base);
+    const top=Math.min(y,y0), h=Math.max(1,Math.abs(y0-y));
+    const x=pad.l+i*groupW+(groupW-barW)/2;
+    ctx.fillStyle=Array.isArray(ds.backgroundColor)?ds.backgroundColor[i]||colors.blue:ds.backgroundColor||colors.blue;
+    ctx.fillRect(x,top,barW,h);
+    if(val>=0)posStack[i]+=val;else negStack[i]+=val;
+   })});
+  }else{
+   const innerGap=2;const slot=groupW*.84;const barW=Math.max(2,(slot-innerGap*(barSets.length-1))/Math.max(barSets.length,1));
+   barSets.forEach((ds,di)=>{(ds.data||[]).forEach((v,i)=>{
+    const raw=Number(v)||0, y=scale(raw), y0=scale(0), top=Math.min(y,y0), h=Math.max(1,Math.abs(y0-y));
+    const x=pad.l+i*groupW+(groupW-slot)/2+di*(barW+innerGap);
+    ctx.fillStyle=Array.isArray(ds.backgroundColor)?ds.backgroundColor[i]||colors.blue:ds.backgroundColor||colors.blue;
+    ctx.fillRect(x,top,barW,h);
+   })});
+  }
+  lineSets.forEach(ds=>{
+   const fill=ds.fill;const stroke=ds.borderColor||colors.blue;
+   const pts=(ds.data||[]).map((v,i)=>({x:labels.length===1?pad.l+plotW/2:pad.l+(i/(labels.length-1))*plotW,y:scale(Number(v)||0)}));
+   if(fill){const fillColor=ds.backgroundColor||(stroke+'22');ctx.fillStyle=fillColor;ctx.beginPath();pts.forEach((p,i)=>i?ctx.lineTo(p.x,p.y):ctx.moveTo(p.x,p.y));ctx.lineTo(pts[pts.length-1].x,scale(0));ctx.lineTo(pts[0].x,scale(0));ctx.closePath();ctx.fill()}
+   ctx.strokeStyle=stroke;ctx.lineWidth=ds.borderWidth||2;ctx.beginPath();pts.forEach((p,i)=>i?ctx.lineTo(p.x,p.y):ctx.moveTo(p.x,p.y));ctx.stroke();
+   const pr=ds.pointRadius||(pts.length<=2?3:0);
+   if(pr){ctx.fillStyle=stroke;pts.forEach(p=>{ctx.beginPath();ctx.arc(p.x,p.y,pr,0,Math.PI*2);ctx.fill()})}
+  });
  }
 }
+function chartFont(){return '-apple-system, BlinkMacSystemFont, "SF Pro Text", "Inter", sans-serif'}
+
 
 const months=['Май 2026','Июнь 2026','Июль 2026','Август 2026','Сентябрь 2026','Октябрь 2026','Ноябрь 2026','Декабрь 2026','Январь 2027','Февраль 2027','Март 2027','Апрель 2027','Май 2027','Июнь 2027','Июль 2027','Август 2027','Сентябрь 2027','Октябрь 2027','Ноябрь 2027','Декабрь 2027'];
 const revenue=[127360.5978,159117.9348,221445,341018.8043,532290.0652,795462.7891,1070183.369,1765383.335,1877356.452,2129657.314,2445466.57,3254744.138,3909008.9,4753230.091,5833006.543,6741346.983,7831355.51,9292788.909,10540212.54,12276711.91];
@@ -287,16 +330,69 @@ function kpi(container,items){
  }).join('')
 }
 function chartColors(){const s=getComputedStyle(document.documentElement);return {text:s.getPropertyValue('--text').trim(),muted:s.getPropertyValue('--muted').trim(),line:s.getPropertyValue('--line').trim(),blue:s.getPropertyValue('--blue').trim(),green:s.getPropertyValue('--green').trim(),orange:s.getPropertyValue('--orange').trim(),red:s.getPropertyValue('--red').trim(),violet:s.getPropertyValue('--violet').trim()}}
-const charts={};function baseOptions(c){return {responsive:true,plugins:{legend:{labels:{color:c.muted,boxWidth:10,boxHeight:10}}},scales:{x:{ticks:{color:c.muted,maxRotation:0,autoSkip:true},grid:{color:c.line+'55'}},y:{ticks:{color:c.muted},grid:{color:c.line+'55'}}}}}
+const charts={};
+const state={window:null,period:'Сегодня',role:'Все роли',channel:'Все каналы',scenario:'Все сценарии'};
+const CHART_PANELS={chartOverview:'overview',chartInvestment:'overview',chartTraffic:'traffic',chartEpc:'traffic',chartRetention:'retention',chartUnit:'unit'};
+const PERIOD_WINDOW={'Сегодня':1,'7 дней':1,'30 дней':1,'Месяц к месяцу':2,'Квартал к кварталу':6};
+function sliceWindow(arr){const w=state.window;return w&&w<arr.length?arr.slice(arr.length-w):arr.slice()}
+function activeChartIds(){const panelId=document.querySelector('.panel.active')?.id||'tab-overview';const tab=panelId.replace('tab-','');return Object.entries(CHART_PANELS).filter(([,p])=>p===tab).map(([id])=>id)}
 function renderCharts(){
  const c=chartColors();
- Object.values(charts).forEach(x=>x.destroy());
- charts.overview=new Chart(document.getElementById('chartOverview'),{type:'bar',data:{labels:months,datasets:[{label:'Выручка',data:revenue.map(v=>v/1000),backgroundColor:c.green+'cc'},{label:'Расходы',data:expenses.map(v=>v/1000),backgroundColor:c.red+'88'},{label:'Прибыль',type:'line',data:profit.map(v=>v/1000),borderColor:c.blue,backgroundColor:'transparent',tension:.35,borderWidth:2,pointRadius:3}]},options:baseOptions(c)});
- charts.investment=new Chart(document.getElementById('chartInvestment'),{type:'line',data:{labels:months,datasets:[{label:'Накопленная выручка',data:cumulativeRevenue.map(v=>v/1000000),borderColor:c.green,backgroundColor:'transparent',tension:.35},{label:'Накопленные инвестиции',data:cumulativeInvestment.map(v=>v/1000000),borderColor:c.red,backgroundColor:'transparent',tension:.35},{label:'Накопленная прибыль',data:cumulativeProfit.map(v=>v/1000000),borderColor:c.blue,backgroundColor:c.blue+'18',fill:true,tension:.35}]},options:baseOptions(c)});
- charts.traffic=new Chart(document.getElementById('chartTraffic'),{type:'bar',data:{labels:months,datasets:[{label:'SEO',data:trafficSEO,backgroundColor:c.green+'cc'},{label:'Директ',data:trafficPPC,backgroundColor:c.blue+'cc'},{label:'PR',data:trafficPR,backgroundColor:c.violet+'cc'},{label:'Повторы',data:repeat,backgroundColor:c.orange+'cc'}]},options:{...baseOptions(c),scales:{...baseOptions(c).scales,x:{...baseOptions(c).scales.x,stacked:true},y:{...baseOptions(c).scales.y,stacked:true}}}});
- charts.epc=new Chart(document.getElementById('chartEpc'),{type:'line',data:{labels:months,datasets:[{label:'EPC, ₽',data:epc,borderColor:c.blue,backgroundColor:c.blue+'18',fill:true,tension:.35,borderWidth:2.5,pointRadius:3}]},options:baseOptions(c)});
- charts.retention=new Chart(document.getElementById('chartRetention'),{type:'line',data:{labels:months,datasets:[{label:'Повторные визиты',data:repeat,borderColor:c.orange,backgroundColor:c.orange+'18',fill:true,tension:.35},{label:'Заявки',data:applications,borderColor:c.green,backgroundColor:'transparent',tension:.35}]},options:baseOptions(c)});
- charts.unit=new Chart(document.getElementById('chartUnit'),{type:'bar',data:{labels:months,datasets:[{label:'Маржинальная прибыль',data:profit.map(v=>v/1000),backgroundColor:profit.map(v=>v>=0?c.green+'bb':c.red+'99')}]},options:baseOptions(c)});
+ const ids=activeChartIds();
+ ids.forEach(id=>{if(charts[id]){charts[id].destroy();delete charts[id]}});
+ const labels=sliceWindow(months);
+ const cfg={
+  chartOverview:{type:'bar',data:{labels,datasets:[
+   {label:'Выручка',data:sliceWindow(revenue).map(v=>v/1000),backgroundColor:c.green+'cc'},
+   {label:'Расходы',data:sliceWindow(expenses).map(v=>v/1000),backgroundColor:c.red+'99'},
+   {label:'Прибыль',type:'line',data:sliceWindow(profit).map(v=>v/1000),borderColor:c.blue,borderWidth:2.5,pointRadius:3}
+  ]}},
+  chartInvestment:{type:'line',data:{labels,datasets:[
+   {label:'Накопленная выручка',data:sliceWindow(cumulativeRevenue).map(v=>v/1000000),borderColor:c.green,borderWidth:2.5},
+   {label:'Накопленные инвестиции',data:sliceWindow(cumulativeInvestment).map(v=>v/1000000),borderColor:c.red,borderWidth:2.5},
+   {label:'Накопленная прибыль',data:sliceWindow(cumulativeProfit).map(v=>v/1000000),borderColor:c.blue,backgroundColor:c.blue+'22',fill:true,borderWidth:2.5}
+  ]}},
+  chartTraffic:{type:'bar',stacked:true,data:{labels,datasets:[
+   {label:'SEO',data:sliceWindow(trafficSEO),backgroundColor:c.green+'cc'},
+   {label:'Директ',data:sliceWindow(trafficPPC),backgroundColor:c.blue+'cc'},
+   {label:'PR',data:sliceWindow(trafficPR),backgroundColor:c.violet+'cc'},
+   {label:'Повторы',data:sliceWindow(repeat),backgroundColor:c.orange+'cc'}
+  ]}},
+  chartEpc:{type:'line',data:{labels,datasets:[
+   {label:'EPC, ₽',data:sliceWindow(epc),borderColor:c.blue,backgroundColor:c.blue+'22',fill:true,borderWidth:2.5,pointRadius:3}
+  ]}},
+  chartRetention:{type:'line',data:{labels,datasets:[
+   {label:'Повторные визиты',data:sliceWindow(repeat),borderColor:c.orange,backgroundColor:c.orange+'22',fill:true,borderWidth:2.5},
+   {label:'Заявки',data:sliceWindow(applications),borderColor:c.green,borderWidth:2.5}
+  ]}},
+  chartUnit:{type:'bar',data:{labels,datasets:[
+   {label:'Маржинальная прибыль, тыс. ₽',data:sliceWindow(profit).map(v=>v/1000),backgroundColor:sliceWindow(profit).map(v=>v>=0?c.green+'bb':c.red+'99')}
+  ]}}
+ };
+ ids.forEach(id=>{const el=document.getElementById(id);if(el&&cfg[id])charts[id]=new Chart(el,cfg[id])});
+}
+const ACQUISITION_ROWS=[
+ {key:'SEO',row:['SEO / органика','__seoSessions__','__seoUnique__','35%','35%','30.9%','__seoRev__','108 ₽','246 ₽','75%']},
+ {key:'Яндекс.Директ',row:['Яндекс / CPC','__ppcSessions__','__ppcUnique__','27%','21.1%','24.2%','__directRev__','99 ₽','2 176 ₽','13%']},
+ {key:'PR',row:['PR / медиа','__prSessions__','__prUnique__','45%','35%','40%','__prRev__','280 ₽','1 432 ₽','28%']},
+ {key:'Повторный',row:['CRM / повторные','__repeatSessions__','__repeatUnique__','34%','28%','36%','__repeatRev__','112 ₽','0 ₽','∞']}
+];
+const UNIT_ROWS=[
+ {key:'SEO',build:t=>['SEO','CPA + прямой API',mln(t.seoRevenue),mln(t.seoSpend),mln(t.seoRevenue-t.seoSpend),'108 ₽','246 ₽','6.1x','4.2 мес',mln(t.seoRevenue-t.seoSpend)]},
+ {key:'Яндекс.Директ',build:t=>['Яндекс Директ','CPA + прямой API',mln(t.directRevenue),mln(t.directSpend),mln(t.directRevenue-t.directSpend),'99 ₽','1 701 ₽','1.8x','8.9 мес',mln(t.directRevenue-t.directSpend)]},
+ {key:'PR',build:t=>['PR','CPA',mln(t.prRevenue),mln(t.prSpend),mln(t.prRevenue-t.prSpend),'280 ₽','1 432 ₽','2.2x','7.1 мес',mln(t.prRevenue-t.prSpend)]},
+ {key:'Повторный',build:_=>['Повторы','прямой API + кросс-продажи',mln(5961100),'0 ₽',mln(5961100),'112 ₽','0 ₽','∞','в тот же день',mln(5961100)]}
+];
+function filterByChannel(rows){return state.channel==='Все каналы'?rows:rows.filter(r=>r.key===state.channel)}
+function filterByScenario(items){if(state.scenario==='Все сценарии')return items;const q=state.scenario.toLowerCase();const filtered=items.filter(s=>{const n=s.name.toLowerCase();return n.includes(q)||q.includes(n)});return filtered}
+function renderFilteredViews(){
+ const acq=filterByChannel(ACQUISITION_ROWS).map(r=>r.row);
+ table('acquisitionTable',['Источник / канал','Сессии','Уникальные пользователи','Кликрейт оффера','Завершение заявки','Одобрение','Выручка','EPC','CAC','ROI / ROMI'],acq.length?acq:[['Нет данных по выбранному каналу','—','—','—','—','—','—','—','—','—']]);
+ const unit=filterByChannel(UNIT_ROWS).map(r=>r.build(totals));
+ table('unitTable',['Канал','Микс интеграций','Выручка','Расходы','Валовая прибыль','EPC','CAC одобрения','LTV/CAC','Окупаемость','Маркетинговый PnL'],unit.length?unit:[['Нет данных','—','—','—','—','—','—','—','—','—']]);
+ const sc=filterByScenario(scenarios);
+ document.getElementById('scenarioGrid').innerHTML=sc.length?sc.map(s=>`<div class="card scenario-card" data-drill="${escapeHtml(s.name)}"><div class="scenario-head"><h3>${escapeHtml(s.name)}</h3><span class="pill">${fmt(s.users)} пользователей</span></div><div class="mini-row"><span>Завершение</span><b>${pct(s.completion)}</b></div><div class="mini-row"><span>Диагностика</span><b>${pct(s.diag)}</b></div><div class="mini-row"><span>Одобрение</span><b>${pct(s.approval)}</b></div><div class="mini-row"><span>Повтор</span><b>${pct(s.repeat)}</b></div><div class="mini-row"><span>Выручка</span><b>${mln(s.revenue)}</b></div><div class="progress"><div class="bar" style="width:${s.completion}%"></div></div><p class="muted">Застревание: диагностика и подтверждение данных. Лучший ответ: ${escapeHtml(s.best)}. Время: ${escapeHtml(s.time)}.</p></div>`).join(''):'<div class="card"><p class="muted">Нет сценариев под выбранный фильтр.</p></div>';
+ table('jtbdTable',['Сценарий','Потери на вопросах','Узкое место','Время','Лучший ответ для одобрения','Выручка','Повтор'],(sc.length?sc:[]).map(s=>[s.name,`${pct(100-s.completion)} отвал`,'ответы диагностики',s.time,s.best,mln(s.revenue),pct(s.repeat)]));
 }
 function init(){
  const approvalRate=ratio(totals.approvals,totals.applications)*100;
@@ -311,13 +407,14 @@ function init(){
  const pnlRows=[['Выручка',...revenue.map(money),money(totals.revenue)],['Расходы',...expenses.map(money),money(totals.expenses)],['Прибыль',...profit.map(v=>money(v)),money(totals.profit)],['Визиты',...visits.map(fmt),fmt(totals.visits)],['Клики на офферы',...offerClicks.map(fmt),fmt(totals.clicks)],['Заявки',...applications.map(fmt),fmt(totals.applications)],['Апрувы',...approvals.map(fmt),fmt(totals.approvals)]];
  table('pnlTable',['Показатель',...months,'Итого'],pnlRows);
  kpi('trafficKpis',[{label:'Выручка SEO',value:mln(totals.seoRevenue),sub:'ROI 75%',cls:'positive'},{label:'Выручка Директа',value:mln(totals.directRevenue),sub:'ROI 13%'},{label:'Выручка PR',value:mln(totals.prRevenue),sub:'ROI 28%'},{label:'Повторные визиты',value:fmt(totals.repeat),sub:'CAC 0 ₽',cls:'positive'}]);
- table('acquisitionTable',['Источник / канал','Сессии','Уникальные пользователи','Кликрейт оффера','Завершение заявки','Одобрение','Выручка','EPC','CAC','ROI / ROMI'],[['SEO / органика',fmt(sum(trafficSEO)),fmt(sum(trafficSEO)*.92),pct(35),pct(35),pct(30.9),mln(totals.seoRevenue),'108 ₽','246 ₽','75%'],['Яндекс / CPC',fmt(sum(trafficPPC)),fmt(sum(trafficPPC)*.88),pct(27),pct(21.1),pct(24.2),mln(totals.directRevenue),'99 ₽','2 176 ₽','13%'],['PR / медиа',fmt(sum(trafficPR)),fmt(sum(trafficPR)*.9),pct(45),pct(35),pct(40),mln(totals.prRevenue),'280 ₽','1 432 ₽','28%'],['CRM / повторные',fmt(totals.repeat),fmt(totals.repeat*.76),pct(34),pct(28),pct(36),mln(5961100),'112 ₽','0 ₽','∞']]);
+ ACQUISITION_ROWS[0].row[1]=fmt(sum(trafficSEO));ACQUISITION_ROWS[0].row[2]=fmt(sum(trafficSEO)*.92);ACQUISITION_ROWS[0].row[6]=mln(totals.seoRevenue);
+ ACQUISITION_ROWS[1].row[1]=fmt(sum(trafficPPC));ACQUISITION_ROWS[1].row[2]=fmt(sum(trafficPPC)*.88);ACQUISITION_ROWS[1].row[6]=mln(totals.directRevenue);
+ ACQUISITION_ROWS[2].row[1]=fmt(sum(trafficPR));ACQUISITION_ROWS[2].row[2]=fmt(sum(trafficPR)*.9);ACQUISITION_ROWS[2].row[6]=mln(totals.prRevenue);
+ ACQUISITION_ROWS[3].row[1]=fmt(totals.repeat);ACQUISITION_ROWS[3].row[2]=fmt(totals.repeat*.76);ACQUISITION_ROWS[3].row[6]=mln(5961100);
  const funnel=[['Сессии',fmt(totals.visits)],['Сценарий выбран',fmt(totals.visits*.78)],['Диагностика завершена',fmt(totals.visits*.61)],['Рекомендации сформированы',fmt(totals.visits*.54)],['Клик по офферу',fmt(totals.clicks)],['Заявки',fmt(totals.applications)],['Одобрения',fmt(totals.approvals)],['Выданные сделки',fmt(issued)]];
  document.getElementById('mainFunnel').innerHTML=funnel.slice(0,5).map((x,i)=>`<div class="step"><b>${x[1]}</b><span>${x[0]}</span><div class="progress" style="margin-top:12px"><div class="bar" style="width:${100-i*13}%"></div></div></div>`).join('');
  document.getElementById('flowComparison').innerHTML=flows.map(f=>`<div class="card scenario-card"><div class="scenario-head"><h3>${f.name}</h3><span class="pill">${f.offers} оффера</span></div><div class="mini-row"><span>Одобрение</span><b>${pct(f.approval)}</b></div><div class="mini-row"><span>Выдачи</span><b>${pct(f.issued)}</b></div><div class="mini-row"><span>Выручка / пользователь</span><b>${f.revenue} ₽</b></div><div class="mini-row"><span>Время решения</span><b>${f.time}</b></div><p class="muted">${f.note}</p></div>`).join('');
  table('funnelTable',['Месяц','Визиты','Клики по офферам','Заявки','Одобрения','Доля одобрений','Выручка'],months.map((m,i)=>[m,fmt(visits[i]),fmt(offerClicks[i]),fmt(applications[i]),fmt(approvals[i]),pct(ratio(approvals[i],applications[i])*100),money(revenue[i])]));
- document.getElementById('scenarioGrid').innerHTML=scenarios.map(s=>`<div class="card scenario-card" data-drill="${s.name}"><div class="scenario-head"><h3>${s.name}</h3><span class="pill">${fmt(s.users)} пользователей</span></div><div class="mini-row"><span>Завершение</span><b>${pct(s.completion)}</b></div><div class="mini-row"><span>Диагностика</span><b>${pct(s.diag)}</b></div><div class="mini-row"><span>Одобрение</span><b>${pct(s.approval)}</b></div><div class="mini-row"><span>Повтор</span><b>${pct(s.repeat)}</b></div><div class="mini-row"><span>Выручка</span><b>${mln(s.revenue)}</b></div><div class="progress"><div class="bar" style="width:${s.completion}%"></div></div><p class="muted">Застревание: диагностика и подтверждение данных. Лучший ответ: ${s.best}. Время: ${s.time}.</p></div>`).join('');
- table('jtbdTable',['Сценарий','Потери на вопросах','Узкое место','Время','Лучший ответ для одобрения','Выручка','Повтор'],scenarios.map(s=>[s.name,`${pct(100-s.completion)} отвал`,'ответы диагностики',s.time,s.best,mln(s.revenue),pct(s.repeat)]));
  kpi('aiKpis',[{label:'Сессии с рекомендациями',value:fmt(totals.visits*.54),sub:'логируется ID сессии рекомендации'},{label:'CTR топ-3',value:'41%',sub:'клики по офферу / показы',cls:'positive'},{label:'Прирост одобрений',value:'+8 п.п.',sub:'к обычному списку',cls:'positive'},{label:'Покрытие объяснениями',value:'94%',sub:'присутствует причина рекомендации',cls:'positive'}]);
  table('aiTable',['ID сессии','Сценарий','Топ-3 оффера','Причина рекомендации','Прогноз одобрения','Фактический результат','Прирост выручки','CTR','Покрытие'],aiRows.map(r=>[r[0],r[1],r[2],r[3],pct(r[4]*100),r[5],pct(r[6]),pct(r[7]),pct(r[8])]));
  table('sosTable',['Метрика','Значение'],sosRows);
@@ -328,15 +425,18 @@ function init(){
  const unitLtv=ratio(totals.revenue,totals.approvals)*LTV_REPEAT_CROSS_SELL_FACTOR;
  kpi('unitKpis',[{label:'EPC',value:Math.round(ratio(totals.revenue,totals.clicks))+' ₽',sub:'выручка / клики'},{label:'CAC выдачи',value:Math.round(cac)+' ₽',sub:'расходы / первые выдачи'},{label:'LTV',value:Math.round(unitLtv)+' ₽',sub:'чистая выручка с повторами'},{label:'LTV / CAC',value:(unitLtv/cac).toFixed(1)+'x',sub:'здорово при > 3x',cls:'positive'}]);
  document.getElementById('formulaList').innerHTML=['EPC = выручка / клики по офферам','CAC = расходы / одобренные пользователи или первые выдачи','LTV = накопленная чистая выручка на пользователя с повторами и кросс-продажами','Маржинальная прибыль = выручка - медиарасходы - переменные партнёрские расходы','Срок окупаемости = CAC / месячная маржа на пользователя','Маркетинговый PnL = выручка - медиарасходы - операционные расходы'].map(x=>`<div class="mini-row"><span>${x}</span><b>отслеживается</b></div>`).join('');
- table('unitTable',['Канал','Микс интеграций','Выручка','Расходы','Валовая прибыль','EPC','CAC одобрения','LTV/CAC','Окупаемость','Маркетинговый PnL'],[['SEO','CPA + прямой API',mln(totals.seoRevenue),mln(totals.seoSpend),mln(totals.seoRevenue-totals.seoSpend),'108 ₽','246 ₽','6.1x','4.2 мес',mln(totals.seoRevenue-totals.seoSpend)],['Яндекс Директ','CPA + прямой API',mln(totals.directRevenue),mln(totals.directSpend),mln(totals.directRevenue-totals.directSpend),'99 ₽','1 701 ₽','1.8x','8.9 мес',mln(totals.directRevenue-totals.directSpend)],['PR','CPA',mln(totals.prRevenue),mln(totals.prSpend),mln(totals.prRevenue-totals.prSpend),'280 ₽','1 432 ₽','2.2x','7.1 мес',mln(totals.prRevenue-totals.prSpend)],['Повторы','прямой API + кросс-продажи',mln(5961100),'0 ₽',mln(5961100),'112 ₽','0 ₽','∞','в тот же день',mln(5961100)]]);
  document.getElementById('alertsGrid').innerHTML=alerts.map(a=>`<div class="card alert-card"><div class="alert-head"><h3>${a.entity}</h3><span class="delta ${a.severity==='red'?'bad':a.severity==='yellow'?'warn':'good'}">${a.severity==='red'?'критично':a.severity==='yellow'?'внимание':'норма'}</span></div><div class="mini-row"><span>Первое обнаружение</span><b>Сегодня</b></div><p class="muted">${a.reason}</p><div class="actions"><button class="action">${a.action}</button></div></div>`).join('');
  document.getElementById('experimentsGrid').innerHTML=experiments.slice(0,3).map(e=>`<div class="card"><div class="card-title"><div><h3>${e.name}</h3><p>${e.id}</p></div><span class="pill">${e.status}</span></div><div class="mini-row"><span>Главная метрика</span><b>${e.primary}</b></div><div class="mini-row"><span>Уверенность</span><b>${e.confidence}</b></div><div class="mini-row"><span>Результат</span><b>${e.result}</b></div></div>`).join('');
  table('experimentsTable',['Эксперимент','Главная метрика','Ограничение','Сегмент','Уверенность','Снимок','Решение'],experiments.map(e=>[e.name,e.primary,e.guardrail,e.segment,e.confidence,e.result,e.status]));
+ renderFilteredViews();
  renderCharts();
 }
-const tabs=document.querySelectorAll('.tab'),panels=document.querySelectorAll('.panel');tabs.forEach(t=>t.addEventListener('click',()=>{tabs.forEach(x=>x.classList.remove('active'));panels.forEach(x=>x.classList.remove('active'));t.classList.add('active');document.getElementById('tab-'+t.dataset.tab).classList.add('active');setTimeout(renderCharts,40)}));
-document.querySelectorAll('.chip').forEach(b=>b.addEventListener('click',()=>{document.querySelectorAll('.chip').forEach(x=>x.classList.remove('active'));b.classList.add('active')}));
-document.getElementById('themeToggle').addEventListener('click',()=>{const root=document.documentElement;root.dataset.theme=root.dataset.theme==='dark'?'light':'dark';setTimeout(renderCharts,40)});
+const tabs=document.querySelectorAll('.tab'),panels=document.querySelectorAll('.panel');
+tabs.forEach(t=>t.addEventListener('click',()=>{tabs.forEach(x=>x.classList.remove('active'));panels.forEach(x=>x.classList.remove('active'));t.classList.add('active');document.getElementById('tab-'+t.dataset.tab).classList.add('active');requestAnimationFrame(renderCharts)}));
+document.querySelectorAll('.chip').forEach(b=>b.addEventListener('click',()=>{document.querySelectorAll('.chip').forEach(x=>x.classList.remove('active'));b.classList.add('active');const w=Number(b.dataset.window||0);state.window=w>0?w:null;renderCharts()}));
+document.querySelectorAll('.filters select').forEach(sel=>{const label=sel.getAttribute('aria-label');sel.addEventListener('change',()=>{const v=sel.value;if(label==='Канал')state.channel=v;else if(label==='Сценарий')state.scenario=v;else if(label==='Роль')state.role=v;renderFilteredViews()})});
+document.getElementById('themeToggle').addEventListener('click',()=>{const root=document.documentElement;root.dataset.theme=root.dataset.theme==='dark'?'light':'dark';requestAnimationFrame(renderCharts)});
+let resizeTimer;window.addEventListener('resize',()=>{clearTimeout(resizeTimer);resizeTimer=setTimeout(renderCharts,120)});
 const drawer=document.getElementById('drawer'),drawerContent=document.getElementById('drawerContent');document.addEventListener('click',e=>{const card=e.target.closest('[data-drill]');if(!card)return;drawerContent.innerHTML=`<h2>${escapeHtml(card.dataset.drill)}</h2><p class="muted">Детализация доступна до пользователя, сессии, заявки и события партнёра с учётом прав доступа. В демо показан агрегированный слой без чувствительных данных.</p><div class="mini-list"><div class="mini-row"><span>Источник</span><b>проверенная витрина</b></div><div class="mini-row"><span>Статус</span><b>сырой / проверенный / атрибутированный</b></div><div class="mini-row"><span>Идентификаторы</span><b>замаскированы / хэшированы</b></div></div>`;drawer.classList.add('open')});document.getElementById('drawerClose').addEventListener('click',()=>drawer.classList.remove('open'));
 init();
 </script>
