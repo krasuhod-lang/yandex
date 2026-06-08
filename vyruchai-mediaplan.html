@@ -254,6 +254,52 @@ const totals={revenue:75897147.75,expenses:38950000,profit:36947147.75,visits:20
 const cumulative=a=>a.reduce((acc,v,i)=>{acc.push((acc[i-1]||0)+v);return acc},[]);
 const cumulativeRevenue=cumulative(revenue), cumulativeInvestment=cumulative(expenses), cumulativeProfit=cumulative(profit);
 const firstMonthlyProfitIndex=profit.findIndex(v=>v>0), paybackIndex=cumulativeProfit.findIndex(v=>v>=0);
+
+// Краткие подписи месяцев в формате "ММ.ГГ" (10.26, 11.26 ...) — компактный таймлайн для 20 месяцев.
+const MONTH_NUM={'Январь':'01','Февраль':'02','Март':'03','Апрель':'04','Май':'05','Июнь':'06','Июль':'07','Август':'08','Сентябрь':'09','Октябрь':'10','Ноябрь':'11','Декабрь':'12'};
+const shortMonths=months.map(m=>{const [mn,yr]=m.split(' ');return (MONTH_NUM[mn]||mn)+'.'+(yr||'').slice(2)});
+
+// Декомпозиция помесячной выручки и расходов по каналам, чтобы фильтры пересчитывали графики, а не только таблицы.
+// Подход: каждая месячная выручка revenue[i] распределяется между SEO/PPC/PR пропорционально доле канала в трафике месяца,
+// после чего ряд канала перешкалируется так, чтобы суммарная годовая выручка канала совпадала с totals.{seo,direct,pr}Revenue.
+const totalChannelTraffic=visits.map((_,i)=>(trafficSEO[i]+trafficPPC[i]+trafficPR[i])||1);
+const seoShare=trafficSEO.map((v,i)=>v/totalChannelTraffic[i]);
+const ppcShare=trafficPPC.map((v,i)=>v/totalChannelTraffic[i]);
+const prShare=trafficPR.map((v,i)=>v/totalChannelTraffic[i]);
+function distributeByWeights(monthlyTotals,weights,channelTotal){
+ const raw=monthlyTotals.map((v,i)=>v*(weights[i]||0));
+ const rawSum=raw.reduce((a,b)=>a+b,0)||1;
+ const scale=channelTotal/rawSum;
+ return raw.map(v=>v*scale);
+}
+const revenueSEO=distributeByWeights(revenue,seoShare,totals.seoRevenue);
+const revenuePPC=distributeByWeights(revenue,ppcShare,totals.directRevenue);
+const revenuePR=distributeByWeights(revenue,prShare,totals.prRevenue);
+// CRM / повторные продажи: годовой объём 5,96 млн ₽ распределяется пропорционально repeat[i] (когортный хвост).
+const REPEAT_REVENUE_TOTAL=5961100;
+const repeatSum=repeat.reduce((a,b)=>a+b,0)||1;
+const revenueRepeat=repeat.map(v=>v/repeatSum*REPEAT_REVENUE_TOTAL);
+// Маркетинговые расходы по каналу — прямой бюджет; общий expenses[] также включает ФОТ и инфраструктуру.
+const expensesSEO=budgetSEO.slice();
+const expensesPPC=budgetDirect.slice();
+const expensesPR=budgetPR.slice();
+const expensesRepeat=revenue.map(()=>0);
+// Доля выручки с повторных продаж в сумме месячной выручки — используется для стек-бара First-time vs Repeat в chartRetention.
+const revenueFirstTime=revenue.map((v,i)=>Math.max(0,v-revenueRepeat[i]));
+// EPC по каналу: выручка канала / клики канала, где клики канала ≈ offerClicks[i] * доля_трафика_канала.
+function channelEpc(revArr,trafficArr){
+ return revArr.map((v,i)=>{const sh=trafficArr[i]/totalChannelTraffic[i]||0;const clicks=offerClicks[i]*sh;return clicks?v/clicks:0});
+}
+const CHANNELS={
+ 'Все каналы':{rev:revenue,cost:expenses,traffic:visits,epc:epc,label:'все каналы'},
+ 'SEO':{rev:revenueSEO,cost:expensesSEO,traffic:trafficSEO,epc:channelEpc(revenueSEO,trafficSEO),label:'SEO'},
+ 'Яндекс.Директ':{rev:revenuePPC,cost:expensesPPC,traffic:trafficPPC,epc:channelEpc(revenuePPC,trafficPPC),label:'Яндекс.Директ'},
+ 'PR':{rev:revenuePR,cost:expensesPR,traffic:trafficPR,epc:channelEpc(revenuePR,trafficPR),label:'PR'},
+ 'Повторный':{rev:revenueRepeat,cost:expensesRepeat,traffic:repeat,epc:revenueRepeat.map((v,i)=>repeat[i]?v/repeat[i]:0),label:'CRM / повторные'}
+};
+// Дисконтирование денежных потоков: 20% годовых ⇒ ~1,53% в месяц. Накопленная дисконтированная прибыль = NPV-кривая.
+const MONTHLY_DISCOUNT_RATE=Math.pow(1.20,1/12)-1;
+function cumulativeDiscounted(arr){const acc=[];let total=0;arr.forEach((v,i)=>{total+=v/Math.pow(1+MONTHLY_DISCOUNT_RATE,i);acc.push(total)});return acc}
 const INPUT_DATA=[
  {title:'Период и источник',value:'Май 2026 — декабрь 2027',text:'Встроенная PNL-модель из Excel: выручка, расходы, трафик, клики, заявки, одобрения и канальные бюджеты.'},
  {title:'Маркетинговые инвестиции',value:'39,0 млн ₽',text:'Сумма расходов на Директ, SEO, PR и операционные затраты за 20 месяцев.'},
@@ -339,33 +385,49 @@ function renderCharts(){
  const c=chartColors();
  const ids=activeChartIds();
  ids.forEach(id=>{if(charts[id]){charts[id].destroy();delete charts[id]}});
- const labels=sliceWindow(months);
+ const labels=sliceWindow(shortMonths);
+ // Активный канал — графики верхнего уровня пересчитываются на лету в соответствии с фильтром.
+ const ch=CHANNELS[state.channel]||CHANNELS['Все каналы'];
+ const fRev=ch.rev, fCost=ch.cost, fProfit=fRev.map((v,i)=>v-fCost[i]);
+ const fCumRev=cumulative(fRev), fCumCost=cumulative(fCost), fCumProfit=cumulative(fProfit);
+ const fNpvProfit=cumulativeDiscounted(fProfit);
+ // Стек удержания: First-time vs Repeat выручка, чтобы инвестору был виден когортный хвост (LTV растёт за счёт повторов).
+ const isAllChannels=state.channel==='Все каналы';
+ const retFirst=isAllChannels?revenueFirstTime:fRev.map((v,i)=>Math.max(0,v-(state.channel==='Повторный'?v:0)));
+ const retRepeat=isAllChannels?revenueRepeat:(state.channel==='Повторный'?fRev.slice():fRev.map(()=>0));
  const cfg={
   chartOverview:{type:'bar',data:{labels,datasets:[
-   {label:'Выручка',data:sliceWindow(revenue).map(v=>v/1000),backgroundColor:c.green+'cc'},
-   {label:'Расходы',data:sliceWindow(expenses).map(v=>v/1000),backgroundColor:c.red+'99'},
-   {label:'Прибыль',type:'line',data:sliceWindow(profit).map(v=>v/1000),borderColor:c.blue,borderWidth:2.5,pointRadius:3}
+   {label:'Выручка ('+ch.label+')',data:sliceWindow(fRev).map(v=>v/1000),backgroundColor:c.green+'cc'},
+   {label:'Расходы',data:sliceWindow(fCost).map(v=>v/1000),backgroundColor:c.red+'99'},
+   {label:'Прибыль',type:'line',data:sliceWindow(fProfit).map(v=>v/1000),borderColor:c.blue,borderWidth:2.5,pointRadius:3}
   ]}},
   chartInvestment:{type:'line',data:{labels,datasets:[
-   {label:'Накопленная выручка',data:sliceWindow(cumulativeRevenue).map(v=>v/1000000),borderColor:c.green,borderWidth:2.5},
-   {label:'Накопленные инвестиции',data:sliceWindow(cumulativeInvestment).map(v=>v/1000000),borderColor:c.red,borderWidth:2.5},
-   {label:'Накопленная прибыль',data:sliceWindow(cumulativeProfit).map(v=>v/1000000),borderColor:c.blue,backgroundColor:c.blue+'22',fill:true,borderWidth:2.5}
+   {label:'Накопленная выручка',data:sliceWindow(fCumRev).map(v=>v/1000000),borderColor:c.green,borderWidth:2.5},
+   {label:'Накопленные инвестиции',data:sliceWindow(fCumCost).map(v=>v/1000000),borderColor:c.red,borderWidth:2.5},
+   {label:'Накопленная прибыль',data:sliceWindow(fCumProfit).map(v=>v/1000000),borderColor:c.blue,backgroundColor:c.blue+'22',fill:true,borderWidth:2.5},
+   {label:'NPV (дисконт 20%)',data:sliceWindow(fNpvProfit).map(v=>v/1000000),borderColor:c.violet,borderWidth:2}
   ]}},
-  chartTraffic:{type:'bar',stacked:true,data:{labels,datasets:[
-   {label:'SEO',data:sliceWindow(trafficSEO),backgroundColor:c.green+'cc'},
-   {label:'Директ',data:sliceWindow(trafficPPC),backgroundColor:c.blue+'cc'},
-   {label:'PR',data:sliceWindow(trafficPR),backgroundColor:c.violet+'cc'},
-   {label:'Повторы',data:sliceWindow(repeat),backgroundColor:c.orange+'cc'}
-  ]}},
+  chartTraffic:isAllChannels?
+   {type:'bar',stacked:true,data:{labels,datasets:[
+    {label:'SEO',data:sliceWindow(trafficSEO),backgroundColor:c.green+'cc'},
+    {label:'Директ',data:sliceWindow(trafficPPC),backgroundColor:c.blue+'cc'},
+    {label:'PR',data:sliceWindow(trafficPR),backgroundColor:c.violet+'cc'},
+    {label:'Повторы',data:sliceWindow(repeat),backgroundColor:c.orange+'cc'}
+   ]}}:
+   {type:'bar',data:{labels,datasets:[
+    {label:'Трафик: '+ch.label,data:sliceWindow(ch.traffic),backgroundColor:c.blue+'cc'}
+   ]}},
   chartEpc:{type:'line',data:{labels,datasets:[
-   {label:'EPC, ₽',data:sliceWindow(epc),borderColor:c.blue,backgroundColor:c.blue+'22',fill:true,borderWidth:2.5,pointRadius:3}
+   {label:'EPC ('+ch.label+'), ₽',data:sliceWindow(ch.epc),borderColor:c.blue,backgroundColor:c.blue+'22',fill:true,borderWidth:2.5,pointRadius:3}
   ]}},
-  chartRetention:{type:'line',data:{labels,datasets:[
-   {label:'Повторные визиты',data:sliceWindow(repeat),borderColor:c.orange,backgroundColor:c.orange+'22',fill:true,borderWidth:2.5},
-   {label:'Заявки',data:sliceWindow(applications),borderColor:c.green,borderWidth:2.5}
+  // Когортный LTV: нижний слой — выручка с первой сделки, верхний — повторы/CRM. Видно, как маржа растёт за счёт CAC=0.
+  chartRetention:{type:'bar',stacked:true,data:{labels,datasets:[
+   {label:'Выручка с первой сделки, тыс. ₽',data:sliceWindow(retFirst).map(v=>v/1000),backgroundColor:c.green+'cc'},
+   {label:'Выручка с повторов / CRM, тыс. ₽',data:sliceWindow(retRepeat).map(v=>v/1000),backgroundColor:c.orange+'cc'},
+   {label:'Повторные визиты',type:'line',data:sliceWindow(repeat),borderColor:c.violet,borderWidth:2}
   ]}},
   chartUnit:{type:'bar',data:{labels,datasets:[
-   {label:'Маржинальная прибыль, тыс. ₽',data:sliceWindow(profit).map(v=>v/1000),backgroundColor:sliceWindow(profit).map(v=>v>=0?c.green+'bb':c.red+'99')}
+   {label:'Маржинальная прибыль ('+ch.label+'), тыс. ₽',data:sliceWindow(fProfit).map(v=>v/1000),backgroundColor:sliceWindow(fProfit).map(v=>v>=0?c.green+'bb':c.red+'99')}
   ]}}
  };
  ids.forEach(id=>{const el=document.getElementById(id);if(el&&cfg[id])charts[id]=new Chart(el,cfg[id])});
@@ -433,7 +495,7 @@ function init(){
 const tabs=document.querySelectorAll('.tab'),panels=document.querySelectorAll('.panel');
 tabs.forEach(t=>t.addEventListener('click',()=>{tabs.forEach(x=>x.classList.remove('active'));panels.forEach(x=>x.classList.remove('active'));t.classList.add('active');document.getElementById('tab-'+t.dataset.tab).classList.add('active');requestAnimationFrame(renderCharts)}));
 document.querySelectorAll('.chip').forEach(b=>b.addEventListener('click',()=>{document.querySelectorAll('.chip').forEach(x=>x.classList.remove('active'));b.classList.add('active');const w=Number(b.dataset.window||0);state.window=w>0?w:null;renderCharts()}));
-document.querySelectorAll('.filters select').forEach(sel=>{const label=sel.getAttribute('aria-label');sel.addEventListener('change',()=>{const v=sel.value;if(label==='Канал')state.channel=v;else if(label==='Сценарий')state.scenario=v;else if(label==='Роль')state.role=v;renderFilteredViews()})});
+document.querySelectorAll('.filters select').forEach(sel=>{const label=sel.getAttribute('aria-label');sel.addEventListener('change',()=>{const v=sel.value;if(label==='Канал')state.channel=v;else if(label==='Сценарий')state.scenario=v;else if(label==='Роль')state.role=v;renderFilteredViews();renderCharts()})});
 document.getElementById('themeToggle').addEventListener('click',()=>{const root=document.documentElement;root.dataset.theme=root.dataset.theme==='dark'?'light':'dark';requestAnimationFrame(renderCharts)});
 let resizeTimer;window.addEventListener('resize',()=>{clearTimeout(resizeTimer);resizeTimer=setTimeout(renderCharts,120)});
 const drawer=document.getElementById('drawer'),drawerContent=document.getElementById('drawerContent');document.addEventListener('click',e=>{const card=e.target.closest('[data-drill]');if(!card)return;drawerContent.innerHTML=`<h2>${escapeHtml(card.dataset.drill)}</h2><p class="muted">Детализация доступна до пользователя, сессии, заявки и события партнёра с учётом прав доступа. В демо показан агрегированный слой без чувствительных данных.</p><div class="mini-list"><div class="mini-row"><span>Источник</span><b>проверенная витрина</b></div><div class="mini-row"><span>Статус</span><b>сырой / проверенный / атрибутированный</b></div><div class="mini-row"><span>Идентификаторы</span><b>замаскированы / хэшированы</b></div></div>`;drawer.classList.add('open')});document.getElementById('drawerClose').addEventListener('click',()=>drawer.classList.remove('open'));
