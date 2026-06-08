@@ -4,7 +4,6 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Выручай.ру — операционный дашборд</title>
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <style>
 :root{
   color-scheme:light;
@@ -41,7 +40,7 @@ main{max-width:var(--max);margin:0 auto;padding:28px 24px 56px}.panel{display:no
         <select><option>Все роли</option><option>CEO</option><option>Product</option><option>Growth</option><option>CRM</option><option>Ops</option></select>
         <select><option>Все каналы</option><option>SEO</option><option>Яндекс.Директ</option><option>PR</option><option>Повторный</option></select>
         <select><option>Все сценарии</option><option>До зарплаты</option><option>Есть долги</option><option>Хочу машину</option><option>Накопления</option><option>Страхование</option></select>
-        <button class="theme" id="themeToggle" aria-label="Сменить тему">◐</button>
+        <button class="theme" id="themeToggle" aria-label="Сменить тему">Тема</button>
       </div>
     </div>
     <nav class="tabs" aria-label="Разделы дашборда">
@@ -68,7 +67,7 @@ main{max-width:var(--max);margin:0 auto;padding:28px 24px 56px}.panel{display:no
         </div>
         <div class="hero-side">
           <div class="card tight"><div class="metric-label">Статус периода</div><div class="metric-value positive">План сходится</div><div class="metric-sub">Break-even: февраль 2027 по месячной прибыли, ноябрь 2026 как операционный рубеж</div></div>
-          <div class="card tight"><div class="metric-label">Источник данных</div><div class="metric-value">Excel PNL</div><div class="metric-sub">20 месяцев, PNL, трафик, заявки, апрувы, каналы, расходы</div></div>
+          <div class="card tight"><div class="metric-label">Источник данных</div><div class="metric-value">Excel PNL</div><div class="metric-sub">20 месяцев, PNL, трафик, заявки, одобрения, каналы, расходы</div></div>
         </div>
       </div>
       <div id="kpiGrid" class="grid kpis"></div>
@@ -152,6 +151,29 @@ main{max-width:var(--max);margin:0 auto;padding:28px 24px 56px}.panel{display:no
 </div>
 
 <script>
+
+class Chart{
+ constructor(canvas,config){this.canvas=canvas;this.config=config;this.ctx=canvas.getContext('2d');this.draw()}
+ destroy(){if(this.ctx)this.ctx.clearRect(0,0,this.canvas.width,this.canvas.height)}
+ draw(){
+  const ctx=this.ctx, cfg=this.config, dpr=window.devicePixelRatio||1;
+  const rect=this.canvas.getBoundingClientRect();
+  const width=Math.max(320,rect.width||this.canvas.parentElement.clientWidth||640), height=Number(this.canvas.getAttribute('height')||140);
+  this.canvas.width=width*dpr;this.canvas.height=height*dpr;ctx.setTransform(dpr,0,0,dpr,0,0);ctx.clearRect(0,0,width,height);
+  const colors=chartColors(); const pad={l:42,r:12,t:12,b:28}; const plotW=width-pad.l-pad.r, plotH=height-pad.t-pad.b;
+  const datasets=cfg.data.datasets||[], labels=cfg.data.labels||[];
+  const values=datasets.flatMap(ds=>(ds.data||[]).map(Number)).filter(Number.isFinite);
+  const min=Math.min(0,...values), max=Math.max(1,...values); const scale=v=>pad.t+plotH-((v-min)/(max-min))*plotH;
+  ctx.strokeStyle=colors.line;ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(pad.l,pad.t);ctx.lineTo(pad.l,pad.t+plotH);ctx.lineTo(width-pad.r,pad.t+plotH);ctx.stroke();
+  ctx.fillStyle=colors.muted;ctx.font='11px -apple-system, BlinkMacSystemFont, sans-serif';
+  labels.forEach((label,i)=>{if(i%Math.ceil(labels.length/6)!==0)return;const x=pad.l+(i/(Math.max(labels.length-1,1)))*plotW;ctx.fillText(String(label).slice(0,6),x-14,height-8)});
+  const barSets=datasets.filter(ds=>(ds.type||cfg.type)!=='line'), lineSets=datasets.filter(ds=>(ds.type||cfg.type)==='line');
+  const groupW=plotW/Math.max(labels.length,1), barW=Math.max(3,groupW/Math.max(barSets.length+1,2));
+  barSets.forEach((ds,di)=>{ctx.fillStyle=ds.backgroundColor||colors.blue;(ds.data||[]).forEach((v,i)=>{const x=pad.l+i*groupW+barW*di+barW*.5;const y=scale(Number(v));ctx.fillRect(x,y,barW,Math.max(1,pad.t+plotH-y))})});
+  lineSets.forEach(ds=>{ctx.strokeStyle=ds.borderColor||colors.blue;ctx.lineWidth=2;ctx.beginPath();(ds.data||[]).forEach((v,i)=>{const x=pad.l+(i/(Math.max(labels.length-1,1)))*plotW,y=scale(Number(v));i?ctx.lineTo(x,y):ctx.moveTo(x,y)});ctx.stroke()});
+ }
+}
+
 const months=['Май 2026','Июнь 2026','Июль 2026','Август 2026','Сентябрь 2026','Октябрь 2026','Ноябрь 2026','Декабрь 2026','Январь 2027','Февраль 2027','Март 2027','Апрель 2027','Май 2027','Июнь 2027','Июль 2027','Август 2027','Сентябрь 2027','Октябрь 2027','Ноябрь 2027','Декабрь 2027'];
 const revenue=[127360.5978,159117.9348,221445,341018.8043,532290.0652,795462.7891,1070183.369,1765383.335,1877356.452,2129657.314,2445466.57,3254744.138,3909008.9,4753230.091,5833006.543,6741346.983,7831355.51,9292788.909,10540212.54,12276711.91];
 const expenses=[1275000,1475000,1675000,1225000,1225000,1445000,1495000,1845000,1895000,1995000,1995000,2245000,2045000,2145000,2495000,2495000,2495000,2495000,2495000,2495000];
@@ -170,7 +192,7 @@ const budgetSEO=[300000,350000,450000,450000,450000,550000,550000,600000,650000,
 const budgetPR=[200000,200000,300000,300000,300000,400000,400000,500000,200000,200000,200000,250000,250000,250000,250000,250000,250000,250000,250000,250000];
 const totals={revenue:75897147.75,expenses:38950000,profit:36947147.75,visits:2030951.549,repeat:165381.8654,clicks:670311.0778,applications:214503.8772,approvals:65105.33756,directRevenue:14361739.13,seoRevenue:53920909.98,prRevenue:7614498.645,directSpend:12550000,seoSpend:13250000,prSpend:5450000};
 const ISSUED_TO_APPROVAL_RATE=0.76;
-const LTV_REPEAT_CROSS_SELL_MULTIPLIER=1.34;
+const LTV_REPEAT_CROSS_SELL_FACTOR=1.34;
 const scenarios=[
  {name:'Дотянуть до зарплаты',users:742000,completion:74,diag:83,match:69,approval:31,repeat:5.8,revenue:28400000,time:'2:18',best:'Наличие стабильной зарплаты'},
  {name:'Есть долги',users:338000,completion:58,diag:91,match:51,approval:24,repeat:7.2,revenue:14600000,time:'3:42',best:'Долговая нагрузка ниже 50%'},
@@ -214,24 +236,34 @@ const alerts=[
  {severity:'yellow',entity:'Repeat rate',reason:'5.1% против цели 6%',action:'Усилить SMS D+14 и cross-sell офферы'},
  {severity:'red',entity:'Пустые рекомендации',reason:'2.7% sessions без top-3',action:'Fallback на direct listing и лог missing partner response'}
 ];
-function sum(a){return a.reduce((x,y)=>x+y,0)}
+function sum(a){return a.reduce((x,y)=>x+(Number.isFinite(Number(y))?Number(y):0),0)}
 function fmt(n){return Math.round(n).toLocaleString('ru-RU')}
 function money(n){return fmt(n)+' ₽'}
 function mln(n){return (n/1000000).toLocaleString('ru-RU',{maximumFractionDigits:1})+' млн ₽'}
 function pct(n){return Number(n).toLocaleString('ru-RU',{maximumFractionDigits:1})+'%'}
 function ratio(a,b){return b? a/b:0}
 function cls(v){return v>=0?'positive':'negative'}
-function escapeHtml(value){return String(value).replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]))}
+function escapeHtml(value){return String(value).replace(/[&<>"'/]/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;','/':'&#x2F;'}[ch]))}
 function table(id,head,rows){
  const el=document.getElementById(id);
  const safeHead=head.map(h=>`<th>${escapeHtml(h)}</th>`).join('');
  const safeRows=rows.map(r=>'<tr>'+r.map(c=>`<td class="${typeof c==='number'&&c<0?'negative':''}">${escapeHtml(c)}</td>`).join('')+'</tr>').join('');
  el.innerHTML='<thead><tr>'+safeHead+'</tr></thead><tbody>'+safeRows+'</tbody>';
 }
-function kpi(container,items){document.getElementById(container).innerHTML=items.map(x=>`<div class="card tight" data-drill="${x.label}"><div class="metric-label">${x.label}</div><div class="metric-value ${x.cls||''}">${x.value}</div><div class="metric-sub">${x.sub}</div></div>`).join('')}
+function kpi(container,items){
+ document.getElementById(container).innerHTML=items.map(x=>{
+  const label=escapeHtml(x.label);
+  const value=escapeHtml(x.value);
+  const sub=escapeHtml(x.sub);
+  const cls=['positive','negative','accent'].includes(x.cls)?x.cls:'';
+  return `<div class="card tight" data-drill="${label}"><div class="metric-label">${label}</div><div class="metric-value ${cls}">${value}</div><div class="metric-sub">${sub}</div></div>`;
+ }).join('')
+}
 function chartColors(){const s=getComputedStyle(document.documentElement);return {text:s.getPropertyValue('--text').trim(),muted:s.getPropertyValue('--muted').trim(),line:s.getPropertyValue('--line').trim(),blue:s.getPropertyValue('--blue').trim(),green:s.getPropertyValue('--green').trim(),orange:s.getPropertyValue('--orange').trim(),red:s.getPropertyValue('--red').trim(),violet:s.getPropertyValue('--violet').trim()}}
 const charts={};function baseOptions(c){return {responsive:true,plugins:{legend:{labels:{color:c.muted,boxWidth:10,boxHeight:10}}},scales:{x:{ticks:{color:c.muted,maxRotation:0,autoSkip:true},grid:{color:c.line+'55'}},y:{ticks:{color:c.muted},grid:{color:c.line+'55'}}}}}
-function renderCharts(){const c=chartColors();Object.values(charts).forEach(x=>x.destroy());
+function renderCharts(){
+ const c=chartColors();
+ Object.values(charts).forEach(x=>x.destroy());
  charts.overview=new Chart(document.getElementById('chartOverview'),{type:'bar',data:{labels:months,datasets:[{label:'Выручка',data:revenue.map(v=>v/1000),backgroundColor:c.green+'cc'},{label:'Расходы',data:expenses.map(v=>v/1000),backgroundColor:c.red+'88'},{label:'Прибыль',type:'line',data:profit.map(v=>v/1000),borderColor:c.blue,backgroundColor:'transparent',tension:.35,borderWidth:2,pointRadius:3}]},options:baseOptions(c)});
  charts.traffic=new Chart(document.getElementById('chartTraffic'),{type:'bar',data:{labels:months,datasets:[{label:'SEO',data:trafficSEO,backgroundColor:c.green+'cc'},{label:'Директ',data:trafficPPC,backgroundColor:c.blue+'cc'},{label:'PR',data:trafficPR,backgroundColor:c.violet+'cc'},{label:'Repeat',data:repeat,backgroundColor:c.orange+'cc'}]},options:{...baseOptions(c),scales:{...baseOptions(c).scales,x:{...baseOptions(c).scales.x,stacked:true},y:{...baseOptions(c).scales.y,stacked:true}}}});
  charts.epc=new Chart(document.getElementById('chartEpc'),{type:'line',data:{labels:months,datasets:[{label:'EPC, ₽',data:epc,borderColor:c.blue,backgroundColor:c.blue+'18',fill:true,tension:.35,borderWidth:2.5,pointRadius:3}]},options:baseOptions(c)});
@@ -239,8 +271,12 @@ function renderCharts(){const c=chartColors();Object.values(charts).forEach(x=>x
  charts.unit=new Chart(document.getElementById('chartUnit'),{type:'bar',data:{labels:months,datasets:[{label:'Contribution margin',data:profit.map(v=>v/1000),backgroundColor:profit.map(v=>v>=0?c.green+'bb':c.red+'99')}]},options:baseOptions(c)});
 }
 function init(){
- const approvalRate=ratio(totals.approvals,totals.applications)*100, issued=Math.round(totals.approvals*ISSUED_TO_APPROVAL_RATE), gross=totals.revenue-totals.expenses, cac=ratio(totals.expenses,issued), ltv=ratio(totals.revenue,totals.approvals)*LTV_REPEAT_CROSS_SELL_MULTIPLIER;
- kpi('kpiGrid',[{label:'Users / sessions',value:fmt(totals.visits),sub:'20 месяцев, все каналы'},{label:'Applications sent',value:fmt(totals.applications),sub:'CR в заявку '+pct(ratio(totals.applications,totals.visits)*100)},{label:'Approval rate',value:pct(approvalRate),sub:fmt(totals.approvals)+' approvals',cls:'positive'},{label:'Issued deals',value:fmt(issued),sub:'оценка funded = 76% approvals'},{label:'Revenue',value:mln(totals.revenue),sub:'one source of truth from PNL',cls:'positive'},{label:'EPC',value:Math.round(ratio(totals.revenue,totals.clicks))+' ₽',sub:'revenue / offer clicks',cls:'positive'},{label:'CAC',value:Math.round(cac)+' ₽',sub:'spend / funded users',cls:'negative'},{label:'LTV / CAC',value:(unitLtv/cac).toFixed(1)+'x',sub:'LTV учитывает repeat и cross-sell',cls:'positive'},{label:'Repeat rate',value:'5.1%',sub:'цель 6% в ближайшем периоде'},{label:'Gross profit',value:mln(gross),sub:'revenue - total spend',cls:'positive'},{label:'Contribution',value:pct(ratio(gross,totals.revenue)*100),sub:'маржинальность по PNL',cls:'positive'},{label:'PnL',value:mln(totals.profit),sub:'нарастающим итогом',cls:'positive'}]);
+ const approvalRate=ratio(totals.approvals,totals.applications)*100;
+ const issued=Math.round(totals.approvals*ISSUED_TO_APPROVAL_RATE);
+ const gross=totals.revenue-totals.expenses;
+ const cac=ratio(totals.expenses,issued);
+ const ltv=ratio(totals.revenue,totals.approvals)*LTV_REPEAT_CROSS_SELL_FACTOR;
+ kpi('kpiGrid',[{label:'Users / sessions',value:fmt(totals.visits),sub:'20 месяцев, все каналы'},{label:'Applications sent',value:fmt(totals.applications),sub:'CR в заявку '+pct(ratio(totals.applications,totals.visits)*100)},{label:'Approval rate',value:pct(approvalRate),sub:fmt(totals.approvals)+' approvals',cls:'positive'},{label:'Issued deals',value:fmt(issued),sub:'оценка funded = 76% approvals'},{label:'Revenue',value:mln(totals.revenue),sub:'one source of truth from PNL',cls:'positive'},{label:'EPC',value:Math.round(ratio(totals.revenue,totals.clicks))+' ₽',sub:'revenue / offer clicks',cls:'positive'},{label:'CAC',value:Math.round(cac)+' ₽',sub:'spend / funded users',cls:'negative'},{label:'LTV / CAC',value:(ltv/cac).toFixed(1)+'x',sub:'LTV учитывает repeat и cross-sell',cls:'positive'},{label:'Repeat rate',value:'5.1%',sub:'цель 6% в ближайшем периоде'},{label:'Gross profit',value:mln(gross),sub:'revenue - total spend',cls:'positive'},{label:'Contribution',value:pct(ratio(gross,totals.revenue)*100),sub:'маржинальность по PNL',cls:'positive'},{label:'PnL',value:mln(totals.profit),sub:'нарастающим итогом',cls:'positive'}]);
  document.getElementById('actionsList').innerHTML=[['Scale','SEO long-tail и Центрофинанс API дают лучший ROI, EPC и approval'],['Fix','Банк Город имеет mismatch predicted vs factual approval'],['Disable','МФО Риск выводится из SOS из-за SLA и complaints'],['Grow','Retention D+14 увеличивает repeat и LTV без CAC'],['Control','Директ масштабировать только при EPC выше CPC и CAC ниже LTV']].map((r,i)=>`<div class="mini-row"><span><span class="status ${i===2?'red':i===1||i===4?'yellow':'green'}"></span> ${r[0]}</span><b>${r[1]}</b></div>`).join('');
  const pnlRows=[['Выручка',...revenue.map(money),money(totals.revenue)],['Расходы',...expenses.map(money),money(totals.expenses)],['Прибыль',...profit.map(v=>money(v)),money(totals.profit)],['Визиты',...visits.map(fmt),fmt(totals.visits)],['Клики на офферы',...offerClicks.map(fmt),fmt(totals.clicks)],['Заявки',...applications.map(fmt),fmt(totals.applications)],['Апрувы',...approvals.map(fmt),fmt(totals.approvals)]];
  table('pnlTable',['Показатель',...months,'Итого'],pnlRows);
@@ -259,7 +295,8 @@ function init(){
  table('partnerTable',['Partner','Integration','Status','SLA','Response','Approve rate','Issue rate','Revenue','EPC','eCPA','Complaint','Top rejection','Action'],partners.map(p=>[p.name,p.type,p.status,p.sla,p.response,pct(p.approval),pct(p.issue),mln(p.revenue),p.epc+' ₽',p.ecpa+' ₽',pct(p.complaints),p.reject,p.action]));
  kpi('retentionKpis',[{label:'Repeat rate',value:'5.1%',sub:'target 6%'},{label:'Days to repeat',value:'21',sub:'median days'},{label:'Reactivation SMS',value:'12.8%',sub:'best channel',cls:'positive'},{label:'Post-deal revenue',value:mln(9860000),sub:'repeat + cross-sell',cls:'positive'}]);
  table('retentionTable',['Event','Users / events','Conversion'],retentionEvents);
- const unitLtv=ratio(totals.revenue,totals.approvals)*LTV_REPEAT_CROSS_SELL_MULTIPLIER; kpi('unitKpis',[{label:'EPC',value:Math.round(ratio(totals.revenue,totals.clicks))+' ₽',sub:'revenue / clicks'},{label:'CAC funded',value:Math.round(cac)+' ₽',sub:'spend / first funded users'},{label:'LTV',value:Math.round(unitLtv)+' ₽',sub:'net revenue with repeat'},{label:'LTV / CAC',value:(unitLtv/cac).toFixed(1)+'x',sub:'healthy if > 3x',cls:'positive'}]);
+ const unitLtv=ratio(totals.revenue,totals.approvals)*LTV_REPEAT_CROSS_SELL_FACTOR;
+ kpi('unitKpis',[{label:'EPC',value:Math.round(ratio(totals.revenue,totals.clicks))+' ₽',sub:'revenue / clicks'},{label:'CAC funded',value:Math.round(cac)+' ₽',sub:'spend / first funded users'},{label:'LTV',value:Math.round(unitLtv)+' ₽',sub:'net revenue with repeat'},{label:'LTV / CAC',value:(unitLtv/cac).toFixed(1)+'x',sub:'healthy if > 3x',cls:'positive'}]);
  document.getElementById('formulaList').innerHTML=['EPC = revenue / offer clicks','CAC = spend / approved users или first funded users','LTV = cumulative net revenue per user with repeat and cross-sell','Contribution margin = revenue - media spend - variable partner costs','Payback period = CAC / monthly margin per user','Marketing PnL = revenue - media spend - operating costs'].map(x=>`<div class="mini-row"><span>${x}</span><b>tracked</b></div>`).join('');
  table('unitTable',['Channel','Integration mix','Revenue','Spend','Gross profit','EPC','CAC approved','LTV/CAC','Payback','Marketing PnL'],[['SEO','CPA + direct API',mln(totals.seoRevenue),mln(totals.seoSpend),mln(totals.seoRevenue-totals.seoSpend),'108 ₽','246 ₽','6.1x','4.2 мес',mln(totals.seoRevenue-totals.seoSpend)],['Yandex Direct','CPA + direct API',mln(totals.directRevenue),mln(totals.directSpend),mln(totals.directRevenue-totals.directSpend),'99 ₽','1 701 ₽','1.8x','8.9 мес',mln(totals.directRevenue-totals.directSpend)],['PR','CPA',mln(totals.prRevenue),mln(totals.prSpend),mln(totals.prRevenue-totals.prSpend),'280 ₽','1 432 ₽','2.2x','7.1 мес',mln(totals.prRevenue-totals.prSpend)],['Repeat','direct API + cross-sell',mln(5961100),'0 ₽',mln(5961100),'112 ₽','0 ₽','∞','same day',mln(5961100)]]);
  document.getElementById('alertsGrid').innerHTML=alerts.map(a=>`<div class="card alert-card"><div class="alert-head"><h3>${a.entity}</h3><span class="delta ${a.severity==='red'?'bad':a.severity==='yellow'?'warn':'good'}">${a.severity}</span></div><div class="mini-row"><span>First seen</span><b>Today</b></div><p class="muted">${a.reason}</p><div class="actions"><button class="action">${a.action}</button></div></div>`).join('');
