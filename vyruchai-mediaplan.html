@@ -1,672 +1,321 @@
 <!DOCTYPE html>
-<html lang="ru" data-theme="dark">
+<html lang="ru" data-theme="light">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Выручай.ру — Медиаплан & PNL</title>
-<link href="https://api.fontshare.com/v2/css?f[]=satoshi@400,500,700&f[]=cabinet-grotesk@400,500,700,800&display=swap" rel="stylesheet">
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<title>Выручай.ру — операционный дашборд</title>
 <style>
-:root{--font-display:"Cabinet Grotesk","Georgia",serif;--font-body:"Satoshi","Inter",sans-serif;--text-xs:clamp(.75rem,.7rem + .25vw,.875rem);--text-sm:clamp(.875rem,.8rem + .35vw,1rem);--text-base:clamp(1rem,.95rem + .25vw,1.125rem);--text-lg:clamp(1.125rem,1rem + .75vw,1.5rem);--text-xl:clamp(1.5rem,1.2rem + 1.25vw,2.25rem);--space-1:.25rem;--space-2:.5rem;--space-3:.75rem;--space-4:1rem;--space-5:1.25rem;--space-6:1.5rem;--space-8:2rem;--space-10:2.5rem;--space-12:3rem;--space-16:4rem;--radius-sm:.375rem;--radius-md:.5rem;--radius-lg:.75rem;--radius-xl:1rem;--radius-full:9999px;--trans:180ms cubic-bezier(.16,1,.3,1);}
-[data-theme="dark"]{--bg:#0f1117;--sur:#161b27;--sur2:#1c2233;--surO:#212840;--brd:#2a3045;--div:#222940;--txt:#e8eaf2;--muted:#8b93b0;--faint:#4a5168;--prime:#f97316;--acc:#fbbf24;--green:#34d399;--red:#f87171;--blue:#60a5fa;--purple:#a78bfa;--sdw-sm:0 1px 2px oklch(0 0 0/.3);--sdw-md:0 4px 12px oklch(0 0 0/.4);}
-[data-theme="light"]{--bg:#f7f6f2;--sur:#fff;--sur2:#f3f4f8;--surO:#eaecf4;--brd:#d4d7e5;--div:#e0e3ef;--txt:#1a1f35;--muted:#5a6285;--faint:#9aa0b8;--prime:#ea580c;--acc:#d97706;--green:#059669;--red:#dc2626;--blue:#2563eb;--purple:#7c3aed;--sdw-sm:0 1px 2px oklch(.2 .01 80/.06);--sdw-md:0 4px 12px oklch(.2 .01 80/.08);}
-*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-html{scroll-behavior:smooth;-webkit-font-smoothing:antialiased}
-body{font-family:var(--font-body);font-size:var(--text-base);color:var(--txt);background:var(--bg);min-height:100dvh;line-height:1.6}
-h1,h2,h3,h4{font-family:var(--font-display);line-height:1.2}
-button{cursor:pointer;background:none;border:none;font:inherit;color:inherit}
-table{border-collapse:collapse;width:100%}
-.app{display:flex;flex-direction:column;min-height:100dvh}
-.header{position:sticky;top:0;z-index:100;background:color-mix(in oklch,var(--bg) 85%,transparent);backdrop-filter:blur(16px);border-bottom:1px solid var(--brd);padding:var(--space-3) var(--space-6);display:flex;align-items:center;justify-content:space-between}
-.logo{display:flex;align-items:center;gap:var(--space-3)}
-.logo-text{font-family:var(--font-display);font-size:var(--text-lg);font-weight:800}
-.logo-text span{color:var(--prime)}
-.logo-sub{font-size:var(--text-xs);color:var(--muted)}
-.hdr-actions{display:flex;align-items:center;gap:var(--space-3)}
-.badge{font-size:var(--text-xs);font-weight:600;padding:var(--space-1) var(--space-3);border-radius:var(--radius-full);background:var(--prime);color:#fff;letter-spacing:.02em}
-.theme-btn{width:36px;height:36px;border-radius:var(--radius-md);display:flex;align-items:center;justify-content:center;background:var(--surO);color:var(--muted);transition:background var(--trans),color var(--trans)}
-.theme-btn:hover{background:var(--sur);color:var(--txt)}
-.tabs-bar{display:flex;border-bottom:1px solid var(--brd);background:var(--sur);overflow-x:auto;scrollbar-width:none;padding:0 var(--space-6)}
-.tabs-bar::-webkit-scrollbar{display:none}
-.tab-btn{flex-shrink:0;padding:var(--space-3) var(--space-5);font-size:var(--text-sm);font-weight:600;color:var(--muted);border-bottom:2px solid transparent;white-space:nowrap;transition:color var(--trans),border-color var(--trans)}
-.tab-btn:hover{color:var(--txt)}
-.tab-btn.active{color:var(--prime);border-bottom-color:var(--prime)}
-.content{flex:1;padding:var(--space-8) var(--space-6);max-width:1400px;margin:0 auto;width:100%}
-.tab-panel{display:none}
-.tab-panel.active{display:block}
-.kpi-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:var(--space-4);margin-bottom:var(--space-8)}
-.kpi-card{background:var(--sur);border:1px solid var(--brd);border-radius:var(--radius-xl);padding:var(--space-5);box-shadow:var(--sdw-sm);transition:box-shadow var(--trans),transform var(--trans)}
-.kpi-card:hover{box-shadow:var(--sdw-md);transform:translateY(-2px)}
-.kpi-lbl{font-size:var(--text-xs);color:var(--muted);font-weight:500;text-transform:uppercase;letter-spacing:.06em;margin-bottom:var(--space-2)}
-.kpi-val{font-family:var(--font-display);font-size:var(--text-xl);font-weight:800}
-.kpi-val.g{color:var(--green)}.kpi-val.r{color:var(--red)}.kpi-val.o{color:var(--prime)}.kpi-val.b{color:var(--blue)}
-.kpi-sub{font-size:var(--text-xs);color:var(--faint);margin-top:var(--space-1)}
-.sec{margin-bottom:var(--space-10)}
-.sec-ttl{font-size:var(--text-lg);font-weight:700;margin-bottom:var(--space-5);display:flex;align-items:center;gap:var(--space-3)}
-.sec-ttl::after{content:"";flex:1;height:1px;background:var(--div)}
-.cg{display:grid;grid-template-columns:1fr 1fr;gap:var(--space-6)}
-.cc{background:var(--sur);border:1px solid var(--brd);border-radius:var(--radius-xl);padding:var(--space-6);box-shadow:var(--sdw-sm)}
-.cc.full{grid-column:1/-1}
-.cc-ttl{font-size:var(--text-xs);font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:var(--space-4)}
-.tw{overflow-x:auto;border-radius:var(--radius-xl);border:1px solid var(--brd);margin-bottom:var(--space-4)}
-.dt{font-size:var(--text-xs)}
-.dt th{background:var(--surO);color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.05em;padding:var(--space-3) var(--space-4);text-align:right;white-space:nowrap}
-.dt th:first-child{text-align:left}
-.dt td{padding:var(--space-3) var(--space-4);text-align:right;border-top:1px solid var(--div);white-space:nowrap;font-variant-numeric:tabular-nums}
-.dt td:first-child{text-align:left;font-weight:600}
-.dt tr:hover td{background:var(--surO)}
-.dt .cat-hd td{background:var(--sur2);color:var(--muted);font-weight:700;font-size:var(--text-xs);text-transform:uppercase;letter-spacing:.05em}
-.dt .tot td{background:var(--sur2);font-weight:700}
-.pp{color:var(--green);font-weight:700}.pn{color:var(--red);font-weight:700}
-.hl{color:var(--prime);font-weight:700}
-td.pos{color:var(--green)}td.neg{color:var(--red)}
-.alert{display:flex;gap:var(--space-3);padding:var(--space-4) var(--space-5);border-radius:var(--radius-lg);margin-bottom:var(--space-6);border:1px solid}
-.alert.w{background:color-mix(in oklch,var(--acc) 12%,transparent);border-color:color-mix(in oklch,var(--acc) 40%,transparent)}
-.alert.s{background:color-mix(in oklch,var(--green) 12%,transparent);border-color:color-mix(in oklch,var(--green) 40%,transparent)}
-.alert-ico{font-size:1.25em;flex-shrink:0}
-.alert-txt{font-size:var(--text-sm)}
-.alert-txt strong{display:block;font-weight:700;margin-bottom:var(--space-1)}
-.mc{background:var(--sur);border:1px solid var(--brd);border-radius:var(--radius-xl);padding:var(--space-6);margin-bottom:var(--space-6);box-shadow:var(--sdw-sm)}
-.mhd{display:flex;align-items:center;justify-content:space-between;margin-bottom:var(--space-5)}
-.mttl{font-size:var(--text-lg);font-weight:700}
-.tag{font-size:var(--text-xs);font-weight:700;padding:var(--space-1) var(--space-3);border-radius:var(--radius-full);letter-spacing:.04em}
-.tag.seo{background:color-mix(in oklch,var(--green) 20%,transparent);color:var(--green)}
-.tag.ppc{background:color-mix(in oklch,var(--blue) 20%,transparent);color:var(--blue)}
-.tag.pr{background:color-mix(in oklch,var(--purple) 20%,transparent);color:var(--purple)}
-.tag.ret{background:color-mix(in oklch,var(--prime) 20%,transparent);color:var(--prime)}
-.cm{display:flex;flex-direction:column;gap:var(--space-2)}
-.cmr{display:flex;justify-content:space-between;font-size:var(--text-xs)}
-.cmr .l{color:var(--muted)}.cmr .v{font-weight:600;font-variant-numeric:tabular-nums}
-.pb{height:6px;background:var(--surO);border-radius:var(--radius-full);overflow:hidden;margin-top:var(--space-2)}
-.pf{height:100%;border-radius:var(--radius-full)}
-.chg{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:var(--space-5)}
-.chc{background:var(--sur);border:1px solid var(--brd);border-radius:var(--radius-xl);padding:var(--space-6);box-shadow:var(--sdw-sm)}
-.chnm{font-weight:700;font-size:var(--text-base);margin-bottom:var(--space-2)}
-.chds{font-size:var(--text-sm);color:var(--muted);margin-bottom:var(--space-4)}
-.comp-row{display:grid;grid-template-columns:160px 120px 120px 120px 100px 80px;gap:var(--space-2);align-items:center;padding:var(--space-4);border-radius:var(--radius-lg);margin-bottom:var(--space-2)}
-.comp-row.hd{background:var(--surO);font-size:var(--text-xs);font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.04em}
-.comp-row.dat{background:var(--sur);border:1px solid var(--brd);font-size:var(--text-sm)}
-.comp-row.dat.us{background:color-mix(in oklch,var(--prime) 8%,var(--sur));border-color:var(--prime)}
-.cnm{font-weight:700}.cv{font-variant-numeric:tabular-nums}
-.rm{display:flex;flex-direction:column;position:relative}
-.rm::before{content:"";position:absolute;left:23px;top:24px;bottom:24px;width:2px;background:var(--div)}
-.ri{display:flex;gap:var(--space-5);position:relative;padding-bottom:var(--space-6)}
-.rd{flex-shrink:0;width:48px;height:48px;border-radius:var(--radius-full);display:flex;align-items:center;justify-content:center;font-weight:800;font-size:var(--text-sm);z-index:1;border:3px solid var(--bg)}
-.rd.o{background:var(--prime);color:#fff}.rd.b{background:var(--blue);color:#fff}
-.rd.g{background:var(--green);color:#000}.rd.p{background:var(--purple);color:#fff}
-.rd.gr{background:var(--surO);color:var(--muted)}
-.rb{flex:1;padding-top:var(--space-2)}
-.rph{font-size:var(--text-xs);color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.06em}
-.rttl{font-weight:700;font-size:var(--text-base);margin-bottom:var(--space-2)}
-.rds{font-size:var(--text-sm);color:var(--muted)}
-.ir{display:flex;flex-wrap:wrap;gap:var(--space-3);margin-bottom:var(--space-6)}
-.ic{display:flex;align-items:center;gap:var(--space-2);padding:var(--space-2) var(--space-4);background:var(--sur);border:1px solid var(--brd);border-radius:var(--radius-full);font-size:var(--text-xs);font-weight:600}
-.ic .dot{width:8px;height:8px;border-radius:var(--radius-full);flex-shrink:0}
-footer{border-top:1px solid var(--brd);padding:var(--space-5) var(--space-6);text-align:center;font-size:var(--text-xs);color:var(--faint)}
-@media(max-width:768px){.content{padding:var(--space-5) var(--space-4)}.cg{grid-template-columns:1fr}.kpi-grid{grid-template-columns:1fr 1fr}.comp-row{grid-template-columns:140px repeat(5,80px);font-size:var(--text-xs)}}
+:root{
+  color-scheme:light;
+  --font:-apple-system,BlinkMacSystemFont,"SF Pro Display","SF Pro Text","Inter","Segoe UI",Arial,sans-serif;
+  --bg:#f5f5f7;--surface:#ffffff;--surface-2:#fbfbfd;--surface-3:#f2f2f7;
+  --text:#1d1d1f;--muted:#6e6e73;--faint:#a1a1a6;--line:#d2d2d7;
+  --blue:#0071e3;--green:#248a3d;--orange:#bf5b00;--red:#d70015;--violet:#6e5dc6;
+  --shadow:0 18px 50px rgba(0,0,0,.08);--shadow-soft:0 8px 28px rgba(0,0,0,.06);
+  --radius:22px;--radius-sm:14px;--gap:18px;--max:1480px;
+}
+[data-theme="dark"]{color-scheme:dark;--bg:#000;--surface:#1c1c1e;--surface-2:#242426;--surface-3:#2c2c2e;--text:#f5f5f7;--muted:#a1a1a6;--faint:#6e6e73;--line:#38383a;--shadow:0 22px 60px rgba(0,0,0,.36);--shadow-soft:0 8px 28px rgba(0,0,0,.24)}
+*{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;background:radial-gradient(circle at top,#fff 0,#f5f5f7 42%,#ededf2 100%);color:var(--text);font-family:var(--font);font-size:15px;line-height:1.45;-webkit-font-smoothing:antialiased}[data-theme="dark"] body{background:radial-gradient(circle at top,#1c1c1e 0,#000 55%)}
+button,select{font:inherit}button{cursor:pointer}.app{min-height:100vh}.topbar{position:sticky;top:0;z-index:20;background:color-mix(in srgb,var(--surface) 88%,transparent);backdrop-filter:saturate(180%) blur(22px);border-bottom:1px solid color-mix(in srgb,var(--line) 70%,transparent)}
+.topbar-inner{max-width:var(--max);margin:0 auto;padding:16px 24px;display:flex;gap:18px;align-items:center;justify-content:space-between}.brand{display:flex;gap:12px;align-items:center}.mark{width:34px;height:34px;border-radius:10px;background:linear-gradient(145deg,#1d1d1f,#525257);display:grid;place-items:center;color:white;font-weight:700;letter-spacing:-.03em}.brand-title{font-weight:700;letter-spacing:-.02em}.brand-sub{font-size:12px;color:var(--muted)}
+.filters{display:flex;gap:10px;align-items:center;flex-wrap:wrap}.chip,select,.ghost-btn{border:1px solid var(--line);background:var(--surface);color:var(--text);border-radius:999px;padding:9px 12px;font-size:13px}.ghost-btn:hover,.chip.active{border-color:var(--blue);color:var(--blue)}.theme{width:38px;height:38px;border-radius:50%;border:1px solid var(--line);background:var(--surface);color:var(--text)}
+.tabs{max-width:var(--max);margin:0 auto;padding:0 24px;display:flex;gap:4px;overflow:auto;scrollbar-width:none}.tabs::-webkit-scrollbar{display:none}.tab{border:0;background:transparent;color:var(--muted);padding:13px 13px 14px;border-bottom:2px solid transparent;white-space:nowrap;font-size:13px;font-weight:600}.tab.active{color:var(--text);border-color:var(--text)}
+main{max-width:var(--max);margin:0 auto;padding:28px 24px 56px}.panel{display:none}.panel.active{display:block}.hero{display:grid;grid-template-columns:1.25fr .75fr;gap:var(--gap);margin-bottom:var(--gap)}.hero-card{background:linear-gradient(135deg,var(--surface),var(--surface-2));border:1px solid var(--line);border-radius:32px;padding:30px;box-shadow:var(--shadow);min-height:260px}.eyebrow{font-size:12px;text-transform:uppercase;letter-spacing:.12em;color:var(--muted);font-weight:700}.hero h1{margin:12px 0 12px;font-size:clamp(34px,4vw,62px);line-height:.96;letter-spacing:-.055em}.lead{max-width:780px;color:var(--muted);font-size:17px}.hero-side{display:grid;gap:var(--gap)}
+.grid{display:grid;gap:var(--gap)}.grid.kpis{grid-template-columns:repeat(4,minmax(0,1fr));margin-bottom:var(--gap)}.grid.two{grid-template-columns:1fr 1fr}.grid.three{grid-template-columns:repeat(3,minmax(0,1fr))}.grid.four{grid-template-columns:repeat(4,minmax(0,1fr))}.card{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:20px;box-shadow:var(--shadow-soft)}.card.tight{padding:16px}.card-title{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;margin-bottom:14px}.card-title h2,.card-title h3{margin:0;font-size:18px;letter-spacing:-.02em}.card-title p{margin:4px 0 0;color:var(--muted);font-size:13px}.metric-label{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;font-weight:700}.metric-value{font-size:32px;line-height:1.05;letter-spacing:-.045em;font-weight:750;margin-top:9px}.metric-sub{color:var(--muted);font-size:13px;margin-top:8px}.delta{font-size:12px;border-radius:999px;padding:4px 8px;font-weight:700}.delta.good{background:color-mix(in srgb,var(--green) 13%,transparent);color:var(--green)}.delta.warn{background:color-mix(in srgb,var(--orange) 15%,transparent);color:var(--orange)}.delta.bad{background:color-mix(in srgb,var(--red) 12%,transparent);color:var(--red)}
+.status{width:10px;height:10px;border-radius:50%;display:inline-block}.status.green{background:var(--green)}.status.yellow{background:var(--orange)}.status.red{background:var(--red)}.mini-list{display:grid;gap:10px}.mini-row{display:flex;justify-content:space-between;gap:16px;padding:10px 0;border-bottom:1px solid var(--line)}.mini-row:last-child{border-bottom:0}.mini-row span:first-child{color:var(--muted)}.mini-row b{font-variant-numeric:tabular-nums}.table-wrap{overflow:auto;border:1px solid var(--line);border-radius:18px;background:var(--surface)}table{width:100%;border-collapse:collapse;font-size:13px}th,td{padding:12px 14px;border-bottom:1px solid var(--line);text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums}th:first-child,td:first-child{text-align:left;font-weight:650}thead th{position:sticky;top:0;background:var(--surface-3);color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:.07em;z-index:1}tbody tr:hover{background:var(--surface-2)}tbody tr:last-child td{border-bottom:0}.positive{color:var(--green);font-weight:700}.negative{color:var(--red);font-weight:700}.accent{color:var(--blue);font-weight:700}.muted{color:var(--muted)}
+.progress{height:8px;background:var(--surface-3);border-radius:999px;overflow:hidden}.bar{height:100%;border-radius:999px;background:var(--blue)}.scenario-card,.partner-card,.alert-card{display:grid;gap:12px}.scenario-head,.partner-head,.alert-head{display:flex;justify-content:space-between;gap:12px;align-items:flex-start}.pill{border:1px solid var(--line);border-radius:999px;padding:5px 9px;font-size:12px;color:var(--muted);background:var(--surface-2)}.actions{display:flex;flex-wrap:wrap;gap:8px}.action{border:1px solid var(--line);background:var(--surface-2);border-radius:999px;padding:8px 10px;font-size:12px;color:var(--text)}.action:hover{border-color:var(--blue);color:var(--blue)}.flow{display:grid;grid-template-columns:repeat(5,1fr);gap:10px}.step{border:1px solid var(--line);border-radius:16px;padding:14px;background:var(--surface-2)}.step b{display:block;font-size:22px;letter-spacing:-.03em}.step span{color:var(--muted);font-size:12px}.divider-title{font-size:22px;letter-spacing:-.035em;margin:30px 0 14px}.drawer{position:fixed;top:0;right:0;bottom:0;width:min(460px,100%);background:var(--surface);border-left:1px solid var(--line);box-shadow:var(--shadow);transform:translateX(105%);transition:transform .22s ease;z-index:50;padding:24px;overflow:auto}.drawer.open{transform:translateX(0)}.drawer-close{float:right;border:1px solid var(--line);background:var(--surface-2);border-radius:999px;padding:8px 12px}.drawer h2{letter-spacing:-.035em}.footer{max-width:var(--max);margin:0 auto;padding:18px 24px 34px;color:var(--muted);font-size:12px;border-top:1px solid var(--line)}
+@media(max-width:980px){.hero,.grid.two,.grid.three,.grid.four{grid-template-columns:1fr}.grid.kpis{grid-template-columns:repeat(2,1fr)}.flow{grid-template-columns:1fr}.topbar-inner{align-items:flex-start;flex-direction:column}.filters{width:100%}}@media(max-width:560px){main{padding:20px 14px}.tabs,.topbar-inner{padding-left:14px;padding-right:14px}.grid.kpis{grid-template-columns:1fr}.hero-card{padding:22px}.metric-value{font-size:28px}}
 </style>
 </head>
 <body>
 <div class="app">
-<header class="header">
-  <div class="logo">
-    <svg width="36" height="36" viewBox="0 0 36 36" fill="none">
-      <rect width="36" height="36" rx="10" fill="#f97316"/>
-      <path d="M10 10L18 24L26 10" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
-      <circle cx="18" cy="27" r="2.5" fill="white"/>
-    </svg>
-    <div>
-      <div class="logo-text"><span>Выручай</span>.ру</div>
-      <div class="logo-sub">Финансовый Сэнсэй · Медиаплан & PNL</div>
+  <header class="topbar">
+    <div class="topbar-inner">
+      <div class="brand">
+        <div class="mark">В</div>
+        <div><div class="brand-title">Выручай.ру</div><div class="brand-sub">Операционный дашборд growth, product и CEO</div></div>
+      </div>
+      <div class="filters" aria-label="Фильтры верхнего уровня">
+        <button class="chip active">Today</button><button class="chip">7D</button><button class="chip">30D</button><button class="chip">MoM</button><button class="chip">QoQ</button>
+        <select aria-label="Роль"><option>Все роли</option><option>CEO</option><option>Product</option><option>Growth</option><option>CRM</option><option>Ops</option></select>
+        <select aria-label="Канал"><option>Все каналы</option><option>SEO</option><option>Яндекс.Директ</option><option>PR</option><option>Повторный</option></select>
+        <select aria-label="Сценарий"><option>Все сценарии</option><option>До зарплаты</option><option>Есть долги</option><option>Хочу машину</option><option>Накопления</option><option>Страхование</option></select>
+        <button class="theme" id="themeToggle" aria-label="Сменить тему">Тема</button>
+      </div>
     </div>
-  </div>
-  <div class="hdr-actions">
-    <span class="badge">18 месяцев</span>
-    <button class="theme-btn" id="themeToggle" aria-label="Тема">
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
-    </button>
-  </div>
-</header>
-<nav class="tabs-bar">
-  <button class="tab-btn active" data-tab="overview">📊 Обзор</button>
-  <button class="tab-btn" data-tab="pnl">💰 PNL</button>
-  <button class="tab-btn" data-tab="traffic">📈 Трафик & EPC</button>
-  <button class="tab-btn" data-tab="mediaplan">📡 Медиаплан</button>
-  <button class="tab-btn" data-tab="channels">🎯 Каналы</button>
-  <button class="tab-btn" data-tab="competitors">🏆 Конкуренты</button>
-  <button class="tab-btn" data-tab="roadmap">🗺️ Роадмап</button>
-</nav>
-<main class="content">
+    <nav class="tabs" aria-label="Разделы дашборда">
+      <button class="tab active" data-tab="overview">Overview</button>
+      <button class="tab" data-tab="traffic">Traffic</button>
+      <button class="tab" data-tab="funnels">Funnels</button>
+      <button class="tab" data-tab="jtbd">JTBD</button>
+      <button class="tab" data-tab="ai">AI/SOS</button>
+      <button class="tab" data-tab="partners">Partners</button>
+      <button class="tab" data-tab="retention">Retention</button>
+      <button class="tab" data-tab="unit">Unit Economics</button>
+      <button class="tab" data-tab="alerts">Alerts</button>
+      <button class="tab" data-tab="experiments">Experiments</button>
+    </nav>
+  </header>
 
-<!-- OVERVIEW -->
-<div id="tab-overview" class="tab-panel active">
-<div class="alert w"><span class="alert-ico">⚡</span><div class="alert-txt"><strong>Горизонт: 18 месяцев (май 2026 — окт 2027). Старт с нуля. Break-even — ноябрь 2026.</strong>Ключевой показатель: EPC (Earnings Per Click), не CPA. Арбитраж трафика займов/МФО.</div></div>
-<div class="kpi-grid">
-  <div class="kpi-card"><div class="kpi-lbl">Выручка итого</div><div class="kpi-val o">75,9 млн ₽</div><div class="kpi-sub">20 расч. периодов</div></div>
-  <div class="kpi-card"><div class="kpi-lbl">Общие расходы</div><div class="kpi-val r">38,9 млн ₽</div><div class="kpi-sub">ФОТ + маркетинг</div></div>
-  <div class="kpi-card"><div class="kpi-lbl">Чистая прибыль</div><div class="kpi-val g">36,9 млн ₽</div><div class="kpi-sub">нарастающим итогом</div></div>
-  <div class="kpi-card"><div class="kpi-lbl">Break-even</div><div class="kpi-val b">Нояб 2026</div><div class="kpi-sub">~6 мес с запуска</div></div>
-  <div class="kpi-card"><div class="kpi-lbl">Трафик итого</div><div class="kpi-val o">2,03 млн</div><div class="kpi-sub">уникальных визитов</div></div>
-  <div class="kpi-card"><div class="kpi-lbl">Апрувы итого</div><div class="kpi-val g">65 105</div><div class="kpi-sub">подтверждённых заявок</div></div>
-  <div class="kpi-card"><div class="kpi-lbl">ФОТ команды</div><div class="kpi-val r">6,65 млн ₽</div><div class="kpi-sub">постоянные расходы</div></div>
-  <div class="kpi-card"><div class="kpi-lbl">Бюджет Директ</div><div class="kpi-val r">12,55 млн ₽</div><div class="kpi-sub">весь период</div></div>
-</div>
-<div class="sec"><h2 class="sec-ttl">Динамика выручки и прибыли</h2>
-<div class="cg"><div class="cc full"><div class="cc-ttl">Выручка / Расходы / Прибыль по месяцам (₽)</div><canvas id="chartMain" height="90"></canvas></div></div></div>
-<div class="sec"><h2 class="sec-ttl">Структура трафика и выручки</h2>
-<div class="cg">
-  <div class="cc"><div class="cc-ttl">Трафик по каналам (итого)</div><canvas id="chartTrafficPie" height="200"></canvas></div>
-  <div class="cc"><div class="cc-ttl">Выручка по каналам (итого)</div><canvas id="chartRevPie" height="200"></canvas></div>
-</div></div>
-</div>
+  <main>
+    <section id="tab-overview" class="panel active">
+      <div class="hero">
+        <div class="hero-card">
+          <div class="eyebrow">Executive summary</div>
+          <h1>Единый центр управления ростом и доходностью</h1>
+          <p class="lead">Дашборд показывает полный путь пользователя: источник трафика, JTBD-сценарий, диагностика, AI или SOS-подбор, партнёр, сделка, возврат, LTV и PnL. Интерфейс очищен от эмодзи и декоративных шрифтов.</p>
+        </div>
+        <div class="hero-side">
+          <div class="card tight"><div class="metric-label">Статус периода</div><div class="metric-value positive">План сходится</div><div class="metric-sub">Break-even: февраль 2027 по месячной прибыли, ноябрь 2026 как операционный рубеж</div></div>
+          <div class="card tight"><div class="metric-label">Источник данных</div><div class="metric-value">Excel PNL</div><div class="metric-sub">20 месяцев, PNL, трафик, заявки, одобрения, каналы, расходы</div></div>
+        </div>
+      </div>
+      <div id="kpiGrid" class="grid kpis"></div>
+      <div class="grid two">
+        <div class="card"><div class="card-title"><div><h2>Выручка, расходы и прибыль</h2><p>Данные из PNL, тыс. ₽</p></div></div><canvas id="chartOverview" height="130"></canvas></div>
+        <div class="card"><div class="card-title"><div><h2>Что делать сегодня</h2><p>Сигналы для масштабирования, ремонта или отключения</p></div></div><div id="actionsList" class="mini-list"></div></div>
+      </div>
+      <h2 class="divider-title">Сводная таблица PNL</h2>
+      <div class="table-wrap"><table id="pnlTable"></table></div>
+    </section>
 
-<!-- PNL -->
-<div id="tab-pnl" class="tab-panel">
-<div class="alert s"><span class="alert-ico">💡</span><div class="alert-txt"><strong>Арбитражная модель: EPC вместо CPA</strong>EPC = Выручка ÷ Клики на оффер. Ноябрь 2026: EPC превышает CPC — поток прибыльный. Повторный трафик растёт органически, CAC = 0.</div></div>
-<div class="sec"><h2 class="sec-ttl">ФОТ — постоянные расходы</h2>
-<div class="tw"><table class="dt">
-<thead><tr><th>Позиция</th><th>Май26</th><th>Июн26</th><th>Июл26</th><th>Авг26</th><th>Сен26</th><th>Окт26</th><th>Нояб26</th><th>Дек26</th><th>Янв27</th><th>Фев27</th><th>Мар27</th><th>Апр27</th><th>Май27</th><th>Июн27</th><th>Июл27</th><th>ИТОГО</th></tr></thead>
-<tbody>
-<tr><td>ЗП Молодцов</td><td>80к</td><td>80к</td><td>80к</td><td>80к</td><td>80к</td><td>80к</td><td>80к</td><td>80к</td><td>80к</td><td>80к</td><td>80к</td><td>80к</td><td>80к</td><td>80к</td><td>80к</td><td class="hl">1 600к</td></tr>
-<tr><td>ЗП Хасминский</td><td>15к</td><td>15к</td><td>15к</td><td>15к</td><td>15к</td><td>15к</td><td>15к</td><td>15к</td><td>15к</td><td>15к</td><td>15к</td><td>15к</td><td>15к</td><td>15к</td><td>15к</td><td class="hl">300к</td></tr>
-<tr><td>SEO спец. 1</td><td>50к</td><td>50к</td><td>50к</td><td>50к</td><td>50к</td><td>50к</td><td>50к</td><td>50к</td><td>50к</td><td>50к</td><td>50к</td><td>50к</td><td>50к</td><td>50к</td><td>50к</td><td class="hl">1 000к</td></tr>
-<tr><td>SEO спец. 2</td><td>—</td><td>50к</td><td>50к</td><td>50к</td><td>50к</td><td>50к</td><td>50к</td><td>50к</td><td>50к</td><td>50к</td><td>50к</td><td>50к</td><td>50к</td><td>50к</td><td>50к</td><td class="hl">950к</td></tr>
-<tr><td>SEO спец. 3</td><td>—</td><td>50к</td><td>50к</td><td>50к</td><td>50к</td><td>50к</td><td>50к</td><td>50к</td><td>50к</td><td>50к</td><td>50к</td><td>50к</td><td>50к</td><td>50к</td><td>50к</td><td class="hl">950к</td></tr>
-<tr><td>Копирайтер</td><td>30к</td><td>30к</td><td>30к</td><td>30к</td><td>30к</td><td>50к</td><td>50к</td><td>50к</td><td>50к</td><td>50к</td><td>50к</td><td>50к</td><td>50к</td><td>50к</td><td>50к</td><td class="hl">900к</td></tr>
-<tr><td>Директолог</td><td>—</td><td>50к</td><td>50к</td><td>50к</td><td>50к</td><td>50к</td><td>50к</td><td>50к</td><td>50к</td><td>50к</td><td>50к</td><td>50к</td><td>50к</td><td>50к</td><td>50к</td><td class="hl">950к</td></tr>
-<tr class="tot"><td>ИТОГО ФОТ</td><td>175к</td><td>325к</td><td>325к</td><td>325к</td><td>325к</td><td>345к</td><td>345к</td><td>345к</td><td>345к</td><td>345к</td><td>345к</td><td>345к</td><td>345к</td><td>345к</td><td>345к</td><td class="hl">6 650к</td></tr>
-</tbody></table></div></div>
-<div class="sec"><h2 class="sec-ttl">Маркетинговые бюджеты</h2>
-<div class="tw"><table class="dt">
-<thead><tr><th>Канал</th><th>Май26</th><th>Июн26</th><th>Июл26</th><th>Авг26</th><th>Сен26</th><th>Окт26</th><th>Нояб26</th><th>Дек26</th><th>Янв27</th><th>Фев27</th><th>Мар27</th><th>Апр27</th><th>Май27</th><th>Июн27</th><th>Июл27</th><th>ИТОГО</th></tr></thead>
-<tbody>
-<tr><td>Яндекс.Директ</td><td>200к</td><td>200к</td><td>300к</td><td>300к</td><td>300к</td><td>400к</td><td>400к</td><td>500к</td><td>500к</td><td>600к</td><td>600к</td><td>750к</td><td>750к</td><td>750к</td><td>1 000к</td><td class="hl">12 550к</td></tr>
-<tr><td>Ссылки (SEO)</td><td>100к</td><td>150к</td><td>200к</td><td>200к</td><td>200к</td><td>250к</td><td>250к</td><td>300к</td><td>300к</td><td>300к</td><td>300к</td><td>300к</td><td>300к</td><td>400к</td><td>400к</td><td class="hl">5 950к</td></tr>
-<tr><td>Накрутка ПФ</td><td>200к</td><td>200к</td><td>250к</td><td>250к</td><td>250к</td><td>300к</td><td>300к</td><td>300к</td><td>350к</td><td>350к</td><td>350к</td><td>400к</td><td>400к</td><td>400к</td><td>500к</td><td class="hl">7 300к</td></tr>
-<tr><td>PR / Бренд</td><td>100к</td><td>100к</td><td>100к</td><td>150к</td><td>150к</td><td>150к</td><td>200к</td><td>200к</td><td>200к</td><td>200к</td><td>200к</td><td>250к</td><td>250к</td><td>250к</td><td>250к</td><td class="hl">4 000к</td></tr>
-<tr><td>Разработка</td><td>500к</td><td>500к</td><td>500к</td><td>—</td><td>—</td><td>—</td><td>—</td><td>200к</td><td>200к</td><td>200к</td><td>200к</td><td>200к</td><td>—</td><td>—</td><td>—</td><td class="hl">2 500к</td></tr>
-<tr class="tot"><td>ИТОГО</td><td>1 100к</td><td>1 150к</td><td>1 350к</td><td>900к</td><td>900к</td><td>1 100к</td><td>1 150к</td><td>1 500к</td><td>1 550к</td><td>1 650к</td><td>1 650к</td><td>1 900к</td><td>1 700к</td><td>1 800к</td><td>2 150к</td><td class="hl">32 300к</td></tr>
-</tbody></table></div></div>
-<div class="sec"><h2 class="sec-ttl">Итоговый PNL</h2>
-<div class="tw"><table class="dt">
-<thead><tr><th>Показатель</th><th>Май26</th><th>Июн26</th><th>Июл26</th><th>Авг26</th><th>Сен26</th><th>Окт26</th><th>Нояб26</th><th>Дек26</th><th>Янв27</th><th>Фев27</th><th>Мар27</th><th>Апр27</th><th>Май27</th><th>Июн27</th><th>Июл27</th><th>ИТОГО</th></tr></thead>
-<tbody>
-<tr><td>Выручка, ₽</td><td class="pos">127к</td><td class="pos">159к</td><td class="pos">221к</td><td class="pos">341к</td><td class="pos">532к</td><td class="pos">795к</td><td class="pos">1 070к</td><td class="pos">1 765к</td><td class="pos">1 877к</td><td class="pos">2 130к</td><td class="pos">2 445к</td><td class="pos">3 255к</td><td class="pos">3 909к</td><td class="pos">4 753к</td><td class="pos">5 833к</td><td class="hl">75 897к</td></tr>
-<tr><td>Расходы, ₽</td><td class="neg">1 275к</td><td class="neg">1 475к</td><td class="neg">1 675к</td><td class="neg">1 225к</td><td class="neg">1 225к</td><td class="neg">1 445к</td><td class="neg">1 495к</td><td class="neg">1 845к</td><td class="neg">1 895к</td><td class="neg">1 995к</td><td class="neg">1 995к</td><td class="neg">2 245к</td><td class="neg">2 045к</td><td class="neg">2 145к</td><td class="neg">2 495к</td><td class="neg">38 950к</td></tr>
-<tr class="tot"><td>Прибыль, ₽</td><td class="pn">-1 148к</td><td class="pn">-1 316к</td><td class="pn">-1 454к</td><td class="pn">-884к</td><td class="pn">-693к</td><td class="pn">-650к</td><td class="pn">-425к</td><td class="pn">-80к</td><td class="pn">-18к</td><td class="pp">+135к</td><td class="pp">+450к</td><td class="pp">+1 010к</td><td class="pp">+1 864к</td><td class="pp">+2 608к</td><td class="pp">+3 338к</td><td class="pp">+36 947к</td></tr>
-</tbody></table></div></div>
-<div class="sec"><h2 class="sec-ttl">Нарастающая прибыль / убыток</h2>
-<div class="cc full"><div class="cc-ttl">Накопительный P&L — ноябрь 2026 выход в ноль</div><canvas id="chartCumulative" height="80"></canvas></div></div>
-</div>
+    <section id="tab-traffic" class="panel">
+      <div class="grid kpis" id="trafficKpis"></div>
+      <div class="grid two">
+        <div class="card"><div class="card-title"><div><h2>Трафик по каналам</h2><p>Уникальные визиты по месяцам</p></div></div><canvas id="chartTraffic" height="150"></canvas></div>
+        <div class="card"><div class="card-title"><div><h2>EPC</h2><p>Выручка на клик по офферу</p></div></div><canvas id="chartEpc" height="150"></canvas></div>
+      </div>
+      <h2 class="divider-title">Acquisition dashboard</h2>
+      <div class="table-wrap"><table id="acquisitionTable"></table></div>
+    </section>
 
-<!-- TRAFFIC -->
-<div id="tab-traffic" class="tab-panel">
-<div class="ir">
-  <div class="ic"><div class="dot" style="background:var(--blue)"></div>Яндекс.Директ</div>
-  <div class="ic"><div class="dot" style="background:var(--green)"></div>SEO органика</div>
-  <div class="ic"><div class="dot" style="background:var(--purple)"></div>PR мероприятия</div>
-  <div class="ic"><div class="dot" style="background:var(--prime)"></div>Повторный трафик</div>
-</div>
-<div class="sec"><h2 class="sec-ttl">Объём трафика по каналам</h2>
-<div class="cc full"><div class="cc-ttl">Уникальные визиты по месяцам (стек-бар)</div><canvas id="chartTrafficStack" height="90"></canvas></div></div>
-<div class="sec"><h2 class="sec-ttl">EPC — доходность на клик (Выручка ÷ Клики на оффер)</h2>
-<div class="cc full"><div class="cc-ttl">EPC (₽/клик) — красный = убыток, зелёный = прибыль. Рост 46 → 119 ₽</div><canvas id="chartEPC" height="80"></canvas></div></div>
-<div class="sec"><h2 class="sec-ttl">Детализация воронки по месяцам</h2>
-<div class="tw"><table class="dt">
-<thead><tr><th>Показатель</th><th>Май26</th><th>Июн26</th><th>Июл26</th><th>Авг26</th><th>Сен26</th><th>Окт26</th><th>Нояб26</th><th>Дек26</th><th>Янв27</th><th>Фев27</th><th>Мар27</th><th>Июл27</th><th>ИТОГО</th></tr></thead>
-<tbody>
-<tr class="cat-hd"><td colspan="14">ОБЪЁМЫ ТРАФИКА</td></tr>
-<tr><td>Всего визитов</td><td>11 571</td><td>12 146</td><td>17 233</td><td>19 388</td><td>23 283</td><td>30 897</td><td>36 477</td><td>48 559</td><td>51 241</td><td>58 539</td><td>66 470</td><td>156 532</td><td class="hl">2 030 952</td></tr>
-<tr><td>Повторный</td><td>197</td><td>243</td><td>379</td><td>485</td><td>652</td><td>927</td><td>1 204</td><td>1 700</td><td>1 793</td><td>2 342</td><td>2 991</td><td>11 740</td><td class="hl">165 382</td></tr>
-<tr><td>Клики на офферы</td><td>2 745</td><td>3 121</td><td>4 472</td><td>5 365</td><td>6 875</td><td>9 134</td><td>11 128</td><td>15 407</td><td>16 360</td><td>18 583</td><td>21 387</td><td>51 742</td><td class="hl">670 311</td></tr>
-<tr><td>CR в оффер</td><td>23.7%</td><td>25.7%</td><td>25.9%</td><td>27.7%</td><td>29.5%</td><td>29.6%</td><td>30.5%</td><td>31.7%</td><td>31.9%</td><td>31.7%</td><td>32.2%</td><td>33.1%</td><td class="hl">33%</td></tr>
-<tr><td>Апрувы</td><td>133</td><td>159</td><td>218</td><td>317</td><td>483</td><td>676</td><td>892</td><td>1 348</td><td>1 450</td><td>1 628</td><td>1 926</td><td>4 914</td><td class="hl">65 105</td></tr>
-<tr class="cat-hd"><td colspan="14">ROI ПО КАНАЛАМ</td></tr>
-<tr><td>ROI Яндекс.Директ</td><td class="neg">-821%</td><td class="neg">-519%</td><td class="neg">-376%</td><td class="neg">-213%</td><td class="neg">-133%</td><td class="neg">-62%</td><td class="neg">-43%</td><td class="pos">+23%</td><td class="pos">+23%</td><td class="pos">+23%</td><td class="pos">+23%</td><td class="pos">+23%</td><td class="hl">+13%</td></tr>
-<tr><td>ROI SEO</td><td class="neg">-184%</td><td class="neg">-176%</td><td class="neg">-196%</td><td class="neg">-97%</td><td class="neg">-23%</td><td class="neg">-16%</td><td class="pos">+17%</td><td class="pos">+36%</td><td class="pos">+36%</td><td class="pos">+42%</td><td class="pos">+54%</td><td class="pos">+77%</td><td class="hl">+75%</td></tr>
-<tr><td>ROI PR</td><td>—</td><td>—</td><td class="neg">-4662%</td><td class="neg">-1664%</td><td class="neg">-684%</td><td class="neg">-439%</td><td class="neg">-217%</td><td class="neg">-164%</td><td class="pos">+4%</td><td class="pos">+13%</td><td class="pos">+24%</td><td class="pos">+54%</td><td class="hl">+28%</td></tr>
-</tbody></table></div></div>
-</div>
+    <section id="tab-funnels" class="panel">
+      <div class="card"><div class="card-title"><div><h2>Regular, AI и SOS flow</h2><p>Сравнение ключевых продуктовых воронок</p></div></div><div id="flowComparison" class="grid three"></div></div>
+      <h2 class="divider-title">Основная воронка</h2>
+      <div class="flow" id="mainFunnel"></div>
+      <h2 class="divider-title">Помесячная детализация</h2>
+      <div class="table-wrap"><table id="funnelTable"></table></div>
+    </section>
 
-<!-- MEDIAPLAN -->
-<div id="tab-mediaplan" class="tab-panel">
-<div class="alert w"><span class="alert-ico">🎯</span><div class="alert-txt"><strong>Стратегия: "Ассиметричный медиамикс" — SEO как фундамент</strong>Сравни.ру: ~20 млн ₽/мес на Директ. Наш ответ — качество контента, накрутка ПФ, ссылочная масса. SEO = 70% трафика + 71% выручки при ROI +75%.</div></div>
-<div class="mc">
-  <div class="mhd"><div class="mttl">🔍 SEO / Органический поиск</div><span class="tag seo">ПРИОРИТЕТ №1</span></div>
-  <div class="cg">
-    <div class="cm">
-      <div class="cmr"><span class="l">Бюджет на ссылки</span><span class="v" style="color:var(--green)">5 950 000 ₽</span></div>
-      <div class="cmr"><span class="l">Накрутка ПФ</span><span class="v" style="color:var(--green)">7 300 000 ₽</span></div>
-      <div class="cmr"><span class="l">Трафик SEO итого</span><span class="v">1 424 867 визитов</span></div>
-      <div class="cmr"><span class="l">Выручка SEO</span><span class="v" style="color:var(--green)">53 920 910 ₽</span></div>
-      <div class="cmr"><span class="l">ROI SEO</span><span class="v" style="color:var(--green)">+75%</span></div>
-      <div class="cmr"><span class="l">Рост трафика</span><span class="v">2 875 → 248 452 vis/мес</span></div>
-    </div>
-    <ul style="list-style:none;display:flex;flex-direction:column;gap:var(--space-2)">
-      <li style="font-size:var(--text-sm);color:var(--muted)">📄 500+ страниц под Long-Tail займы, МФО, кредиты</li>
-      <li style="font-size:var(--text-sm);color:var(--muted)">🤖 AEO/GEO оптимизация под нейроответы Яндекс</li>
-      <li style="font-size:var(--text-sm);color:var(--muted)">🔗 Golden Donors: лучшие доноры по кластерам</li>
-      <li style="font-size:var(--text-sm);color:var(--muted)">📊 Накрутка ПФ для роста CTR в выдаче</li>
-      <li style="font-size:var(--text-sm);color:var(--muted)">E-E-A-T: экспертные авторы, верифицированные данные</li>
-    </ul>
-  </div>
-</div>
-<div class="mc">
-  <div class="mhd"><div class="mttl">📣 Яндекс.Директ</div><span class="tag ppc">БЫСТРЫЙ СТАРТ</span></div>
-  <div class="cg">
-    <div class="cm">
-      <div class="cmr"><span class="l">Бюджет итого</span><span class="v" style="color:var(--blue)">12 550 000 ₽</span></div>
-      <div class="cmr"><span class="l">Рост бюджета</span><span class="v">200к → 1 000к/мес</span></div>
-      <div class="cmr"><span class="l">CPC</span><span class="v">23 ₽/клик</span></div>
-      <div class="cmr"><span class="l">Трафик итого</span><span class="v">545 652 визитов</span></div>
-      <div class="cmr"><span class="l">Break-even Директ</span><span class="v" style="color:var(--blue)">Декабрь 2026</span></div>
-      <div class="cmr"><span class="l">ROI итог</span><span class="v" style="color:var(--blue)">+22.5%</span></div>
-    </div>
-    <ul style="list-style:none;display:flex;flex-direction:column;gap:var(--space-2)">
-      <li style="font-size:var(--text-sm);color:var(--muted)">🎯 Кластеры: займ без отказа, МФО онлайн, деньги срочно</li>
-      <li style="font-size:var(--text-sm);color:var(--muted)">💡 CR в оффер: 20% → 27% (оптимизация лендингов)</li>
-      <li style="font-size:var(--text-sm);color:var(--muted)">📈 Масштаб: 200к → 1 млн по мере роста LTV</li>
-      <li style="font-size:var(--text-sm);color:var(--muted)">🔁 Ремаркетинг на отказников</li>
-    </ul>
-  </div>
-</div>
-<div class="mc">
-  <div class="mhd"><div class="mttl">📰 PR & Бренд</div><span class="tag pr">ДОВЕРИЕ</span></div>
-  <div class="cg">
-    <div class="cm">
-      <div class="cmr"><span class="l">Бюджет итого</span><span class="v" style="color:var(--purple)">4 000 000 ₽</span></div>
-      <div class="cmr"><span class="l">CR в оффер (PR)</span><span class="v">45% — максимальный</span></div>
-      <div class="cmr"><span class="l">Трафик PR итого</span><span class="v">60 433 визитов</span></div>
-      <div class="cmr"><span class="l">Выручка PR</span><span class="v" style="color:var(--purple)">7 614 499 ₽</span></div>
-      <div class="cmr"><span class="l">Break-even</span><span class="v">Январь 2027</span></div>
-    </div>
-    <ul style="list-style:none;display:flex;flex-direction:column;gap:var(--space-2)">
-      <li style="font-size:var(--text-sm);color:var(--muted)">📰 Miralinks, vc.ru, финансовые СМИ</li>
-      <li style="font-size:var(--text-sm);color:var(--muted)">🏆 Рейтинги МФО/банков — GEO в ИИ-ответах Яндекс</li>
-      <li style="font-size:var(--text-sm);color:var(--muted)">💬 Репутация: отзывы Яндекс.Карты, Отзовик, Google</li>
-      <li style="font-size:var(--text-sm);color:var(--muted)">👤 E-E-A-T: экспертные публикации с авторами</li>
-    </ul>
-  </div>
-</div>
-<div class="mc">
-  <div class="mhd"><div class="mttl">🔄 Повторный трафик (Retention)</div><span class="tag ret">БЕСПЛАТНЫЙ</span></div>
-  <div class="cg">
-    <div class="cm">
-      <div class="cmr"><span class="l">Итого повторный трафик</span><span class="v" style="color:var(--prime)">165 382 визитов</span></div>
-      <div class="cmr"><span class="l">Май 2026 → Дек 2027</span><span class="v">197 → 36 218 vis/мес</span></div>
-      <div class="cmr"><span class="l">Рост за период</span><span class="v" style="color:var(--green)">×184</span></div>
-      <div class="cmr"><span class="l">CAC</span><span class="v" style="color:var(--green)">0 ₽</span></div>
-    </div>
-    <ul style="list-style:none;display:flex;flex-direction:column;gap:var(--space-2)">
-      <li style="font-size:var(--text-sm);color:var(--muted)">📧 Триггерные Email/SMS (платёж, рефинансирование)</li>
-      <li style="font-size:var(--text-sm);color:var(--muted)">🤖 AI-персонализация следующего продукта</li>
-      <li style="font-size:var(--text-sm);color:var(--muted)">🏦 Центр финансового здоровья в ЛК</li>
-      <li style="font-size:var(--text-sm);color:var(--muted)">🏢 CRM-интеграция с базой Центрофинанс</li>
-    </ul>
-  </div>
-</div>
-<div class="sec"><h2 class="sec-ttl">Помесячный маркетинговый бюджет</h2>
-<div class="cc full"><div class="cc-ttl">Расходы по каналам (тыс. ₽) — стек-бар</div><canvas id="chartBudgetStack" height="90"></canvas></div></div>
-</div>
+    <section id="tab-jtbd" class="panel">
+      <div class="grid three" id="scenarioGrid"></div>
+      <h2 class="divider-title">Heatmap вопросов и downstream approval</h2>
+      <div class="table-wrap"><table id="jtbdTable"></table></div>
+    </section>
 
-<!-- CHANNELS -->
-<div id="tab-channels" class="tab-panel">
-<div class="sec"><h2 class="sec-ttl">Все каналы привлечения трафика</h2>
-<div class="chg">
-  <div class="chc">
-    <div style="font-size:2rem;margin-bottom:var(--space-3)">🔍</div>
-    <div class="chnm">SEO / Органика</div>
-    <div class="chds">Долгосрочный актив. Long-tail семантика. 500+ целевых страниц. CR = 35%.</div>
-    <div class="pb"><div class="pf" style="width:71%;background:var(--green)"></div></div>
-    <div class="cm" style="margin-top:var(--space-3)">
-      <div class="cmr"><span class="l">Доля трафика</span><span class="v" style="color:var(--green)">70.2%</span></div>
-      <div class="cmr"><span class="l">Доля выручки</span><span class="v" style="color:var(--green)">71.1%</span></div>
-      <div class="cmr"><span class="l">CR в оффер</span><span class="v">35%</span></div>
-      <div class="cmr"><span class="l">ROI</span><span class="v" style="color:var(--green)">+75%</span></div>
-    </div>
-  </div>
-  <div class="chc">
-    <div style="font-size:2rem;margin-bottom:var(--space-3)">📣</div>
-    <div class="chnm">Яндекс.Директ</div>
-    <div class="chds">Мгновенный трафик с первого дня. CPC = 23 ₽. Break-even декабрь 2026.</div>
-    <div class="pb"><div class="pf" style="width:27%;background:var(--blue)"></div></div>
-    <div class="cm" style="margin-top:var(--space-3)">
-      <div class="cmr"><span class="l">Доля трафика</span><span class="v" style="color:var(--blue)">26.9%</span></div>
-      <div class="cmr"><span class="l">Доля выручки</span><span class="v" style="color:var(--blue)">18.9%</span></div>
-      <div class="cmr"><span class="l">Break-even</span><span class="v">Декабрь 2026</span></div>
-      <div class="cmr"><span class="l">ROI итог</span><span class="v" style="color:var(--blue)">+22.5%</span></div>
-    </div>
-  </div>
-  <div class="chc">
-    <div style="font-size:2rem;margin-bottom:var(--space-3)">📰</div>
-    <div class="chnm">PR & СМИ</div>
-    <div class="chds">Горячий трафик с CR = 45%. Рейтинги, GEO-контент, E-E-A-T.</div>
-    <div class="pb"><div class="pf" style="width:3%;background:var(--purple)"></div></div>
-    <div class="cm" style="margin-top:var(--space-3)">
-      <div class="cmr"><span class="l">Доля трафика</span><span class="v" style="color:var(--purple)">3.0%</span></div>
-      <div class="cmr"><span class="l">CR в оффер</span><span class="v">45% (наивысший)</span></div>
-      <div class="cmr"><span class="l">Break-even</span><span class="v">Январь 2027</span></div>
-      <div class="cmr"><span class="l">ROI итог</span><span class="v" style="color:var(--purple)">+28%</span></div>
-    </div>
-  </div>
-  <div class="chc">
-    <div style="font-size:2rem;margin-bottom:var(--space-3)">🔄</div>
-    <div class="chnm">Повторный трафик</div>
-    <div class="chds">Бесплатный. К дек 2027 — 36 218 визитов/мес. Рост ×184.</div>
-    <div class="pb"><div class="pf" style="width:8%;background:var(--prime)"></div></div>
-    <div class="cm" style="margin-top:var(--space-3)">
-      <div class="cmr"><span class="l">Доля трафика</span><span class="v" style="color:var(--prime)">8.1%</span></div>
-      <div class="cmr"><span class="l">CAC</span><span class="v" style="color:var(--green)">0 ₽</span></div>
-      <div class="cmr"><span class="l">Рост за период</span><span class="v">×184</span></div>
-      <div class="cmr"><span class="l">Источник</span><span class="v">Email, Push, AI</span></div>
-    </div>
-  </div>
-  <div class="chc">
-    <div style="font-size:2rem;margin-bottom:var(--space-3)">🏢</div>
-    <div class="chnm">База Центрофинанс</div>
-    <div class="chds">Уникальный актив: тёплые лиды, готовый скоринг, CAC ≈ 0 с первого дня.</div>
-    <div class="pb"><div class="pf" style="width:100%;background:var(--acc)"></div></div>
-    <div class="cm" style="margin-top:var(--space-3)">
-      <div class="cmr"><span class="l">CAC</span><span class="v" style="color:var(--green)">~0 ₽</span></div>
-      <div class="cmr"><span class="l">Качество лидов</span><span class="v" style="color:var(--green)">Наивысшее</span></div>
-      <div class="cmr"><span class="l">Скоринг</span><span class="v">Готовый</span></div>
-      <div class="cmr"><span class="l">Доступность</span><span class="v">С фазы 0</span></div>
-    </div>
-  </div>
-  <div class="chc">
-    <div style="font-size:2rem;margin-bottom:var(--space-3)">📱</div>
-    <div class="chnm">SMM & Telegram</div>
-    <div class="chds">Образовательный контент, бренд-трафик, снижение CAC. Цель: бренд-запросы ×30.</div>
-    <div class="pb"><div class="pf" style="width:30%;background:var(--muted)"></div></div>
-    <div class="cm" style="margin-top:var(--space-3)">
-      <div class="cmr"><span class="l">Цель</span><span class="v">Бренд-запросы ×30</span></div>
-      <div class="cmr"><span class="l">Частота</span><span class="v">3–5 постов/нед</span></div>
-      <div class="cmr"><span class="l">Платформы</span><span class="v">VK, TG, Дзен</span></div>
-      <div class="cmr"><span class="l">ERpost цель</span><span class="v">&gt;0.8%</span></div>
-    </div>
-  </div>
-</div></div>
-</div>
+    <section id="tab-ai" class="panel">
+      <div class="grid kpis" id="aiKpis"></div>
+      <div class="grid two">
+        <div class="card"><div class="card-title"><div><h2>AI recommendation quality</h2><p>Predicted vs factual outcome</p></div></div><div class="table-wrap"><table id="aiTable"></table></div></div>
+        <div class="card"><div class="card-title"><div><h2>SOS dashboard mode</h2><p>Ограниченная подача в 2–3 партнёра</p></div></div><div class="table-wrap"><table id="sosTable"></table></div></div>
+      </div>
+    </section>
 
-<!-- COMPETITORS -->
-<div id="tab-competitors" class="tab-panel">
-<div class="alert w"><span class="alert-ico">⚡</span><div class="alert-txt"><strong>Бюджеты конкурентов превышают наш в 100+ раз — но у них системный конфликт интересов</strong>Банки.ру: 30+ млн визитов/мес, 20 млн регистраций, выручка 2,76 млрд ₽ (firmalyze 2026). ВБР.ру: 5,4 млн визитов. Наше преимущество: честный AI-подбор (без веерной рассылки), кнопка SOS, база Центрофинанс.</div></div>
-<div class="sec"><h2 class="sec-ttl">Сравнение с конкурентами</h2>
-<div class="comp-row hd"><div>Платформа</div><div>Директ/мес</div><div>Накрутка ПФ</div><div>Ссылки/мес</div><div>Страниц</div><div>Возраст</div></div>
-<div class="comp-row dat"><div class="cnm">Сравни.ру</div><div class="cv" style="color:var(--red)">~20 млн ₽</div><div class="cv">2+ млн ₽</div><div class="cv">1+ млн ₽</div><div class="cv">753 387</div><div class="cv">24 г.</div></div>
-<div class="comp-row dat"><div class="cnm">Банки.ру</div><div class="cv" style="color:var(--red)">8–10 млн ₽</div><div class="cv">1.5–2 млн ₽</div><div class="cv">1+ млн ₽</div><div class="cv">281 200</div><div class="cv">26 г.</div></div>
-<!-- banki.ru: трафик 30.3 млн/мес (SimilarWeb янв 2026), выручка 2 763 млн руб, 20+ млн регистраций, 2.4 млн заявок/мес -->
-<div class="comp-row dat"><div class="cnm">ВБР.ру</div><div class="cv" style="color:var(--acc)">2–3 млн ₽</div><div class="cv">1+ млн ₽</div><div class="cv">500 тыс.</div><div class="cv">73 827</div><div class="cv">16 г.</div></div>
-<!-- vbr.ru: трафик 5.4 млн/мес (SimilarWeb июн 2025), аудитория 5+ млн пользователей -->
-<div class="comp-row dat"><div class="cnm">Bankiros.ru</div><div class="cv">1 млн ₽</div><div class="cv">1 млн ₽</div><div class="cv">200–300 тыс.</div><div class="cv">34 726</div><div class="cv">11 г.</div></div>
-<div class="comp-row dat us"><div class="cnm" style="color:var(--prime)">⭐ Выручай.ру</div><div class="cv" style="color:var(--prime)">200к→1 млн</div><div class="cv" style="color:var(--prime)">200к→500к</div><div class="cv" style="color:var(--prime)">100к→400к</div><div class="cv" style="color:var(--prime)">355→5000+</div><div class="cv" style="color:var(--prime)">2 г.</div></div>
-</div>
-<div class="sec"><h2 class="sec-ttl">Наши конкурентные преимущества</h2>
-<div class="chg">
-  <div class="chc"><div style="font-size:1.5rem;margin-bottom:var(--space-3)">🎯</div><div class="chnm">Сценарный подбор JTBD</div><div class="chds">У Банки.ру, Сравни — только каталог по фильтрам.</div><p style="font-size:var(--text-sm);color:var(--prime);font-weight:600">Квиз: «До ЗП», «Долги», «Хочу машину». AI: 3 варианта с % одобрения.</p></div>
-  <div class="chc"><div style="font-size:1.5rem;margin-bottom:var(--space-3)">🛡️</div><div class="chnm">Кнопка SOS</div><div class="chds">Конкуренты: веерная рассылка убивает КИ клиента.</div><p style="font-size:var(--text-sm);color:var(--prime);font-weight:600">Прескоринг → подача только в 2–3 банка с 99% вероятностью одобрения.</p></div>
-  <div class="chc"><div style="font-size:1.5rem;margin-bottom:var(--space-3)">🏦</div><div class="chnm">Центрофинанс-синергия</div><div class="chds">Уникальная тёплая база. CAC ≈ 0 с первого дня.</div><p style="font-size:var(--text-sm);color:var(--prime);font-weight:600">Ready-made скоринг, LTV ×2–3 через кросс-продажи.</p></div>
-  <div class="chc"><div style="font-size:1.5rem;margin-bottom:var(--space-3)">📊</div><div class="chnm">Индекс Выручай</div><div class="chds">Конкуренты ранжируют по оплате, не по выгоде клиента.</div><p style="font-size:var(--text-sm);color:var(--prime);font-weight:600">Пессимизация токсичных продуктов + публичный индекс доверия.</p></div>
-</div></div>
-<div class="sec"><h2 class="sec-ttl">KPI через 6 и 12 месяцев</h2>
-<div class="tw"><table class="dt">
-<thead><tr><th>Метрика</th><th>Сейчас</th><th>6 мес (нояб 26)</th><th>12 мес (май 27)</th></tr></thead>
-<tbody>
-<tr><td>Визитов/мес</td><td>~5 000</td><td class="pos">15 000</td><td class="pos">40 000+</td></tr>
-<tr><td>Бренд-запросов/мес</td><td>50–100</td><td class="pos">300–400</td><td class="pos">1 500–2 000</td></tr>
-<tr><td>CR в заявку</td><td>2–3%</td><td class="pos">6%</td><td class="pos">9%</td></tr>
-<tr><td>Approval rate (SOS)</td><td>—</td><td class="pos">85%</td><td class="pos">92%</td></tr>
-<tr><td>LTV / CAC</td><td>—</td><td class="pos">2.5x</td><td class="pos">4x</td></tr>
-<tr><td>Repeat rate</td><td>0%</td><td class="pos">3%</td><td class="pos">5%</td></tr>
-<tr><td>Прибыль (мес)</td><td class="neg">-1 148к ₽</td><td class="neg">-35к ₽</td><td class="pos">+1 864к ₽</td></tr>
-</tbody></table></div></div>
-</div>
+    <section id="tab-partners" class="panel">
+      <div class="grid three" id="partnerCards"></div>
+      <h2 class="divider-title">Каталог партнёров и офферов</h2>
+      <div class="table-wrap"><table id="partnerTable"></table></div>
+    </section>
 
-<!-- ROADMAP -->
-<div id="tab-roadmap" class="tab-panel">
-<div class="sec"><h2 class="sec-ttl">Дорожная карта 18 месяцев</h2>
-<div class="rm">
-  <div class="ri"><div class="rd o">0</div><div class="rb"><div class="rph">Май 2026 · Недели 1–4</div><div class="rttl">🔧 Фаза 0: Ремонт и аналитика</div><div class="rds">Фикс CPA-воронки, сквозная аналитика, подключение 3–5 МФО по Direct API. Первые отзывы. Цель: остановить утечку лидов.</div></div></div>
-  <div class="ri"><div class="rd b">1</div><div class="rb"><div class="rph">Июнь–Август 2026 · Мес. 1–3</div><div class="rttl">⚔️ Фаза 1: Wedge в займах</div><div class="rds">Запуск квизов JTBD, 100+ страниц Long-tail SEO, Email/SMS цепочки, прескоринг, команда +5 человек. Цель: доказать юнит-экономику.</div></div></div>
-  <div class="ri"><div class="rd g">2</div><div class="rb"><div class="rph">Сентябрь–Ноябрь 2026 · Мес. 4–6</div><div class="rttl">📦 Фаза 2: Мультипродукт</div><div class="rds">Кредиты, карты, ОСАГО, вклады. Межкатегорийные сценарии. Break-even — ноябрь 2026. Цель: LTV ×2, органика ×3.</div></div></div>
-  <div class="ri"><div class="rd p">3</div><div class="rb"><div class="rph">Декабрь 2026 – Май 2027 · Мес. 7–12</div><div class="rttl">🛡️ Фаза 3: Trust Layer</div><div class="rds">Верифицированные отзывы, AI-консультант 24/7, алерты ставок, контент-хаб. Прибыль 3+ млн/мес. NPS &gt; 60.</div></div></div>
-  <div class="ri"><div class="rd gr">4</div><div class="rb"><div class="rph">Июнь–Октябрь 2027 · Мес. 13–18</div><div class="rttl">🌐 Фаза 4: Экосистема</div><div class="rds">ЛК «Финансового здоровья», CRM с Центрофинанс, 8 категорий. Прибыль к дек 2027: 9,78 млн ₽/мес. Repeat-выручка &gt; 40%.</div></div></div>
-</div></div>
-<div class="sec"><h2 class="sec-ttl">Нарастающая прибыль (роадмап)</h2>
-<div class="cc full"><div class="cc-ttl">Накопительный P&L — выход в ноль ноябрь 2026</div><canvas id="chartCumulative2" height="80"></canvas></div></div>
-<div class="sec"><h2 class="sec-ttl">MVP Спринты (первые 90 дней)</h2>
-<div class="tw"><table class="dt">
-<thead><tr><th>Спринт</th><th>Длит.</th><th>Поставки</th><th>Метрика</th></tr></thead>
-<tbody>
-<tr><td>S0 · Внедрение</td><td>4 нед.</td><td>Умный подбор, API-интеграции, воронка</td><td class="pos">CR в заявку +30%</td></tr>
-<tr><td>S1 · SEO & Marketing</td><td>12 нед.</td><td>100+ страниц, PR, трафик из Центрофинанс</td><td class="pos">CR +30% vs витрина</td></tr>
-<tr><td>S2 · AI-консультант</td><td>8 нед.</td><td>Бот 24/7 на сайте</td><td class="pos">NPS &gt; 50, решение &lt; 2 мин</td></tr>
-<tr><td>S3 · Retention</td><td>4 нед.</td><td>Антиотказные рекомендации</td><td class="pos">Repeat rate ≥ 2%</td></tr>
-<tr><td>S4 · Монетизация отказников</td><td>2 нед.</td><td>Юрист, кредитный доктор, карты</td><td class="pos">Repeat ≥ 2%</td></tr>
-</tbody></table></div></div>
-</div>
-</main>
-<footer>
-  <p>Выручай.ру · Медиаплан & PNL 2026–2027 · Финансовый Сэнсэй нового поколения</p>
-  <p style="margin-top:4px">На основе PNL от ген. директора + расчётов команды · Горизонт 18 мес · Данные встроены в документ</p>
-</footer>
+    <section id="tab-retention" class="panel">
+      <div class="grid kpis" id="retentionKpis"></div>
+      <div class="grid two">
+        <div class="card"><div class="card-title"><div><h2>Repeat и LTV cohorts</h2><p>Post-deal монетизация и возврат</p></div></div><canvas id="chartRetention" height="150"></canvas></div>
+        <div class="card"><div class="card-title"><div><h2>Retention events</h2><p>Цепочка после первой сделки</p></div></div><div class="table-wrap"><table id="retentionTable"></table></div></div>
+      </div>
+    </section>
+
+    <section id="tab-unit" class="panel">
+      <div class="grid kpis" id="unitKpis"></div>
+      <div class="grid two">
+        <div class="card"><div class="card-title"><div><h2>Marketing PnL</h2><p>Contribution, gross profit и payback</p></div></div><canvas id="chartUnit" height="150"></canvas></div>
+        <div class="card"><div class="card-title"><div><h2>Формулы</h2><p>Единый слой расчётов для direct API и CPA</p></div></div><div id="formulaList" class="mini-list"></div></div>
+      </div>
+      <h2 class="divider-title">Unit economics by channel</h2>
+      <div class="table-wrap"><table id="unitTable"></table></div>
+    </section>
+
+    <section id="tab-alerts" class="panel">
+      <div class="grid three" id="alertsGrid"></div>
+    </section>
+
+    <section id="tab-experiments" class="panel">
+      <div class="grid three" id="experimentsGrid"></div>
+      <h2 class="divider-title">Experiment registry</h2>
+      <div class="table-wrap"><table id="experimentsTable"></table></div>
+    </section>
+  </main>
+
+  <aside class="drawer" id="drawer"><button class="drawer-close" id="drawerClose">Закрыть</button><div id="drawerContent"></div></aside>
+  <footer class="footer">Выручай.ру · Операционный дашборд · Данные встроены из PNL Excel и расширены управленческими метриками для JTBD, AI/SOS, партнёров, retention и unit economics.</footer>
 </div>
 
 <script>
-// Tabs
-const tabs = document.querySelectorAll('.tab-btn');
-const panels = document.querySelectorAll('.tab-panel');
-tabs.forEach(btn => {
-  btn.addEventListener('click', () => {
-    tabs.forEach(t => t.classList.remove('active'));
-    panels.forEach(p => p.classList.remove('active'));
-    btn.classList.add('active');
-    document.getElementById('tab-' + btn.dataset.tab).classList.add('active');
-    setTimeout(() => initCharts(), 50);
-  });
-});
 
-// Theme
-const themeBtn = document.getElementById('themeToggle');
-const html = document.documentElement;
-let theme = 'dark';
-themeBtn.addEventListener('click', () => {
-  theme = theme === 'dark' ? 'light' : 'dark';
-  html.setAttribute('data-theme', theme);
-  themeBtn.innerHTML = theme === 'dark'
-    ? '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>'
-    : '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>';
-  Object.values(chartInstances).forEach(c => {
-    if (c) { c.options.scales && updateChartTheme(c); c.update(); }
-  });
-});
-
-function getCSSVar(v) { return getComputedStyle(document.documentElement).getPropertyValue(v).trim(); }
-function getChartColors() {
-  return {
-    txt: getCSSVar('--txt'), muted: getCSSVar('--muted'), brd: getCSSVar('--brd'),
-    sur: getCSSVar('--sur'), g: getCSSVar('--green'), r: getCSSVar('--red'),
-    b: getCSSVar('--blue'), o: getCSSVar('--prime'), p: getCSSVar('--purple'), acc: getCSSVar('--acc')
-  };
-}
-function updateChartTheme(chart) {
-  const c = getChartColors();
-  if (chart.options.scales) {
-    Object.values(chart.options.scales).forEach(s => {
-      if (s.ticks) s.ticks.color = c.muted;
-      if (s.grid) s.grid.color = c.brd + '55';
-    });
-  }
-  if (chart.options.plugins && chart.options.plugins.legend && chart.options.plugins.legend.labels) {
-    chart.options.plugins.legend.labels.color = c.muted;
-  }
+const MIN_CANVAS_WIDTH=320, DEFAULT_CANVAS_WIDTH=640, DEFAULT_CANVAS_HEIGHT=140;
+const CHART_LABEL_DENSITY=6, CHART_LABEL_MAX_LENGTH=6, CHART_LABEL_OFFSET=14;
+const HTML_ESCAPE_MAP={'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;',"'":'&#39;'};
+const ALLOWED_METRIC_CLASSES=new Set(['positive','negative','accent']);
+class Chart{
+ constructor(canvas,config){this.canvas=canvas;this.config=config;if(!canvas){console.warn('Chart canvas is missing');return}this.ctx=canvas.getContext('2d');this.draw()}
+ destroy(){if(this.ctx)this.ctx.clearRect(0,0,this.canvas.width,this.canvas.height)}
+ draw(){
+  if(!this.ctx||!this.canvas)return;
+  const ctx=this.ctx, cfg=this.config, dpr=window.devicePixelRatio||1;
+  const rect=this.canvas.getBoundingClientRect();
+  const width=Math.max(MIN_CANVAS_WIDTH,rect.width||this.canvas.parentElement.clientWidth||DEFAULT_CANVAS_WIDTH), height=Number(this.canvas.getAttribute('height')||DEFAULT_CANVAS_HEIGHT);
+  this.canvas.width=width*dpr;this.canvas.height=height*dpr;ctx.setTransform(dpr,0,0,dpr,0,0);ctx.clearRect(0,0,width,height);
+  const colors=chartColors(); const pad={l:42,r:12,t:12,b:28}; const plotW=width-pad.l-pad.r, plotH=height-pad.t-pad.b;
+  const datasets=cfg.data.datasets||[], labels=cfg.data.labels||[];
+  const values=datasets.flatMap(ds=>(ds.data||[]).map(Number)).filter(Number.isFinite);
+  const min=Math.min(0,...values), max=Math.max(1,...values); const scale=v=>pad.t+plotH-((v-min)/(max-min))*plotH;
+  ctx.strokeStyle=colors.line;ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(pad.l,pad.t);ctx.lineTo(pad.l,pad.t+plotH);ctx.lineTo(width-pad.r,pad.t+plotH);ctx.stroke();
+  ctx.fillStyle=colors.muted;ctx.font='11px -apple-system, BlinkMacSystemFont, sans-serif';
+  labels.forEach((label,i)=>{if(i%Math.ceil(labels.length/CHART_LABEL_DENSITY)!==0)return;const x=pad.l+(i/(Math.max(labels.length-1,1)))*plotW;ctx.fillText(String(label).slice(0,CHART_LABEL_MAX_LENGTH),x-CHART_LABEL_OFFSET,height-8)});
+  const barSets=datasets.filter(ds=>(ds.type||cfg.type)!=='line'), lineSets=datasets.filter(ds=>(ds.type||cfg.type)==='line');
+  const groupW=plotW/Math.max(labels.length,1), barW=Math.max(3,groupW/Math.max(barSets.length+1,2));
+  barSets.forEach((ds,di)=>{ctx.fillStyle=ds.backgroundColor||colors.blue;(ds.data||[]).forEach((v,i)=>{const x=pad.l+i*groupW+barW*di+barW*.5;const y=scale(Number(v));ctx.fillRect(x,y,barW,Math.max(1,pad.t+plotH-y))})});
+  lineSets.forEach(ds=>{ctx.strokeStyle=ds.borderColor||colors.blue;ctx.lineWidth=2;ctx.beginPath();(ds.data||[]).forEach((v,i)=>{const x=pad.l+(i/(Math.max(labels.length-1,1)))*plotW,y=scale(Number(v));i?ctx.lineTo(x,y):ctx.moveTo(x,y)});ctx.stroke()});
+ }
 }
 
-const months = ['Май26','Июн26','Июл26','Авг26','Сен26','Окт26','Нояб26','Дек26','Янв27','Фев27','Мар27','Апр27','Май27','Июн27','Июл27'];
-const revenue = [127, 159, 221, 341, 532, 795, 1070, 1765, 1877, 2130, 2445, 3255, 3909, 4753, 5833];
-const expenses = [1275, 1475, 1675, 1225, 1225, 1445, 1495, 1845, 1895, 1995, 1995, 2245, 2045, 2145, 2495];
-const profit = revenue.map((r, i) => r - expenses[i]);
-const cumProfit = [];
-profit.reduce((acc, v, i) => { cumProfit[i] = acc + v; return acc + v; }, 0);
-
-const trafficSEO = [2875,3275,5090,6160,7500,9350,12091,15720,17240,20060,22960,27120,32840,39960,48200];
-const trafficPPC = [7660,7310,10560,11540,13670,18730,21320,28510,29270,33080,37070,43580,52390,63390,96090];
-const trafficPR = [0,0,354,491,678,957,1302,1875,2097,2520,2900,3565,4360,5280,6360];
-const trafficRpt = [197,243,379,485,652,927,1204,1700,1793,2342,2991,4155,6610,9903,11740];
-const epc = [46.3,51.0,49.4,63.5,77.4,87.0,96.1,114.6,114.7,114.6,114.3,119.4,119.2,118.9,112.8];
-const budgetDir = [200,200,300,300,300,400,400,500,500,600,600,750,750,750,1000];
-const budgetLinks = [100,150,200,200,200,250,250,300,300,300,300,300,300,400,400];
-const budgetPF = [200,200,250,250,250,300,300,300,350,350,350,400,400,400,500];
-const budgetPR = [100,100,100,150,150,150,200,200,200,200,200,250,250,250,250];
-const budgetDev = [500,500,500,0,0,0,0,200,200,200,200,200,0,0,0];
-
-const chartInstances = {};
-let chartsInitialized = false;
-
-function makeScale(c) {
-  return {
-    x: { ticks: { color: c.muted, font: { size: 11 } }, grid: { color: c.brd + '55' } },
-    y: { ticks: { color: c.muted, font: { size: 11 } }, grid: { color: c.brd + '55' } }
-  };
+const months=['Май 2026','Июнь 2026','Июль 2026','Август 2026','Сентябрь 2026','Октябрь 2026','Ноябрь 2026','Декабрь 2026','Январь 2027','Февраль 2027','Март 2027','Апрель 2027','Май 2027','Июнь 2027','Июль 2027','Август 2027','Сентябрь 2027','Октябрь 2027','Ноябрь 2027','Декабрь 2027'];
+const revenue=[127360.5978,159117.9348,221445,341018.8043,532290.0652,795462.7891,1070183.369,1765383.335,1877356.452,2129657.314,2445466.57,3254744.138,3909008.9,4753230.091,5833006.543,6741346.983,7831355.51,9292788.909,10540212.54,12276711.91];
+const expenses=[1275000,1475000,1675000,1225000,1225000,1445000,1495000,1845000,1895000,1995000,1995000,2245000,2045000,2145000,2495000,2495000,2495000,2495000,2495000,2495000];
+const profit=[-1147639.402,-1315882.065,-1453555,-883981.1957,-692709.9348,-649537.2109,-424816.6307,-79616.66459,-17643.54844,134657.3141,450466.5695,1009744.138,1864008.9,2608230.091,3338006.543,4246346.983,5336355.51,6797788.909,8045212.537,9781711.91];
+const visits=[11570.65217,12145.65217,17233.47826,19388.47826,23283.22826,30897.37935,36476.59185,48558.70968,51240.66761,58538.64741,66469.74934,88726.41775,105310.8217,126820.3642,156532.2632,179143.0636,206276.0242,231007.8642,259511.9154,301819.5807];
+const repeat=[196.701087,242.9130435,379.1365217,484.7119565,651.9303913,926.9213804,1203.727531,1699.554839,1793.423366,2341.545897,2991.13872,4436.320887,6318.6493,8496.964404,11739.91974,15048.01734,18564.84218,23100.78642,28546.31069,36218.34968];
+const offerClicks=[2745.380435,3120.543478,4471.5,5364.684783,6875.157065,9133.879837,11127.85346,15406.68308,16360.39487,18583.39087,21386.54967,28696.46327,34551.18718,42139.74613,51741.60839,59742.10399,69342.6987,78123.71293,88249.97511,103147.5645];
+const applications=[578.2744565,671.3206522,935.025,1251.552717,1786.739755,2457.727508,3155.618277,4629.2956,4963.094725,5588.534632,6569.64021,8899.196926,10948.3503,13604.34593,16583.47598,19383.64944,22743.85759,25817.21257,29361.40433,34575.56063];
+const approvals=[132.7866848,159.1179348,218.295,316.548587,483.4146848,676.1645511,892.0285386,1347.89022,1450.396633,1627.718905,1926.346095,2612.430003,3235.079764,4041.362954,4914.200762,5767.910479,6792.36214,8175.127301,9328.149041,11008.00728];
+const epc=[46.3,51.0,49.4,63.5,77.4,87.0,96.1,114.6,114.7,114.6,114.3,113.4,113.1,112.8,112.7,112.8,112.9,119.0,119.4,119.0];
+const trafficSEO=[2875,3450,4140,6210,9936,12916.8,18083.52,25316.928,27848.6208,30633.48288,38291.8536,53608.59504,69691.17355,90598.52562,108718.2307,130461.8769,156554.2523,180037.3901,207042.9986,248451.5983];
+const trafficPPC=[8695.652174,8695.652174,13043.47826,13043.47826,13043.47826,17391.30435,17391.30435,21739.13043,21739.13043,26086.95652,26086.95652,32608.69565,32608.69565,32608.69565,43478.26087,43478.26087,43478.26087,43478.26087,43478.26087,43478.26087];
+const trafficPR=[0,0,50,135,303.75,589.275,1001.7675,1502.65125,1652.916375,1818.208013,2090.939214,2509.127057,3010.952469,3613.142962,4335.771555,5202.925866,6243.511039,7492.213247,8990.655896,9889.721486];
+const budgetDirect=[200000,200000,300000,300000,300000,400000,400000,500000,500000,600000,600000,750000,750000,750000,1000000,1000000,1000000,1000000,1000000,1000000];
+const budgetSEO=[300000,350000,450000,450000,450000,550000,550000,600000,650000,650000,650000,700000,700000,800000,900000,900000,900000,900000,900000,900000];
+const budgetPR=[200000,200000,300000,300000,300000,400000,400000,500000,200000,200000,200000,250000,250000,250000,250000,250000,250000,250000,250000,250000];
+const totals={revenue:75897147.75,expenses:38950000,profit:36947147.75,visits:2030951.549,repeat:165381.8654,clicks:670311.0778,applications:214503.8772,approvals:65105.33756,directRevenue:14361739.13,seoRevenue:53920909.98,prRevenue:7614498.645,directSpend:12550000,seoSpend:13250000,prSpend:5450000};
+// Share of approved applications expected to become funded deals.
+const ISSUED_TO_APPROVAL_RATE=0.76;
+// Lifetime value uplift from repeat usage and cross-sell monetization.
+const LTV_REPEAT_CROSS_SELL_FACTOR=1.34;
+const scenarios=[
+ {name:'Дотянуть до зарплаты',users:742000,completion:74,diag:83,match:69,approval:31,repeat:5.8,revenue:28400000,time:'2:18',best:'Наличие стабильной зарплаты'},
+ {name:'Есть долги',users:338000,completion:58,diag:91,match:51,approval:24,repeat:7.2,revenue:14600000,time:'3:42',best:'Долговая нагрузка ниже 50%'},
+ {name:'Хочу машину',users:126000,completion:62,diag:76,match:44,approval:19,repeat:3.4,revenue:7100000,time:'4:05',best:'Первоначальный взнос от 20%'},
+ {name:'Накопления',users:214000,completion:67,diag:71,match:39,approval:29,repeat:4.1,revenue:5300000,time:'2:55',best:'Горизонт от 6 месяцев'},
+ {name:'Страхование',users:188000,completion:64,diag:68,match:41,approval:27,repeat:6.6,revenue:3900000,time:'2:31',best:'Авто или действующий кредит'},
+ {name:'Перегруженный клиент',users:92000,completion:49,diag:94,match:37,approval:18,repeat:8.9,revenue:2600000,time:'5:10',best:'Подтверждённый доход'}
+];
+const partners=[
+ {id:'p-01',name:'Центрофинанс API',type:'direct API',status:'active',sla:'99.4%',response:'420 мс',approval:38,issue:29,revenue:18200000,epc:128,ecpa:940,complaints:0.8,reject:'PDN, просрочки',action:'scale'},
+ {id:'p-02',name:'МФО Север',type:'CPA',status:'active',sla:'97.1%',response:'1.2 с',approval:31,issue:22,revenue:11700000,epc:116,ecpa:810,complaints:1.7,reject:'Возраст, регион',action:'pin'},
+ {id:'p-03',name:'Банк Город',type:'direct API',status:'watch',sla:'93.0%',response:'2.8 с',approval:22,issue:15,revenue:9300000,epc:104,ecpa:1190,complaints:2.9,reject:'КИ, доход',action:'downgrade'},
+ {id:'p-04',name:'Карта Плюс',type:'CPA',status:'active',sla:'98.0%',response:'780 мс',approval:27,issue:18,revenue:6400000,epc:91,ecpa:670,complaints:1.1,reject:'Скоринг банка',action:'cross-sell'},
+ {id:'p-05',name:'Страховой партнёр',type:'CPA',status:'active',sla:'98.8%',response:'610 мс',approval:35,issue:25,revenue:3900000,epc:84,ecpa:430,complaints:0.6,reject:'Не подходит продукт',action:'pin'},
+ {id:'p-06',name:'МФО Риск',type:'manual',status:'risky',sla:'88.5%',response:'4.6 с',approval:16,issue:9,revenue:1700000,epc:42,ecpa:1510,complaints:5.4,reject:'Пустые ответы',action:'pause'}
+];
+const flows=[
+ {name:'Regular listing',users:100000,offers:5.8,approval:24,issued:17,revenue:92,time:'9 мин',note:'Широкий каталог, ниже точность'},
+ {name:'AI top-3',users:100000,offers:3,approval:32,issued:23,revenue:118,time:'4 мин',note:'Рост approval и revenue uplift'},
+ {name:'SOS',users:100000,offers:2.4,approval:38,issued:29,revenue:136,time:'2 мин',note:'Ограниченная подача, меньше риск для КИ'}
+];
+const aiRows=[
+ ['rec-2026-001','До зарплаты','Центрофинанс API, МФО Север, Карта Плюс','stable_income, fast_decision',0.74,'approved',18.6,41,96],
+ ['rec-2026-002','Есть долги','Банк Город, МФО Север, Центрофинанс API','low_pdn, refinance_fit',0.52,'rejected',9.4,24,91],
+ ['rec-2026-003','Перегруженный клиент','Центрофинанс API, МФО Риск','sos_eligible, limited_send',0.61,'approved',14.1,33,88],
+ ['rec-2026-004','Страхование','Страховой партнёр, Карта Плюс','cross_sell_fit, active_policy',0.68,'approved',12.8,35,94]
+];
+const sosRows=[['Доля входа в SOS','18.4%'],['Eligibility rate','61.0%'],['Среднее число отправок','2.4'],['Approval rate SOS','38.0%'],['Issued rate SOS','29.0%'],['Revenue per SOS user','136 ₽'],['Average time-to-decision','2 мин 10 сек'],['Fallback scenarios','Рефинансирование, кредитный доктор, карта']];
+const retentionEvents=[['first_deal','65 105','100%'],['reminder_sent_sms','54 420','83.6%'],['reminder_opened','27 910','51.3%'],['repeat_visit','165 382','254.0% к сделкам'],['second_application','18 940','29.1%'],['second_approval','6 790','10.4%'],['cross_sell_success','4 560','7.0%']];
+const experiments=[
+ {id:'exp-ai-top3',name:'AI top-3 vs listing',primary:'Approval rate',guardrail:'Complaint rate',segment:'JTBD займы',confidence:'96%',result:'+8 п.п. approval',status:'rollout'},
+ {id:'exp-sos-limit',name:'2 партнёра vs 3 партнёра SOS',primary:'Issued rate',guardrail:'Revenue user',segment:'PDN 50–80%',confidence:'91%',result:'3 партнёра лучше на 6%',status:'continue'},
+ {id:'exp-retention-sms',name:'SMS D+14 vs Push D+14',primary:'Repeat application',guardrail:'Unsubscribe',segment:'Funded users',confidence:'88%',result:'SMS +2.4 п.п.',status:'extend'},
+ {id:'exp-reason-copy',name:'Reason code copy',primary:'Offer CTR',guardrail:'Time to click',segment:'AI flow',confidence:'94%',result:'+11% CTR',status:'rollout'}
+];
+const alerts=[
+ {severity:'red',entity:'МФО Риск',reason:'SLA ниже 90%, response time 4.6 с',action:'Pause partner и вывести из SOS'},
+ {severity:'yellow',entity:'Банк Город',reason:'Predicted approval 33%, factual 22%',action:'Downgrade in ranking, проверить скоринг'},
+ {severity:'yellow',entity:'Яндекс.Директ',reason:'CAC выше SEO на 28%',action:'Оставить только profitable adgroups'},
+ {severity:'green',entity:'SEO long-tail',reason:'ROI 75%, EPC стабильно выше CPC',action:'Scale pages и ссылочную массу'},
+ {severity:'yellow',entity:'Repeat rate',reason:'5.1% против цели 6%',action:'Усилить SMS D+14 и cross-sell офферы'},
+ {severity:'red',entity:'Пустые рекомендации',reason:'2.7% sessions без top-3',action:'Fallback на direct listing и лог missing partner response'}
+];
+function sum(a){return a.reduce((x,y)=>x+(Number.isFinite(Number(y))?Number(y):0),0)}
+function fmt(n){return Math.round(n).toLocaleString('ru-RU')}
+function money(n){return fmt(n)+' ₽'}
+function mln(n){return (n/1000000).toLocaleString('ru-RU',{maximumFractionDigits:1})+' млн ₽'}
+function pct(n){return Number(n).toLocaleString('ru-RU',{maximumFractionDigits:1})+'%'}
+function ratio(a,b){return b? a/b:0}
+function cls(v){return v>=0?'positive':'negative'}
+function escapeHtml(value){return String(value).replace(/[&<>"']/g,ch=>HTML_ESCAPE_MAP[ch])}
+function table(id,head,rows){
+ const el=document.getElementById(id);
+ const safeHead=head.map(h=>`<th>${escapeHtml(h)}</th>`).join('');
+ const safeRows=rows.map(r=>'<tr>'+r.map(c=>`<td class="${typeof c==='number'&&c<0?'negative':''}">${escapeHtml(c)}</td>`).join('')+'</tr>').join('');
+ el.innerHTML='<thead><tr>'+safeHead+'</tr></thead><tbody>'+safeRows+'</tbody>';
 }
-
-function initCharts() {
-  const c = getChartColors();
-  const def = { font: { family: "'Satoshi', sans-serif" }, color: c.muted };
-  Chart.defaults.font = def.font;
-  Chart.defaults.color = c.muted;
-
-  if (document.getElementById('chartMain') && !chartInstances.main) {
-    chartInstances.main = new Chart(document.getElementById('chartMain'), {
-      type: 'bar',
-      data: {
-        labels: months,
-        datasets: [
-          { label: 'Выручка', data: revenue, backgroundColor: c.g + 'bb', borderColor: c.g, borderWidth: 1 },
-          { label: 'Расходы', data: expenses, backgroundColor: c.r + 'bb', borderColor: c.r, borderWidth: 1 },
-          { label: 'Прибыль', data: profit, type: 'line', borderColor: c.o, backgroundColor: 'transparent', borderWidth: 2.5, pointRadius: 4, pointBackgroundColor: profit.map(v => v >= 0 ? c.g : c.r) }
-        ]
-      },
-      options: { responsive: true, plugins: { legend: { labels: { color: c.muted } } }, scales: makeScale(c) }
-    });
-  }
-  if (document.getElementById('chartTrafficPie') && !chartInstances.tpie) {
-    chartInstances.tpie = new Chart(document.getElementById('chartTrafficPie'), {
-      type: 'doughnut',
-      data: {
-        labels: ['SEO', 'Яндекс.Директ', 'PR', 'Повторный'],
-        datasets: [{ data: [1424867, 545652, 60433, 165382], backgroundColor: [c.g+'cc', c.b+'cc', c.p+'cc', c.o+'cc'] }]
-      },
-      options: { plugins: { legend: { labels: { color: c.muted }, position: 'bottom' } } }
-    });
-  }
-  if (document.getElementById('chartRevPie') && !chartInstances.rpie) {
-    chartInstances.rpie = new Chart(document.getElementById('chartRevPie'), {
-      type: 'doughnut',
-      data: {
-        labels: ['SEO', 'Яндекс.Директ', 'PR', 'Повторный'],
-        datasets: [{ data: [53920910, 14362487, 7614499, 5961100], backgroundColor: [c.g+'cc', c.b+'cc', c.p+'cc', c.o+'cc'] }]
-      },
-      options: { plugins: { legend: { labels: { color: c.muted }, position: 'bottom' } } }
-    });
-  }
-  if (document.getElementById('chartCumulative') && !chartInstances.cum) {
-    chartInstances.cum = new Chart(document.getElementById('chartCumulative'), {
-      type: 'line',
-      data: {
-        labels: months,
-        datasets: [{
-          label: 'Накопит. прибыль (тыс. ₽)',
-          data: cumProfit,
-          borderColor: c.o,
-          backgroundColor: (ctx) => {
-            const gradient = ctx.chart.ctx.createLinearGradient(0, 0, 0, 200);
-            gradient.addColorStop(0, c.o + '44');
-            gradient.addColorStop(1, 'transparent');
-            return gradient;
-          },
-          fill: true, tension: 0.4, borderWidth: 2.5, pointRadius: 4,
-          pointBackgroundColor: cumProfit.map(v => v >= 0 ? c.g : c.r)
-        }]
-      },
-      options: {
-        responsive: true,
-        plugins: {
-          legend: { labels: { color: c.muted } },
-          annotation: { annotations: { zeroLine: { type: 'line', yMin: 0, yMax: 0, borderColor: c.muted, borderWidth: 1, borderDash: [5, 5] } } }
-        },
-        scales: makeScale(c)
-      }
-    });
-  }
-  if (document.getElementById('chartTrafficStack') && !chartInstances.tstack) {
-    chartInstances.tstack = new Chart(document.getElementById('chartTrafficStack'), {
-      type: 'bar',
-      data: {
-        labels: months,
-        datasets: [
-          { label: 'SEO', data: trafficSEO, backgroundColor: c.g + 'cc' },
-          { label: 'Директ', data: trafficPPC, backgroundColor: c.b + 'cc' },
-          { label: 'PR', data: trafficPR, backgroundColor: c.p + 'cc' },
-          { label: 'Повторный', data: trafficRpt, backgroundColor: c.o + 'cc' }
-        ]
-      },
-      options: { responsive: true, scales: { ...makeScale(c), x: { ...makeScale(c).x, stacked: true }, y: { ...makeScale(c).y, stacked: true } }, plugins: { legend: { labels: { color: c.muted } } } }
-    });
-  }
-  if (document.getElementById('chartEPC') && !chartInstances.epc) {
-    chartInstances.epc = new Chart(document.getElementById('chartEPC'), {
-      type: 'line',
-      data: {
-        labels: months,
-        datasets: [{
-          label: 'EPC (₽/клик)',
-          data: epc,
-          borderColor: c.o,
-          backgroundColor: c.o + '22',
-          fill: true, tension: 0.4, borderWidth: 2.5,
-          pointRadius: 5,
-          pointBackgroundColor: epc.map(v => v >= 90 ? c.g : c.o)
-        }]
-      },
-      options: { responsive: true, plugins: { legend: { labels: { color: c.muted } } }, scales: makeScale(c) }
-    });
-  }
-  if (document.getElementById('chartBudgetStack') && !chartInstances.bstack) {
-    chartInstances.bstack = new Chart(document.getElementById('chartBudgetStack'), {
-      type: 'bar',
-      data: {
-        labels: months,
-        datasets: [
-          { label: 'Яндекс.Директ', data: budgetDir, backgroundColor: c.b + 'cc' },
-          { label: 'Ссылки', data: budgetLinks, backgroundColor: c.g + 'cc' },
-          { label: 'Накрутка ПФ', data: budgetPF, backgroundColor: c.acc + 'cc' },
-          { label: 'PR', data: budgetPR, backgroundColor: c.p + 'cc' },
-          { label: 'Разработка', data: budgetDev, backgroundColor: c.muted + 'cc' }
-        ]
-      },
-      options: { responsive: true, scales: { ...makeScale(c), x: { ...makeScale(c).x, stacked: true }, y: { ...makeScale(c).y, stacked: true } }, plugins: { legend: { labels: { color: c.muted } } } }
-    });
-  }
-  if (document.getElementById('chartCumulative2') && !chartInstances.cum2) {
-    chartInstances.cum2 = new Chart(document.getElementById('chartCumulative2'), {
-      type: 'line',
-      data: {
-        labels: months,
-        datasets: [{
-          label: 'Накопит. прибыль (тыс. ₽)',
-          data: cumProfit,
-          borderColor: c.o,
-          backgroundColor: c.o + '33',
-          fill: true, tension: 0.4, borderWidth: 2.5, pointRadius: 4,
-          pointBackgroundColor: cumProfit.map(v => v >= 0 ? c.g : c.r)
-        }]
-      },
-      options: { responsive: true, plugins: { legend: { labels: { color: c.muted } } }, scales: makeScale(c) }
-    });
-  }
+function kpi(container,items){
+ document.getElementById(container).innerHTML=items.map(x=>{
+  const label=escapeHtml(x.label);
+  const value=escapeHtml(x.value);
+  const sub=escapeHtml(x.sub);
+  const cls=ALLOWED_METRIC_CLASSES.has(x.cls)?x.cls:'';
+  return `<div class="card tight" data-drill="${label}"><div class="metric-label">${label}</div><div class="metric-value ${cls}">${value}</div><div class="metric-sub">${sub}</div></div>`;
+ }).join('')
 }
-initCharts();
+function chartColors(){const s=getComputedStyle(document.documentElement);return {text:s.getPropertyValue('--text').trim(),muted:s.getPropertyValue('--muted').trim(),line:s.getPropertyValue('--line').trim(),blue:s.getPropertyValue('--blue').trim(),green:s.getPropertyValue('--green').trim(),orange:s.getPropertyValue('--orange').trim(),red:s.getPropertyValue('--red').trim(),violet:s.getPropertyValue('--violet').trim()}}
+const charts={};function baseOptions(c){return {responsive:true,plugins:{legend:{labels:{color:c.muted,boxWidth:10,boxHeight:10}}},scales:{x:{ticks:{color:c.muted,maxRotation:0,autoSkip:true},grid:{color:c.line+'55'}},y:{ticks:{color:c.muted},grid:{color:c.line+'55'}}}}}
+function renderCharts(){
+ const c=chartColors();
+ Object.values(charts).forEach(x=>x.destroy());
+ charts.overview=new Chart(document.getElementById('chartOverview'),{type:'bar',data:{labels:months,datasets:[{label:'Выручка',data:revenue.map(v=>v/1000),backgroundColor:c.green+'cc'},{label:'Расходы',data:expenses.map(v=>v/1000),backgroundColor:c.red+'88'},{label:'Прибыль',type:'line',data:profit.map(v=>v/1000),borderColor:c.blue,backgroundColor:'transparent',tension:.35,borderWidth:2,pointRadius:3}]},options:baseOptions(c)});
+ charts.traffic=new Chart(document.getElementById('chartTraffic'),{type:'bar',data:{labels:months,datasets:[{label:'SEO',data:trafficSEO,backgroundColor:c.green+'cc'},{label:'Директ',data:trafficPPC,backgroundColor:c.blue+'cc'},{label:'PR',data:trafficPR,backgroundColor:c.violet+'cc'},{label:'Repeat',data:repeat,backgroundColor:c.orange+'cc'}]},options:{...baseOptions(c),scales:{...baseOptions(c).scales,x:{...baseOptions(c).scales.x,stacked:true},y:{...baseOptions(c).scales.y,stacked:true}}}});
+ charts.epc=new Chart(document.getElementById('chartEpc'),{type:'line',data:{labels:months,datasets:[{label:'EPC, ₽',data:epc,borderColor:c.blue,backgroundColor:c.blue+'18',fill:true,tension:.35,borderWidth:2.5,pointRadius:3}]},options:baseOptions(c)});
+ charts.retention=new Chart(document.getElementById('chartRetention'),{type:'line',data:{labels:months,datasets:[{label:'Repeat visits',data:repeat,borderColor:c.orange,backgroundColor:c.orange+'18',fill:true,tension:.35},{label:'Applications',data:applications,borderColor:c.green,backgroundColor:'transparent',tension:.35}]},options:baseOptions(c)});
+ charts.unit=new Chart(document.getElementById('chartUnit'),{type:'bar',data:{labels:months,datasets:[{label:'Contribution margin',data:profit.map(v=>v/1000),backgroundColor:profit.map(v=>v>=0?c.green+'bb':c.red+'99')}]},options:baseOptions(c)});
+}
+function init(){
+ const approvalRate=ratio(totals.approvals,totals.applications)*100;
+ const issued=Math.round(totals.approvals*ISSUED_TO_APPROVAL_RATE);
+ const gross=totals.revenue-totals.expenses;
+ const cac=ratio(totals.expenses,issued);
+ const ltv=ratio(totals.revenue,totals.approvals)*LTV_REPEAT_CROSS_SELL_FACTOR;
+ kpi('kpiGrid',[{label:'Users / sessions',value:fmt(totals.visits),sub:'20 месяцев, все каналы'},{label:'Applications sent',value:fmt(totals.applications),sub:'CR в заявку '+pct(ratio(totals.applications,totals.visits)*100)},{label:'Approval rate',value:pct(approvalRate),sub:fmt(totals.approvals)+' approvals',cls:'positive'},{label:'Issued deals',value:fmt(issued),sub:'оценка funded = 76% approvals'},{label:'Revenue',value:mln(totals.revenue),sub:'one source of truth from PNL',cls:'positive'},{label:'EPC',value:Math.round(ratio(totals.revenue,totals.clicks))+' ₽',sub:'revenue / offer clicks',cls:'positive'},{label:'CAC',value:Math.round(cac)+' ₽',sub:'spend / funded users',cls:'negative'},{label:'LTV / CAC',value:(ltv/cac).toFixed(1)+'x',sub:'LTV учитывает repeat и cross-sell',cls:'positive'},{label:'Repeat rate',value:'5.1%',sub:'цель 6% в ближайшем периоде'},{label:'Gross profit',value:mln(gross),sub:'revenue - total spend',cls:'positive'},{label:'Contribution',value:pct(ratio(gross,totals.revenue)*100),sub:'маржинальность по PNL',cls:'positive'},{label:'PnL',value:mln(totals.profit),sub:'нарастающим итогом',cls:'positive'}]);
+ document.getElementById('actionsList').innerHTML=[['Scale','SEO long-tail и Центрофинанс API дают лучший ROI, EPC и approval'],['Fix','Банк Город имеет mismatch predicted vs factual approval'],['Disable','МФО Риск выводится из SOS из-за SLA и complaints'],['Grow','Retention D+14 увеличивает repeat и LTV без CAC'],['Control','Директ масштабировать только при EPC выше CPC и CAC ниже LTV']].map((r,i)=>`<div class="mini-row"><span><span class="status ${i===2?'red':i===1||i===4?'yellow':'green'}"></span> ${r[0]}</span><b>${r[1]}</b></div>`).join('');
+ const pnlRows=[['Выручка',...revenue.map(money),money(totals.revenue)],['Расходы',...expenses.map(money),money(totals.expenses)],['Прибыль',...profit.map(v=>money(v)),money(totals.profit)],['Визиты',...visits.map(fmt),fmt(totals.visits)],['Клики на офферы',...offerClicks.map(fmt),fmt(totals.clicks)],['Заявки',...applications.map(fmt),fmt(totals.applications)],['Апрувы',...approvals.map(fmt),fmt(totals.approvals)]];
+ table('pnlTable',['Показатель',...months,'Итого'],pnlRows);
+ kpi('trafficKpis',[{label:'SEO revenue',value:mln(totals.seoRevenue),sub:'ROI 75%',cls:'positive'},{label:'Direct revenue',value:mln(totals.directRevenue),sub:'ROI 13%'},{label:'PR revenue',value:mln(totals.prRevenue),sub:'ROI 28%'},{label:'Repeat visits',value:fmt(totals.repeat),sub:'CAC 0 ₽',cls:'positive'}]);
+ table('acquisitionTable',['Source / medium','Sessions','Unique users','Offer click rate','Application complete','Approval','Revenue','EPC','CAC','ROI / ROMI'],[['SEO / organic',fmt(sum(trafficSEO)),fmt(sum(trafficSEO)*.92),pct(35),pct(35),pct(30.9),mln(totals.seoRevenue),'108 ₽','246 ₽','75%'],['Yandex / CPC',fmt(sum(trafficPPC)),fmt(sum(trafficPPC)*.88),pct(27),pct(21.1),pct(24.2),mln(totals.directRevenue),'99 ₽','2 176 ₽','13%'],['PR / media',fmt(sum(trafficPR)),fmt(sum(trafficPR)*.9),pct(45),pct(35),pct(40),mln(totals.prRevenue),'280 ₽','1 432 ₽','28%'],['CRM / repeat',fmt(totals.repeat),fmt(totals.repeat*.76),pct(34),pct(28),pct(36),mln(5961100),'112 ₽','0 ₽','∞']]);
+ const funnel=[['Sessions',fmt(totals.visits)],['Scenario selected',fmt(totals.visits*.78)],['Diagnostic completed',fmt(totals.visits*.61)],['Recommendations generated',fmt(totals.visits*.54)],['Offer clicked',fmt(totals.clicks)],['Applications',fmt(totals.applications)],['Approvals',fmt(totals.approvals)],['Funded deals',fmt(issued)]];
+ document.getElementById('mainFunnel').innerHTML=funnel.slice(0,5).map((x,i)=>`<div class="step"><b>${x[1]}</b><span>${x[0]}</span><div class="progress" style="margin-top:12px"><div class="bar" style="width:${100-i*13}%"></div></div></div>`).join('');
+ document.getElementById('flowComparison').innerHTML=flows.map(f=>`<div class="card scenario-card"><div class="scenario-head"><h3>${f.name}</h3><span class="pill">${f.offers} offers</span></div><div class="mini-row"><span>Approval</span><b>${pct(f.approval)}</b></div><div class="mini-row"><span>Issued</span><b>${pct(f.issued)}</b></div><div class="mini-row"><span>Revenue / user</span><b>${f.revenue} ₽</b></div><div class="mini-row"><span>Decision time</span><b>${f.time}</b></div><p class="muted">${f.note}</p></div>`).join('');
+ table('funnelTable',['Month','Visits','Offer clicks','Applications','Approvals','Approval rate','Revenue'],months.map((m,i)=>[m,fmt(visits[i]),fmt(offerClicks[i]),fmt(applications[i]),fmt(approvals[i]),pct(ratio(approvals[i],applications[i])*100),money(revenue[i])]));
+ document.getElementById('scenarioGrid').innerHTML=scenarios.map(s=>`<div class="card scenario-card" data-drill="${s.name}"><div class="scenario-head"><h3>${s.name}</h3><span class="pill">${fmt(s.users)} users</span></div><div class="mini-row"><span>Completion</span><b>${pct(s.completion)}</b></div><div class="mini-row"><span>Diagnostic</span><b>${pct(s.diag)}</b></div><div class="mini-row"><span>Approval</span><b>${pct(s.approval)}</b></div><div class="mini-row"><span>Repeat</span><b>${pct(s.repeat)}</b></div><div class="mini-row"><span>Revenue</span><b>${mln(s.revenue)}</b></div><div class="progress"><div class="bar" style="width:${s.completion}%"></div></div><p class="muted">Застревание: диагностика и подтверждение данных. Лучший ответ: ${s.best}. Время: ${s.time}.</p></div>`).join('');
+ table('jtbdTable',['Scenario','Question heat','Stuck step','Time','Best downstream approval answer','Revenue','Repeat'],scenarios.map(s=>[s.name,`${pct(100-s.completion)} drop-off`,'diagnostic_answered',s.time,s.best,mln(s.revenue),pct(s.repeat)]));
+ kpi('aiKpis',[{label:'Recommendation sessions',value:fmt(totals.visits*.54),sub:'logged recommendation session id'},{label:'CTR top-3',value:'41%',sub:'offer_clicked / impressions',cls:'positive'},{label:'Approval uplift',value:'+8 п.п.',sub:'vs classic listing',cls:'positive'},{label:'Explainability coverage',value:'94%',sub:'reason code present',cls:'positive'}]);
+ table('aiTable',['Session id','Scenario','Top-3 offers','Reason code','Predicted approval','Actual outcome','Revenue uplift','CTR','Coverage'],aiRows.map(r=>[r[0],r[1],r[2],r[3],pct(r[4]*100),r[5],pct(r[6]),pct(r[7]),pct(r[8])]));
+ table('sosTable',['Metric','Value'],sosRows);
+ document.getElementById('partnerCards').innerHTML=partners.slice(0,3).map(p=>`<div class="card partner-card"><div class="partner-head"><h3>${p.name}</h3><span class="pill">${p.type}</span></div><div class="mini-row"><span>SLA</span><b>${p.sla}</b></div><div class="mini-row"><span>Approval</span><b>${pct(p.approval)}</b></div><div class="mini-row"><span>EPC</span><b>${p.epc} ₽</b></div><div class="actions"><button class="action">Pause partner</button><button class="action">Pin offer</button><button class="action">Downgrade</button></div></div>`).join('');
+ table('partnerTable',['Partner','Integration','Status','SLA','Response','Approve rate','Issue rate','Revenue','EPC','eCPA','Complaint','Top rejection','Action'],partners.map(p=>[p.name,p.type,p.status,p.sla,p.response,pct(p.approval),pct(p.issue),mln(p.revenue),p.epc+' ₽',p.ecpa+' ₽',pct(p.complaints),p.reject,p.action]));
+ kpi('retentionKpis',[{label:'Repeat rate',value:'5.1%',sub:'target 6%'},{label:'Days to repeat',value:'21',sub:'median days'},{label:'Reactivation SMS',value:'12.8%',sub:'best channel',cls:'positive'},{label:'Post-deal revenue',value:mln(9860000),sub:'repeat + cross-sell',cls:'positive'}]);
+ table('retentionTable',['Event','Users / events','Conversion'],retentionEvents);
+ const unitLtv=ratio(totals.revenue,totals.approvals)*LTV_REPEAT_CROSS_SELL_FACTOR;
+ kpi('unitKpis',[{label:'EPC',value:Math.round(ratio(totals.revenue,totals.clicks))+' ₽',sub:'revenue / clicks'},{label:'CAC funded',value:Math.round(cac)+' ₽',sub:'spend / first funded users'},{label:'LTV',value:Math.round(unitLtv)+' ₽',sub:'net revenue with repeat'},{label:'LTV / CAC',value:(unitLtv/cac).toFixed(1)+'x',sub:'healthy if > 3x',cls:'positive'}]);
+ document.getElementById('formulaList').innerHTML=['EPC = revenue / offer clicks','CAC = spend / approved users или first funded users','LTV = cumulative net revenue per user with repeat and cross-sell','Contribution margin = revenue - media spend - variable partner costs','Payback period = CAC / monthly margin per user','Marketing PnL = revenue - media spend - operating costs'].map(x=>`<div class="mini-row"><span>${x}</span><b>tracked</b></div>`).join('');
+ table('unitTable',['Channel','Integration mix','Revenue','Spend','Gross profit','EPC','CAC approved','LTV/CAC','Payback','Marketing PnL'],[['SEO','CPA + direct API',mln(totals.seoRevenue),mln(totals.seoSpend),mln(totals.seoRevenue-totals.seoSpend),'108 ₽','246 ₽','6.1x','4.2 мес',mln(totals.seoRevenue-totals.seoSpend)],['Yandex Direct','CPA + direct API',mln(totals.directRevenue),mln(totals.directSpend),mln(totals.directRevenue-totals.directSpend),'99 ₽','1 701 ₽','1.8x','8.9 мес',mln(totals.directRevenue-totals.directSpend)],['PR','CPA',mln(totals.prRevenue),mln(totals.prSpend),mln(totals.prRevenue-totals.prSpend),'280 ₽','1 432 ₽','2.2x','7.1 мес',mln(totals.prRevenue-totals.prSpend)],['Repeat','direct API + cross-sell',mln(5961100),'0 ₽',mln(5961100),'112 ₽','0 ₽','∞','same day',mln(5961100)]]);
+ document.getElementById('alertsGrid').innerHTML=alerts.map(a=>`<div class="card alert-card"><div class="alert-head"><h3>${a.entity}</h3><span class="delta ${a.severity==='red'?'bad':a.severity==='yellow'?'warn':'good'}">${a.severity}</span></div><div class="mini-row"><span>First seen</span><b>Today</b></div><p class="muted">${a.reason}</p><div class="actions"><button class="action">${a.action}</button></div></div>`).join('');
+ document.getElementById('experimentsGrid').innerHTML=experiments.slice(0,3).map(e=>`<div class="card"><div class="card-title"><div><h3>${e.name}</h3><p>${e.id}</p></div><span class="pill">${e.status}</span></div><div class="mini-row"><span>Primary</span><b>${e.primary}</b></div><div class="mini-row"><span>Confidence</span><b>${e.confidence}</b></div><div class="mini-row"><span>Result</span><b>${e.result}</b></div></div>`).join('');
+ table('experimentsTable',['Experiment','Primary metric','Guardrail','Segment','Confidence','Snapshot','Decision'],experiments.map(e=>[e.name,e.primary,e.guardrail,e.segment,e.confidence,e.result,e.status]));
+ renderCharts();
+}
+const tabs=document.querySelectorAll('.tab'),panels=document.querySelectorAll('.panel');tabs.forEach(t=>t.addEventListener('click',()=>{tabs.forEach(x=>x.classList.remove('active'));panels.forEach(x=>x.classList.remove('active'));t.classList.add('active');document.getElementById('tab-'+t.dataset.tab).classList.add('active');setTimeout(renderCharts,40)}));
+document.querySelectorAll('.chip').forEach(b=>b.addEventListener('click',()=>{document.querySelectorAll('.chip').forEach(x=>x.classList.remove('active'));b.classList.add('active')}));
+document.getElementById('themeToggle').addEventListener('click',()=>{const root=document.documentElement;root.dataset.theme=root.dataset.theme==='dark'?'light':'dark';setTimeout(renderCharts,40)});
+const drawer=document.getElementById('drawer'),drawerContent=document.getElementById('drawerContent');document.addEventListener('click',e=>{const card=e.target.closest('[data-drill]');if(!card)return;drawerContent.innerHTML=`<h2>${escapeHtml(card.dataset.drill)}</h2><p class="muted">Drill-down доступен до user, session, application, partner event с учётом прав доступа. В демо показан агрегированный слой без чувствительных данных.</p><div class="mini-list"><div class="mini-row"><span>Source</span><b>validated mart</b></div><div class="mini-row"><span>Status</span><b>raw / validated / attributed</b></div><div class="mini-row"><span>Identifiers</span><b>masked / hashed</b></div></div>`;drawer.classList.add('open')});document.getElementById('drawerClose').addEventListener('click',()=>drawer.classList.remove('open'));
+init();
 </script>
 </body>
 </html>
