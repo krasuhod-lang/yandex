@@ -153,9 +153,11 @@ main{max-width:var(--max);margin:0 auto;padding:28px 24px 56px}.panel{display:no
 <script>
 
 class Chart{
- constructor(canvas,config){this.canvas=canvas;this.config=config;this.ctx=canvas.getContext('2d');this.draw()}
+ constructor(canvas,config){this.canvas=canvas;this.config=config;if(!canvas)return;this.ctx=canvas.getContext('2d');this.draw()}
  destroy(){if(this.ctx)this.ctx.clearRect(0,0,this.canvas.width,this.canvas.height)}
  draw(){
+  if(!this.ctx||!this.canvas)return;
+  const CHART_LABEL_DENSITY=6, CHART_LABEL_MAX_LENGTH=6;
   const ctx=this.ctx, cfg=this.config, dpr=window.devicePixelRatio||1;
   const rect=this.canvas.getBoundingClientRect();
   const width=Math.max(320,rect.width||this.canvas.parentElement.clientWidth||640), height=Number(this.canvas.getAttribute('height')||140);
@@ -166,7 +168,7 @@ class Chart{
   const min=Math.min(0,...values), max=Math.max(1,...values); const scale=v=>pad.t+plotH-((v-min)/(max-min))*plotH;
   ctx.strokeStyle=colors.line;ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(pad.l,pad.t);ctx.lineTo(pad.l,pad.t+plotH);ctx.lineTo(width-pad.r,pad.t+plotH);ctx.stroke();
   ctx.fillStyle=colors.muted;ctx.font='11px -apple-system, BlinkMacSystemFont, sans-serif';
-  labels.forEach((label,i)=>{if(i%Math.ceil(labels.length/6)!==0)return;const x=pad.l+(i/(Math.max(labels.length-1,1)))*plotW;ctx.fillText(String(label).slice(0,6),x-14,height-8)});
+  labels.forEach((label,i)=>{if(i%Math.ceil(labels.length/CHART_LABEL_DENSITY)!==0)return;const x=pad.l+(i/(Math.max(labels.length-1,1)))*plotW;ctx.fillText(String(label).slice(0,CHART_LABEL_MAX_LENGTH),x-14,height-8)});
   const barSets=datasets.filter(ds=>(ds.type||cfg.type)!=='line'), lineSets=datasets.filter(ds=>(ds.type||cfg.type)==='line');
   const groupW=plotW/Math.max(labels.length,1), barW=Math.max(3,groupW/Math.max(barSets.length+1,2));
   barSets.forEach((ds,di)=>{ctx.fillStyle=ds.backgroundColor||colors.blue;(ds.data||[]).forEach((v,i)=>{const x=pad.l+i*groupW+barW*di+barW*.5;const y=scale(Number(v));ctx.fillRect(x,y,barW,Math.max(1,pad.t+plotH-y))})});
@@ -191,7 +193,9 @@ const budgetDirect=[200000,200000,300000,300000,300000,400000,400000,500000,5000
 const budgetSEO=[300000,350000,450000,450000,450000,550000,550000,600000,650000,650000,650000,700000,700000,800000,900000,900000,900000,900000,900000,900000];
 const budgetPR=[200000,200000,300000,300000,300000,400000,400000,500000,200000,200000,200000,250000,250000,250000,250000,250000,250000,250000,250000,250000];
 const totals={revenue:75897147.75,expenses:38950000,profit:36947147.75,visits:2030951.549,repeat:165381.8654,clicks:670311.0778,applications:214503.8772,approvals:65105.33756,directRevenue:14361739.13,seoRevenue:53920909.98,prRevenue:7614498.645,directSpend:12550000,seoSpend:13250000,prSpend:5450000};
+// Share of approved applications expected to become funded deals.
 const ISSUED_TO_APPROVAL_RATE=0.76;
+// Lifetime value uplift from repeat usage and cross-sell monetization.
 const LTV_REPEAT_CROSS_SELL_FACTOR=1.34;
 const scenarios=[
  {name:'Дотянуть до зарплаты',users:742000,completion:74,diag:83,match:69,approval:31,repeat:5.8,revenue:28400000,time:'2:18',best:'Наличие стабильной зарплаты'},
@@ -243,7 +247,7 @@ function mln(n){return (n/1000000).toLocaleString('ru-RU',{maximumFractionDigits
 function pct(n){return Number(n).toLocaleString('ru-RU',{maximumFractionDigits:1})+'%'}
 function ratio(a,b){return b? a/b:0}
 function cls(v){return v>=0?'positive':'negative'}
-function escapeHtml(value){return String(value).replace(/[&<>"'/]/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;','/':'&#x2F;'}[ch]))}
+function escapeHtml(value){return String(value).replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]))}
 function table(id,head,rows){
  const el=document.getElementById(id);
  const safeHead=head.map(h=>`<th>${escapeHtml(h)}</th>`).join('');
@@ -255,7 +259,8 @@ function kpi(container,items){
   const label=escapeHtml(x.label);
   const value=escapeHtml(x.value);
   const sub=escapeHtml(x.sub);
-  const cls=['positive','negative','accent'].includes(x.cls)?x.cls:'';
+  const allowedMetricClasses=new Set(['positive','negative','accent']);
+  const cls=allowedMetricClasses.has(x.cls)?x.cls:'';
   return `<div class="card tight" data-drill="${label}"><div class="metric-label">${label}</div><div class="metric-value ${cls}">${value}</div><div class="metric-sub">${sub}</div></div>`;
  }).join('')
 }
