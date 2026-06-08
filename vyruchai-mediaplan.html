@@ -257,7 +257,7 @@ const firstMonthlyProfitIndex=profit.findIndex(v=>v>0), paybackIndex=cumulativeP
 
 // Краткие подписи месяцев в формате "ММ.ГГ" (10.26, 11.26 ...) — компактный таймлайн для 20 месяцев.
 const MONTH_NUM={'Январь':'01','Февраль':'02','Март':'03','Апрель':'04','Май':'05','Июнь':'06','Июль':'07','Август':'08','Сентябрь':'09','Октябрь':'10','Ноябрь':'11','Декабрь':'12'};
-const shortMonths=months.map(m=>{const [mn,yr]=m.split(' ');return (MONTH_NUM[mn]||mn)+'.'+(yr||'').slice(2)});
+const shortMonths=months.map(m=>{const parts=m.split(' ');const mn=parts[0];const yr=parts[1]||'';return (MONTH_NUM[mn]||mn)+'.'+(yr.length>=2?yr.slice(-2):yr)});
 
 // Декомпозиция помесячной выручки и расходов по каналам, чтобы фильтры пересчитывали графики, а не только таблицы.
 // Подход: каждая месячная выручка revenue[i] распределяется между SEO/PPC/PR пропорционально доле канала в трафике месяца,
@@ -391,10 +391,16 @@ function renderCharts(){
  const fRev=ch.rev, fCost=ch.cost, fProfit=fRev.map((v,i)=>v-fCost[i]);
  const fCumRev=cumulative(fRev), fCumCost=cumulative(fCost), fCumProfit=cumulative(fProfit);
  const fNpvProfit=cumulativeDiscounted(fProfit);
- // Стек удержания: First-time vs Repeat выручка, чтобы инвестору был виден когортный хвост (LTV растёт за счёт повторов).
+ // Стек удержания (когортный LTV): нижний слой — выручка с первой сделки, верхний — повторы / CRM (CAC = 0).
+ // Для агрегата "Все каналы" используем helper-разложение revenueFirstTime/revenueRepeat;
+ // для "Повторного" канала вся отфильтрованная выручка — это повторы;
+ // для остальных каналов считаем, что в их декомпозиции повторов нет (они учтены в CRM-канале).
  const isAllChannels=state.channel==='Все каналы';
- const retFirst=isAllChannels?revenueFirstTime:fRev.map((v,i)=>Math.max(0,v-(state.channel==='Повторный'?v:0)));
- const retRepeat=isAllChannels?revenueRepeat:(state.channel==='Повторный'?fRev.slice():fRev.map(()=>0));
+ const isRepeatChannel=state.channel==='Повторный';
+ let retFirst,retRepeat;
+ if(isAllChannels){retFirst=revenueFirstTime;retRepeat=revenueRepeat}
+ else if(isRepeatChannel){retFirst=fRev.map(()=>0);retRepeat=fRev.slice()}
+ else{retFirst=fRev.slice();retRepeat=fRev.map(()=>0)}
  const cfg={
   chartOverview:{type:'bar',data:{labels,datasets:[
    {label:'Выручка ('+ch.label+')',data:sliceWindow(fRev).map(v=>v/1000),backgroundColor:c.green+'cc'},
@@ -405,7 +411,7 @@ function renderCharts(){
    {label:'Накопленная выручка',data:sliceWindow(fCumRev).map(v=>v/1000000),borderColor:c.green,borderWidth:2.5},
    {label:'Накопленные инвестиции',data:sliceWindow(fCumCost).map(v=>v/1000000),borderColor:c.red,borderWidth:2.5},
    {label:'Накопленная прибыль',data:sliceWindow(fCumProfit).map(v=>v/1000000),borderColor:c.blue,backgroundColor:c.blue+'22',fill:true,borderWidth:2.5},
-   {label:'NPV (дисконт 20%)',data:sliceWindow(fNpvProfit).map(v=>v/1000000),borderColor:c.violet,borderWidth:2}
+   {label:'Дисконтированная накопленная прибыль (NPV, 20% годовых)',data:sliceWindow(fNpvProfit).map(v=>v/1000000),borderColor:c.violet,borderWidth:2}
   ]}},
   chartTraffic:isAllChannels?
    {type:'bar',stacked:true,data:{labels,datasets:[
