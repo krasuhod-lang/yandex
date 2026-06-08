@@ -333,7 +333,6 @@ function chartColors(){const s=getComputedStyle(document.documentElement);return
 const charts={};
 const state={window:null,period:'Сегодня',role:'Все роли',channel:'Все каналы',scenario:'Все сценарии'};
 const CHART_PANELS={chartOverview:'overview',chartInvestment:'overview',chartTraffic:'traffic',chartEpc:'traffic',chartRetention:'retention',chartUnit:'unit'};
-const PERIOD_WINDOW={'Сегодня':1,'7 дней':1,'30 дней':1,'Месяц к месяцу':2,'Квартал к кварталу':6};
 function sliceWindow(arr){const w=state.window;return w&&w<arr.length?arr.slice(arr.length-w):arr.slice()}
 function activeChartIds(){const panelId=document.querySelector('.panel.active')?.id||'tab-overview';const tab=panelId.replace('tab-','');return Object.entries(CHART_PANELS).filter(([,p])=>p===tab).map(([id])=>id)}
 function renderCharts(){
