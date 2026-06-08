@@ -33,27 +33,27 @@ main{max-width:var(--max);margin:0 auto;padding:28px 24px 56px}.panel{display:no
     <div class="topbar-inner">
       <div class="brand">
         <div class="mark">В</div>
-        <div><div class="brand-title">Выручай.ру</div><div class="brand-sub">Операционный дашборд growth, product и CEO</div></div>
+        <div><div class="brand-title">Выручай.ру</div><div class="brand-sub">Операционный дашборд роста, продукта и руководителя</div></div>
       </div>
       <div class="filters" aria-label="Фильтры верхнего уровня">
-        <button class="chip active">Today</button><button class="chip">7D</button><button class="chip">30D</button><button class="chip">MoM</button><button class="chip">QoQ</button>
-        <select aria-label="Роль"><option>Все роли</option><option>CEO</option><option>Product</option><option>Growth</option><option>CRM</option><option>Ops</option></select>
+        <button class="chip active">Сегодня</button><button class="chip">7 дней</button><button class="chip">30 дней</button><button class="chip">Месяц к месяцу</button><button class="chip">Квартал к кварталу</button>
+        <select aria-label="Роль"><option>Все роли</option><option>Руководитель</option><option>Продукт</option><option>Рост</option><option>CRM</option><option>Операции</option></select>
         <select aria-label="Канал"><option>Все каналы</option><option>SEO</option><option>Яндекс.Директ</option><option>PR</option><option>Повторный</option></select>
         <select aria-label="Сценарий"><option>Все сценарии</option><option>До зарплаты</option><option>Есть долги</option><option>Хочу машину</option><option>Накопления</option><option>Страхование</option></select>
         <button class="theme" id="themeToggle" aria-label="Сменить тему">Тема</button>
       </div>
     </div>
     <nav class="tabs" aria-label="Разделы дашборда">
-      <button class="tab active" data-tab="overview">Overview</button>
-      <button class="tab" data-tab="traffic">Traffic</button>
-      <button class="tab" data-tab="funnels">Funnels</button>
+      <button class="tab active" data-tab="overview">Обзор</button>
+      <button class="tab" data-tab="traffic">Трафик</button>
+      <button class="tab" data-tab="funnels">Воронки</button>
       <button class="tab" data-tab="jtbd">JTBD</button>
       <button class="tab" data-tab="ai">AI/SOS</button>
-      <button class="tab" data-tab="partners">Partners</button>
-      <button class="tab" data-tab="retention">Retention</button>
-      <button class="tab" data-tab="unit">Unit Economics</button>
-      <button class="tab" data-tab="alerts">Alerts</button>
-      <button class="tab" data-tab="experiments">Experiments</button>
+      <button class="tab" data-tab="partners">Партнёры</button>
+      <button class="tab" data-tab="retention">Повторные продажи</button>
+      <button class="tab" data-tab="unit">Юнит-экономика</button>
+      <button class="tab" data-tab="alerts">Сигналы</button>
+      <button class="tab" data-tab="experiments">Эксперименты</button>
     </nav>
   </header>
 
@@ -61,19 +61,25 @@ main{max-width:var(--max);margin:0 auto;padding:28px 24px 56px}.panel{display:no
     <section id="tab-overview" class="panel active">
       <div class="hero">
         <div class="hero-card">
-          <div class="eyebrow">Executive summary</div>
+          <div class="eyebrow">Краткая сводка</div>
           <h1>Единый центр управления ростом и доходностью</h1>
           <p class="lead">Дашборд показывает полный путь пользователя: источник трафика, JTBD-сценарий, диагностика, AI или SOS-подбор, партнёр, сделка, возврат, LTV и PnL. Интерфейс очищен от эмодзи и декоративных шрифтов.</p>
         </div>
         <div class="hero-side">
-          <div class="card tight"><div class="metric-label">Статус периода</div><div class="metric-value positive">План сходится</div><div class="metric-sub">Break-even: февраль 2027 по месячной прибыли, ноябрь 2026 как операционный рубеж</div></div>
+          <div class="card tight"><div class="metric-label">Статус периода</div><div class="metric-value positive">План сходится</div><div class="metric-sub">Операционная прибыль: февраль 2027; окупаемость накопленных инвестиций: июль 2027</div></div>
           <div class="card tight"><div class="metric-label">Источник данных</div><div class="metric-value">Excel PNL</div><div class="metric-sub">20 месяцев, PNL, трафик, заявки, одобрения, каналы, расходы</div></div>
         </div>
       </div>
+      <h2 class="divider-title">Вводные данные</h2>
+      <div class="grid three" id="inputDataList"></div>
       <div id="kpiGrid" class="grid kpis"></div>
       <div class="grid two">
         <div class="card"><div class="card-title"><div><h2>Выручка, расходы и прибыль</h2><p>Данные из PNL, тыс. ₽</p></div></div><canvas id="chartOverview" height="130"></canvas></div>
         <div class="card"><div class="card-title"><div><h2>Что делать сегодня</h2><p>Сигналы для масштабирования, ремонта или отключения</p></div></div><div id="actionsList" class="mini-list"></div></div>
+      </div>
+      <div class="grid two" style="margin-top:var(--gap)">
+        <div class="card"><div class="card-title"><div><h2>Динамика инвестиций и окупаемости</h2><p>Накопленные вложения, выручка и прибыль, млн ₽</p></div></div><canvas id="chartInvestment" height="150"></canvas></div>
+        <div class="card"><div class="card-title"><div><h2>Срок окупаемости</h2><p>Когда проект перекрывает накопленный убыток</p></div></div><div id="paybackList" class="mini-list"></div></div>
       </div>
       <h2 class="divider-title">Сводная таблица PNL</h2>
       <div class="table-wrap"><table id="pnlTable"></table></div>
@@ -85,12 +91,12 @@ main{max-width:var(--max);margin:0 auto;padding:28px 24px 56px}.panel{display:no
         <div class="card"><div class="card-title"><div><h2>Трафик по каналам</h2><p>Уникальные визиты по месяцам</p></div></div><canvas id="chartTraffic" height="150"></canvas></div>
         <div class="card"><div class="card-title"><div><h2>EPC</h2><p>Выручка на клик по офферу</p></div></div><canvas id="chartEpc" height="150"></canvas></div>
       </div>
-      <h2 class="divider-title">Acquisition dashboard</h2>
+      <h2 class="divider-title">Дашборд привлечения</h2>
       <div class="table-wrap"><table id="acquisitionTable"></table></div>
     </section>
 
     <section id="tab-funnels" class="panel">
-      <div class="card"><div class="card-title"><div><h2>Regular, AI и SOS flow</h2><p>Сравнение ключевых продуктовых воронок</p></div></div><div id="flowComparison" class="grid three"></div></div>
+      <div class="card"><div class="card-title"><div><h2>Обычная, AI и SOS-воронки</h2><p>Сравнение ключевых продуктовых сценариев</p></div></div><div id="flowComparison" class="grid three"></div></div>
       <h2 class="divider-title">Основная воронка</h2>
       <div class="flow" id="mainFunnel"></div>
       <h2 class="divider-title">Помесячная детализация</h2>
@@ -99,15 +105,15 @@ main{max-width:var(--max);margin:0 auto;padding:28px 24px 56px}.panel{display:no
 
     <section id="tab-jtbd" class="panel">
       <div class="grid three" id="scenarioGrid"></div>
-      <h2 class="divider-title">Heatmap вопросов и downstream approval</h2>
+      <h2 class="divider-title">Карта вопросов и последующее одобрение</h2>
       <div class="table-wrap"><table id="jtbdTable"></table></div>
     </section>
 
     <section id="tab-ai" class="panel">
       <div class="grid kpis" id="aiKpis"></div>
       <div class="grid two">
-        <div class="card"><div class="card-title"><div><h2>AI recommendation quality</h2><p>Predicted vs factual outcome</p></div></div><div class="table-wrap"><table id="aiTable"></table></div></div>
-        <div class="card"><div class="card-title"><div><h2>SOS dashboard mode</h2><p>Ограниченная подача в 2–3 партнёра</p></div></div><div class="table-wrap"><table id="sosTable"></table></div></div>
+        <div class="card"><div class="card-title"><div><h2>Качество AI-рекомендаций</h2><p>Прогноз против фактического результата</p></div></div><div class="table-wrap"><table id="aiTable"></table></div></div>
+        <div class="card"><div class="card-title"><div><h2>SOS-режим дашборда</h2><p>Ограниченная подача в 2–3 партнёра</p></div></div><div class="table-wrap"><table id="sosTable"></table></div></div>
       </div>
     </section>
 
@@ -120,18 +126,18 @@ main{max-width:var(--max);margin:0 auto;padding:28px 24px 56px}.panel{display:no
     <section id="tab-retention" class="panel">
       <div class="grid kpis" id="retentionKpis"></div>
       <div class="grid two">
-        <div class="card"><div class="card-title"><div><h2>Repeat и LTV cohorts</h2><p>Post-deal монетизация и возврат</p></div></div><canvas id="chartRetention" height="150"></canvas></div>
-        <div class="card"><div class="card-title"><div><h2>Retention events</h2><p>Цепочка после первой сделки</p></div></div><div class="table-wrap"><table id="retentionTable"></table></div></div>
+        <div class="card"><div class="card-title"><div><h2>Повторные визиты и LTV-когорты</h2><p>Монетизация после сделки и возврат</p></div></div><canvas id="chartRetention" height="150"></canvas></div>
+        <div class="card"><div class="card-title"><div><h2>События удержания</h2><p>Цепочка после первой сделки</p></div></div><div class="table-wrap"><table id="retentionTable"></table></div></div>
       </div>
     </section>
 
     <section id="tab-unit" class="panel">
       <div class="grid kpis" id="unitKpis"></div>
       <div class="grid two">
-        <div class="card"><div class="card-title"><div><h2>Marketing PnL</h2><p>Contribution, gross profit и payback</p></div></div><canvas id="chartUnit" height="150"></canvas></div>
-        <div class="card"><div class="card-title"><div><h2>Формулы</h2><p>Единый слой расчётов для direct API и CPA</p></div></div><div id="formulaList" class="mini-list"></div></div>
+        <div class="card"><div class="card-title"><div><h2>Маркетинговый PnL</h2><p>Маржинальная прибыль, валовая прибыль и окупаемость</p></div></div><canvas id="chartUnit" height="150"></canvas></div>
+        <div class="card"><div class="card-title"><div><h2>Формулы</h2><p>Единый слой расчётов для прямого API и CPA</p></div></div><div id="formulaList" class="mini-list"></div></div>
       </div>
-      <h2 class="divider-title">Unit economics by channel</h2>
+      <h2 class="divider-title">Юнит-экономика по каналам</h2>
       <div class="table-wrap"><table id="unitTable"></table></div>
     </section>
 
@@ -141,13 +147,13 @@ main{max-width:var(--max);margin:0 auto;padding:28px 24px 56px}.panel{display:no
 
     <section id="tab-experiments" class="panel">
       <div class="grid three" id="experimentsGrid"></div>
-      <h2 class="divider-title">Experiment registry</h2>
+      <h2 class="divider-title">Реестр экспериментов</h2>
       <div class="table-wrap"><table id="experimentsTable"></table></div>
     </section>
   </main>
 
   <aside class="drawer" id="drawer"><button class="drawer-close" id="drawerClose">Закрыть</button><div id="drawerContent"></div></aside>
-  <footer class="footer">Выручай.ру · Операционный дашборд · Данные встроены из PNL Excel и расширены управленческими метриками для JTBD, AI/SOS, партнёров, retention и unit economics.</footer>
+  <footer class="footer">Выручай.ру · Операционный дашборд · Данные встроены из PNL Excel и расширены управленческими метриками для JTBD, AI/SOS, партнёров, удержания и юнит-экономики.</footer>
 </div>
 
 <script>
@@ -168,13 +174,19 @@ class Chart{
   const colors=chartColors(); const pad={l:42,r:12,t:12,b:28}; const plotW=width-pad.l-pad.r, plotH=height-pad.t-pad.b;
   const datasets=cfg.data.datasets||[], labels=cfg.data.labels||[];
   const values=datasets.flatMap(ds=>(ds.data||[]).map(Number)).filter(Number.isFinite);
-  const min=Math.min(0,...values), max=Math.max(1,...values); const scale=v=>pad.t+plotH-((v-min)/(max-min))*plotH;
+  const min=Math.min(0,...values), max=Math.max(1,...values), valueRange=max-min||1; const scale=v=>pad.t+plotH-((v-min)/valueRange)*plotH;
   ctx.strokeStyle=colors.line;ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(pad.l,pad.t);ctx.lineTo(pad.l,pad.t+plotH);ctx.lineTo(width-pad.r,pad.t+plotH);ctx.stroke();
+  const zeroY=scale(0);ctx.strokeStyle=colors.line;ctx.beginPath();ctx.moveTo(pad.l,zeroY);ctx.lineTo(width-pad.r,zeroY);ctx.stroke();
   ctx.fillStyle=colors.muted;ctx.font='11px -apple-system, BlinkMacSystemFont, sans-serif';
   labels.forEach((label,i)=>{if(i%Math.ceil(labels.length/CHART_LABEL_DENSITY)!==0)return;const x=pad.l+(i/(Math.max(labels.length-1,1)))*plotW;ctx.fillText(String(label).slice(0,CHART_LABEL_MAX_LENGTH),x-CHART_LABEL_OFFSET,height-8)});
   const barSets=datasets.filter(ds=>(ds.type||cfg.type)!=='line'), lineSets=datasets.filter(ds=>(ds.type||cfg.type)==='line');
   const groupW=plotW/Math.max(labels.length,1), barW=Math.max(3,groupW/Math.max(barSets.length+1,2));
-  barSets.forEach((ds,di)=>{ctx.fillStyle=ds.backgroundColor||colors.blue;(ds.data||[]).forEach((v,i)=>{const x=pad.l+i*groupW+barW*di+barW*.5;const y=scale(Number(v));ctx.fillRect(x,y,barW,Math.max(1,pad.t+plotH-y))})});
+  barSets.forEach((ds,di)=>{(ds.data||[]).forEach((v,i)=>{
+   const raw=Number(v), y=scale(raw), top=Math.min(y,zeroY), h=Math.max(1,Math.abs(zeroY-y));
+   const x=pad.l+i*groupW+barW*di+barW*.5;
+   ctx.fillStyle=Array.isArray(ds.backgroundColor)?ds.backgroundColor[i]||colors.blue:ds.backgroundColor||colors.blue;
+   ctx.fillRect(x,top,barW,h)
+  })});
   lineSets.forEach(ds=>{ctx.strokeStyle=ds.borderColor||colors.blue;ctx.lineWidth=2;ctx.beginPath();(ds.data||[]).forEach((v,i)=>{const x=pad.l+(i/(Math.max(labels.length-1,1)))*plotW,y=scale(Number(v));i?ctx.lineTo(x,y):ctx.moveTo(x,y)});ctx.stroke()});
  }
 }
@@ -196,9 +208,17 @@ const budgetDirect=[200000,200000,300000,300000,300000,400000,400000,500000,5000
 const budgetSEO=[300000,350000,450000,450000,450000,550000,550000,600000,650000,650000,650000,700000,700000,800000,900000,900000,900000,900000,900000,900000];
 const budgetPR=[200000,200000,300000,300000,300000,400000,400000,500000,200000,200000,200000,250000,250000,250000,250000,250000,250000,250000,250000,250000];
 const totals={revenue:75897147.75,expenses:38950000,profit:36947147.75,visits:2030951.549,repeat:165381.8654,clicks:670311.0778,applications:214503.8772,approvals:65105.33756,directRevenue:14361739.13,seoRevenue:53920909.98,prRevenue:7614498.645,directSpend:12550000,seoSpend:13250000,prSpend:5450000};
-// Share of approved applications expected to become funded deals.
+const cumulative=a=>a.reduce((acc,v,i)=>{acc.push((acc[i-1]||0)+v);return acc},[]);
+const cumulativeRevenue=cumulative(revenue), cumulativeInvestment=cumulative(expenses), cumulativeProfit=cumulative(profit);
+const firstMonthlyProfitIndex=profit.findIndex(v=>v>0), paybackIndex=cumulativeProfit.findIndex(v=>v>=0);
+const INPUT_DATA=[
+ {title:'Период и источник',value:'Май 2026 — декабрь 2027',text:'Встроенная PNL-модель из Excel: выручка, расходы, трафик, клики, заявки, одобрения и канальные бюджеты.'},
+ {title:'Маркетинговые инвестиции',value:'39,0 млн ₽',text:'Сумма расходов на Директ, SEO, PR и операционные затраты за 20 месяцев.'},
+ {title:'Ключевые допущения',value:'76% выдач',text:'76% одобрений становятся выдачами; LTV увеличивается за счёт повторных визитов и кросс-продаж на коэффициент 1,34.'}
+];
+// Доля одобренных заявок, которые ожидаемо становятся выдачами.
 const ISSUED_TO_APPROVAL_RATE=0.76;
-// Lifetime value uplift from repeat usage and cross-sell monetization.
+// Рост LTV за счёт повторного использования и кросс-продаж.
 const LTV_REPEAT_CROSS_SELL_FACTOR=1.34;
 const scenarios=[
  {name:'Дотянуть до зарплаты',users:742000,completion:74,diag:83,match:69,approval:31,repeat:5.8,revenue:28400000,time:'2:18',best:'Наличие стабильной зарплаты'},
@@ -209,39 +229,39 @@ const scenarios=[
  {name:'Перегруженный клиент',users:92000,completion:49,diag:94,match:37,approval:18,repeat:8.9,revenue:2600000,time:'5:10',best:'Подтверждённый доход'}
 ];
 const partners=[
- {id:'p-01',name:'Центрофинанс API',type:'direct API',status:'active',sla:'99.4%',response:'420 мс',approval:38,issue:29,revenue:18200000,epc:128,ecpa:940,complaints:0.8,reject:'PDN, просрочки',action:'scale'},
- {id:'p-02',name:'МФО Север',type:'CPA',status:'active',sla:'97.1%',response:'1.2 с',approval:31,issue:22,revenue:11700000,epc:116,ecpa:810,complaints:1.7,reject:'Возраст, регион',action:'pin'},
- {id:'p-03',name:'Банк Город',type:'direct API',status:'watch',sla:'93.0%',response:'2.8 с',approval:22,issue:15,revenue:9300000,epc:104,ecpa:1190,complaints:2.9,reject:'КИ, доход',action:'downgrade'},
- {id:'p-04',name:'Карта Плюс',type:'CPA',status:'active',sla:'98.0%',response:'780 мс',approval:27,issue:18,revenue:6400000,epc:91,ecpa:670,complaints:1.1,reject:'Скоринг банка',action:'cross-sell'},
- {id:'p-05',name:'Страховой партнёр',type:'CPA',status:'active',sla:'98.8%',response:'610 мс',approval:35,issue:25,revenue:3900000,epc:84,ecpa:430,complaints:0.6,reject:'Не подходит продукт',action:'pin'},
- {id:'p-06',name:'МФО Риск',type:'manual',status:'risky',sla:'88.5%',response:'4.6 с',approval:16,issue:9,revenue:1700000,epc:42,ecpa:1510,complaints:5.4,reject:'Пустые ответы',action:'pause'}
+ {id:'p-01',name:'Центрофинанс API',type:'прямой API',status:'активен',sla:'99.4%',response:'420 мс',approval:38,issue:29,revenue:18200000,epc:128,ecpa:940,complaints:0.8,reject:'ПДН, просрочки',action:'масштабировать'},
+ {id:'p-02',name:'МФО Север',type:'CPA',status:'активен',sla:'97.1%',response:'1.2 с',approval:31,issue:22,revenue:11700000,epc:116,ecpa:810,complaints:1.7,reject:'Возраст, регион',action:'закрепить'},
+ {id:'p-03',name:'Банк Город',type:'прямой API',status:'наблюдение',sla:'93.0%',response:'2.8 с',approval:22,issue:15,revenue:9300000,epc:104,ecpa:1190,complaints:2.9,reject:'КИ, доход',action:'понизить'},
+ {id:'p-04',name:'Карта Плюс',type:'CPA',status:'активен',sla:'98.0%',response:'780 мс',approval:27,issue:18,revenue:6400000,epc:91,ecpa:670,complaints:1.1,reject:'Скоринг банка',action:'кросс-продажа'},
+ {id:'p-05',name:'Страховой партнёр',type:'CPA',status:'активен',sla:'98.8%',response:'610 мс',approval:35,issue:25,revenue:3900000,epc:84,ecpa:430,complaints:0.6,reject:'Не подходит продукт',action:'закрепить'},
+ {id:'p-06',name:'МФО Риск',type:'ручной',status:'риск',sla:'88.5%',response:'4.6 с',approval:16,issue:9,revenue:1700000,epc:42,ecpa:1510,complaints:5.4,reject:'Пустые ответы',action:'пауза'}
 ];
 const flows=[
- {name:'Regular listing',users:100000,offers:5.8,approval:24,issued:17,revenue:92,time:'9 мин',note:'Широкий каталог, ниже точность'},
- {name:'AI top-3',users:100000,offers:3,approval:32,issued:23,revenue:118,time:'4 мин',note:'Рост approval и revenue uplift'},
+ {name:'Обычный список',users:100000,offers:5.8,approval:24,issued:17,revenue:92,time:'9 мин',note:'Широкий каталог, ниже точность'},
+ {name:'AI топ-3',users:100000,offers:3,approval:32,issued:23,revenue:118,time:'4 мин',note:'Рост одобрения и выручки на пользователя'},
  {name:'SOS',users:100000,offers:2.4,approval:38,issued:29,revenue:136,time:'2 мин',note:'Ограниченная подача, меньше риск для КИ'}
 ];
 const aiRows=[
- ['rec-2026-001','До зарплаты','Центрофинанс API, МФО Север, Карта Плюс','stable_income, fast_decision',0.74,'approved',18.6,41,96],
- ['rec-2026-002','Есть долги','Банк Город, МФО Север, Центрофинанс API','low_pdn, refinance_fit',0.52,'rejected',9.4,24,91],
- ['rec-2026-003','Перегруженный клиент','Центрофинанс API, МФО Риск','sos_eligible, limited_send',0.61,'approved',14.1,33,88],
- ['rec-2026-004','Страхование','Страховой партнёр, Карта Плюс','cross_sell_fit, active_policy',0.68,'approved',12.8,35,94]
+ ['rec-2026-001','До зарплаты','Центрофинанс API, МФО Север, Карта Плюс','стабильный доход, быстрое решение',0.74,'одобрено',18.6,41,96],
+ ['rec-2026-002','Есть долги','Банк Город, МФО Север, Центрофинанс API','низкий ПДН, подходит рефинансирование',0.52,'отказ',9.4,24,91],
+ ['rec-2026-003','Перегруженный клиент','Центрофинанс API, МФО Риск','подходит SOS, ограниченная отправка',0.61,'одобрено',14.1,33,88],
+ ['rec-2026-004','Страхование','Страховой партнёр, Карта Плюс','подходит кросс-продажа, активный полис',0.68,'одобрено',12.8,35,94]
 ];
-const sosRows=[['Доля входа в SOS','18.4%'],['Eligibility rate','61.0%'],['Среднее число отправок','2.4'],['Approval rate SOS','38.0%'],['Issued rate SOS','29.0%'],['Revenue per SOS user','136 ₽'],['Average time-to-decision','2 мин 10 сек'],['Fallback scenarios','Рефинансирование, кредитный доктор, карта']];
-const retentionEvents=[['first_deal','65 105','100%'],['reminder_sent_sms','54 420','83.6%'],['reminder_opened','27 910','51.3%'],['repeat_visit','165 382','254.0% к сделкам'],['second_application','18 940','29.1%'],['second_approval','6 790','10.4%'],['cross_sell_success','4 560','7.0%']];
+const sosRows=[['Доля входа в SOS','18.4%'],['Доля подходящих клиентов','61.0%'],['Среднее число отправок','2.4'],['Доля одобрений SOS','38.0%'],['Доля выдач SOS','29.0%'],['Выручка на SOS-пользователя','136 ₽'],['Среднее время до решения','2 мин 10 сек'],['Резервные сценарии','Рефинансирование, кредитный доктор, карта']];
+const retentionEvents=[['Первая сделка','65 105','100%'],['Отправлено SMS-напоминание','54 420','83.6%'],['Открыто напоминание','27 910','51.3%'],['Повторный визит','165 382','254.0% к сделкам'],['Вторая заявка','18 940','29.1%'],['Второе одобрение','6 790','10.4%'],['Успешная кросс-продажа','4 560','7.0%']];
 const experiments=[
- {id:'exp-ai-top3',name:'AI top-3 vs listing',primary:'Approval rate',guardrail:'Complaint rate',segment:'JTBD займы',confidence:'96%',result:'+8 п.п. approval',status:'rollout'},
- {id:'exp-sos-limit',name:'2 партнёра vs 3 партнёра SOS',primary:'Issued rate',guardrail:'Revenue user',segment:'PDN 50–80%',confidence:'91%',result:'3 партнёра лучше на 6%',status:'continue'},
- {id:'exp-retention-sms',name:'SMS D+14 vs Push D+14',primary:'Repeat application',guardrail:'Unsubscribe',segment:'Funded users',confidence:'88%',result:'SMS +2.4 п.п.',status:'extend'},
- {id:'exp-reason-copy',name:'Reason code copy',primary:'Offer CTR',guardrail:'Time to click',segment:'AI flow',confidence:'94%',result:'+11% CTR',status:'rollout'}
+ {id:'exp-ai-top3',name:'AI топ-3 против списка',primary:'Доля одобрений',guardrail:'Доля жалоб',segment:'JTBD займы',confidence:'96%',result:'+8 п.п. к одобрению',status:'раскатка'},
+ {id:'exp-sos-limit',name:'2 партнёра против 3 партнёров SOS',primary:'Доля выдач',guardrail:'Выручка на пользователя',segment:'ПДН 50–80%',confidence:'91%',result:'3 партнёра лучше на 6%',status:'продолжить'},
+ {id:'exp-retention-sms',name:'SMS D+14 против Push D+14',primary:'Повторная заявка',guardrail:'Отписки',segment:'Пользователи с выдачей',confidence:'88%',result:'SMS +2.4 п.п.',status:'расширить'},
+ {id:'exp-reason-copy',name:'Текст причины рекомендации',primary:'CTR оффера',guardrail:'Время до клика',segment:'AI-воронка',confidence:'94%',result:'+11% CTR',status:'раскатка'}
 ];
 const alerts=[
- {severity:'red',entity:'МФО Риск',reason:'SLA ниже 90%, response time 4.6 с',action:'Pause partner и вывести из SOS'},
- {severity:'yellow',entity:'Банк Город',reason:'Predicted approval 33%, factual 22%',action:'Downgrade in ranking, проверить скоринг'},
- {severity:'yellow',entity:'Яндекс.Директ',reason:'CAC выше SEO на 28%',action:'Оставить только profitable adgroups'},
- {severity:'green',entity:'SEO long-tail',reason:'ROI 75%, EPC стабильно выше CPC',action:'Scale pages и ссылочную массу'},
- {severity:'yellow',entity:'Repeat rate',reason:'5.1% против цели 6%',action:'Усилить SMS D+14 и cross-sell офферы'},
- {severity:'red',entity:'Пустые рекомендации',reason:'2.7% sessions без top-3',action:'Fallback на direct listing и лог missing partner response'}
+ {severity:'red',entity:'МФО Риск',reason:'SLA ниже 90%, время ответа 4.6 с',action:'Поставить партнёра на паузу и вывести из SOS'},
+ {severity:'yellow',entity:'Банк Город',reason:'Прогноз одобрения 33%, факт 22%',action:'Понизить в ранжировании и проверить скоринг'},
+ {severity:'yellow',entity:'Яндекс.Директ',reason:'CAC выше SEO на 28%',action:'Оставить только прибыльные группы объявлений'},
+ {severity:'green',entity:'SEO long-tail',reason:'ROI 75%, EPC стабильно выше CPC',action:'Масштабировать страницы и ссылочную массу'},
+ {severity:'yellow',entity:'Доля повторов',reason:'5.1% против цели 6%',action:'Усилить SMS D+14 и кросс-продажи'},
+ {severity:'red',entity:'Пустые рекомендации',reason:'2.7% сессий без топ-3',action:'Включить резервный список и логировать отсутствующие ответы партнёров'}
 ];
 function sum(a){return a.reduce((x,y)=>x+(Number.isFinite(Number(y))?Number(y):0),0)}
 function fmt(n){return Math.round(n).toLocaleString('ru-RU')}
@@ -272,10 +292,11 @@ function renderCharts(){
  const c=chartColors();
  Object.values(charts).forEach(x=>x.destroy());
  charts.overview=new Chart(document.getElementById('chartOverview'),{type:'bar',data:{labels:months,datasets:[{label:'Выручка',data:revenue.map(v=>v/1000),backgroundColor:c.green+'cc'},{label:'Расходы',data:expenses.map(v=>v/1000),backgroundColor:c.red+'88'},{label:'Прибыль',type:'line',data:profit.map(v=>v/1000),borderColor:c.blue,backgroundColor:'transparent',tension:.35,borderWidth:2,pointRadius:3}]},options:baseOptions(c)});
- charts.traffic=new Chart(document.getElementById('chartTraffic'),{type:'bar',data:{labels:months,datasets:[{label:'SEO',data:trafficSEO,backgroundColor:c.green+'cc'},{label:'Директ',data:trafficPPC,backgroundColor:c.blue+'cc'},{label:'PR',data:trafficPR,backgroundColor:c.violet+'cc'},{label:'Repeat',data:repeat,backgroundColor:c.orange+'cc'}]},options:{...baseOptions(c),scales:{...baseOptions(c).scales,x:{...baseOptions(c).scales.x,stacked:true},y:{...baseOptions(c).scales.y,stacked:true}}}});
+ charts.investment=new Chart(document.getElementById('chartInvestment'),{type:'line',data:{labels:months,datasets:[{label:'Накопленная выручка',data:cumulativeRevenue.map(v=>v/1000000),borderColor:c.green,backgroundColor:'transparent',tension:.35},{label:'Накопленные инвестиции',data:cumulativeInvestment.map(v=>v/1000000),borderColor:c.red,backgroundColor:'transparent',tension:.35},{label:'Накопленная прибыль',data:cumulativeProfit.map(v=>v/1000000),borderColor:c.blue,backgroundColor:c.blue+'18',fill:true,tension:.35}]},options:baseOptions(c)});
+ charts.traffic=new Chart(document.getElementById('chartTraffic'),{type:'bar',data:{labels:months,datasets:[{label:'SEO',data:trafficSEO,backgroundColor:c.green+'cc'},{label:'Директ',data:trafficPPC,backgroundColor:c.blue+'cc'},{label:'PR',data:trafficPR,backgroundColor:c.violet+'cc'},{label:'Повторы',data:repeat,backgroundColor:c.orange+'cc'}]},options:{...baseOptions(c),scales:{...baseOptions(c).scales,x:{...baseOptions(c).scales.x,stacked:true},y:{...baseOptions(c).scales.y,stacked:true}}}});
  charts.epc=new Chart(document.getElementById('chartEpc'),{type:'line',data:{labels:months,datasets:[{label:'EPC, ₽',data:epc,borderColor:c.blue,backgroundColor:c.blue+'18',fill:true,tension:.35,borderWidth:2.5,pointRadius:3}]},options:baseOptions(c)});
- charts.retention=new Chart(document.getElementById('chartRetention'),{type:'line',data:{labels:months,datasets:[{label:'Repeat visits',data:repeat,borderColor:c.orange,backgroundColor:c.orange+'18',fill:true,tension:.35},{label:'Applications',data:applications,borderColor:c.green,backgroundColor:'transparent',tension:.35}]},options:baseOptions(c)});
- charts.unit=new Chart(document.getElementById('chartUnit'),{type:'bar',data:{labels:months,datasets:[{label:'Contribution margin',data:profit.map(v=>v/1000),backgroundColor:profit.map(v=>v>=0?c.green+'bb':c.red+'99')}]},options:baseOptions(c)});
+ charts.retention=new Chart(document.getElementById('chartRetention'),{type:'line',data:{labels:months,datasets:[{label:'Повторные визиты',data:repeat,borderColor:c.orange,backgroundColor:c.orange+'18',fill:true,tension:.35},{label:'Заявки',data:applications,borderColor:c.green,backgroundColor:'transparent',tension:.35}]},options:baseOptions(c)});
+ charts.unit=new Chart(document.getElementById('chartUnit'),{type:'bar',data:{labels:months,datasets:[{label:'Маржинальная прибыль',data:profit.map(v=>v/1000),backgroundColor:profit.map(v=>v>=0?c.green+'bb':c.red+'99')}]},options:baseOptions(c)});
 }
 function init(){
  const approvalRate=ratio(totals.approvals,totals.applications)*100;
@@ -283,38 +304,40 @@ function init(){
  const gross=totals.revenue-totals.expenses;
  const cac=ratio(totals.expenses,issued);
  const ltv=ratio(totals.revenue,totals.approvals)*LTV_REPEAT_CROSS_SELL_FACTOR;
- kpi('kpiGrid',[{label:'Users / sessions',value:fmt(totals.visits),sub:'20 месяцев, все каналы'},{label:'Applications sent',value:fmt(totals.applications),sub:'CR в заявку '+pct(ratio(totals.applications,totals.visits)*100)},{label:'Approval rate',value:pct(approvalRate),sub:fmt(totals.approvals)+' approvals',cls:'positive'},{label:'Issued deals',value:fmt(issued),sub:'оценка funded = 76% approvals'},{label:'Revenue',value:mln(totals.revenue),sub:'one source of truth from PNL',cls:'positive'},{label:'EPC',value:Math.round(ratio(totals.revenue,totals.clicks))+' ₽',sub:'revenue / offer clicks',cls:'positive'},{label:'CAC',value:Math.round(cac)+' ₽',sub:'spend / funded users',cls:'negative'},{label:'LTV / CAC',value:(ltv/cac).toFixed(1)+'x',sub:'LTV учитывает repeat и cross-sell',cls:'positive'},{label:'Repeat rate',value:'5.1%',sub:'цель 6% в ближайшем периоде'},{label:'Gross profit',value:mln(gross),sub:'revenue - total spend',cls:'positive'},{label:'Contribution',value:pct(ratio(gross,totals.revenue)*100),sub:'маржинальность по PNL',cls:'positive'},{label:'PnL',value:mln(totals.profit),sub:'нарастающим итогом',cls:'positive'}]);
- document.getElementById('actionsList').innerHTML=[['Scale','SEO long-tail и Центрофинанс API дают лучший ROI, EPC и approval'],['Fix','Банк Город имеет mismatch predicted vs factual approval'],['Disable','МФО Риск выводится из SOS из-за SLA и complaints'],['Grow','Retention D+14 увеличивает repeat и LTV без CAC'],['Control','Директ масштабировать только при EPC выше CPC и CAC ниже LTV']].map((r,i)=>`<div class="mini-row"><span><span class="status ${i===2?'red':i===1||i===4?'yellow':'green'}"></span> ${r[0]}</span><b>${r[1]}</b></div>`).join('');
+ document.getElementById('inputDataList').innerHTML=INPUT_DATA.map(x=>`<div class="card tight"><div class="metric-label">${escapeHtml(x.title)}</div><div class="metric-value">${escapeHtml(x.value)}</div><div class="metric-sub">${escapeHtml(x.text)}</div></div>`).join('');
+ kpi('kpiGrid',[{label:'Пользователи / сессии',value:fmt(totals.visits),sub:'20 месяцев, все каналы'},{label:'Отправленные заявки',value:fmt(totals.applications),sub:'CR в заявку '+pct(ratio(totals.applications,totals.visits)*100)},{label:'Доля одобрений',value:pct(approvalRate),sub:fmt(totals.approvals)+' одобрений',cls:'positive'},{label:'Выданные сделки',value:fmt(issued),sub:'оценка выдач = 76% одобрений'},{label:'Выручка',value:mln(totals.revenue),sub:'единый источник данных — PNL',cls:'positive'},{label:'EPC',value:Math.round(ratio(totals.revenue,totals.clicks))+' ₽',sub:'выручка / клики на офферы',cls:'positive'},{label:'CAC',value:Math.round(cac)+' ₽',sub:'расходы / выданные сделки',cls:'negative'},{label:'LTV / CAC',value:(ltv/cac).toFixed(1)+'x',sub:'LTV учитывает повторы и кросс-продажи',cls:'positive'},{label:'Доля повторов',value:'5.1%',sub:'цель 6% в ближайшем периоде'},{label:'Валовая прибыль',value:mln(gross),sub:'выручка минус расходы',cls:'positive'},{label:'Маржинальность',value:pct(ratio(gross,totals.revenue)*100),sub:'маржинальность по PNL',cls:'positive'},{label:'PnL',value:mln(totals.profit),sub:'нарастающим итогом',cls:'positive'}]);
+ document.getElementById('paybackList').innerHTML=[['Первая месячная прибыль',months[firstMonthlyProfitIndex]||'—'],['Окупаемость накопленных инвестиций',months[paybackIndex]||'—'],['Максимальный накопленный минус',mln(Math.min(...cumulativeProfit))],['Финальный накопленный PnL',mln(totals.profit)]].map((r,i)=>`<div class="mini-row"><span><span class="status ${i===3?'green':i===2?'red':'yellow'}"></span> ${r[0]}</span><b>${r[1]}</b></div>`).join('');
+ document.getElementById('actionsList').innerHTML=[['Масштабировать','SEO long-tail и Центрофинанс API дают лучший ROI, EPC и одобрение'],['Исправить','У Банка Город расхождение прогноза и фактического одобрения'],['Отключить','МФО Риск выводится из SOS из-за SLA и жалоб'],['Растить','Удержание D+14 увеличивает повторы и LTV без CAC'],['Контроль','Директ масштабировать только при EPC выше CPC и CAC ниже LTV']].map((r,i)=>`<div class="mini-row"><span><span class="status ${i===2?'red':i===1||i===4?'yellow':'green'}"></span> ${r[0]}</span><b>${r[1]}</b></div>`).join('');
  const pnlRows=[['Выручка',...revenue.map(money),money(totals.revenue)],['Расходы',...expenses.map(money),money(totals.expenses)],['Прибыль',...profit.map(v=>money(v)),money(totals.profit)],['Визиты',...visits.map(fmt),fmt(totals.visits)],['Клики на офферы',...offerClicks.map(fmt),fmt(totals.clicks)],['Заявки',...applications.map(fmt),fmt(totals.applications)],['Апрувы',...approvals.map(fmt),fmt(totals.approvals)]];
  table('pnlTable',['Показатель',...months,'Итого'],pnlRows);
- kpi('trafficKpis',[{label:'SEO revenue',value:mln(totals.seoRevenue),sub:'ROI 75%',cls:'positive'},{label:'Direct revenue',value:mln(totals.directRevenue),sub:'ROI 13%'},{label:'PR revenue',value:mln(totals.prRevenue),sub:'ROI 28%'},{label:'Repeat visits',value:fmt(totals.repeat),sub:'CAC 0 ₽',cls:'positive'}]);
- table('acquisitionTable',['Source / medium','Sessions','Unique users','Offer click rate','Application complete','Approval','Revenue','EPC','CAC','ROI / ROMI'],[['SEO / organic',fmt(sum(trafficSEO)),fmt(sum(trafficSEO)*.92),pct(35),pct(35),pct(30.9),mln(totals.seoRevenue),'108 ₽','246 ₽','75%'],['Yandex / CPC',fmt(sum(trafficPPC)),fmt(sum(trafficPPC)*.88),pct(27),pct(21.1),pct(24.2),mln(totals.directRevenue),'99 ₽','2 176 ₽','13%'],['PR / media',fmt(sum(trafficPR)),fmt(sum(trafficPR)*.9),pct(45),pct(35),pct(40),mln(totals.prRevenue),'280 ₽','1 432 ₽','28%'],['CRM / repeat',fmt(totals.repeat),fmt(totals.repeat*.76),pct(34),pct(28),pct(36),mln(5961100),'112 ₽','0 ₽','∞']]);
- const funnel=[['Sessions',fmt(totals.visits)],['Scenario selected',fmt(totals.visits*.78)],['Diagnostic completed',fmt(totals.visits*.61)],['Recommendations generated',fmt(totals.visits*.54)],['Offer clicked',fmt(totals.clicks)],['Applications',fmt(totals.applications)],['Approvals',fmt(totals.approvals)],['Funded deals',fmt(issued)]];
+ kpi('trafficKpis',[{label:'Выручка SEO',value:mln(totals.seoRevenue),sub:'ROI 75%',cls:'positive'},{label:'Выручка Директа',value:mln(totals.directRevenue),sub:'ROI 13%'},{label:'Выручка PR',value:mln(totals.prRevenue),sub:'ROI 28%'},{label:'Повторные визиты',value:fmt(totals.repeat),sub:'CAC 0 ₽',cls:'positive'}]);
+ table('acquisitionTable',['Источник / канал','Сессии','Уникальные пользователи','Кликрейт оффера','Завершение заявки','Одобрение','Выручка','EPC','CAC','ROI / ROMI'],[['SEO / органика',fmt(sum(trafficSEO)),fmt(sum(trafficSEO)*.92),pct(35),pct(35),pct(30.9),mln(totals.seoRevenue),'108 ₽','246 ₽','75%'],['Яндекс / CPC',fmt(sum(trafficPPC)),fmt(sum(trafficPPC)*.88),pct(27),pct(21.1),pct(24.2),mln(totals.directRevenue),'99 ₽','2 176 ₽','13%'],['PR / медиа',fmt(sum(trafficPR)),fmt(sum(trafficPR)*.9),pct(45),pct(35),pct(40),mln(totals.prRevenue),'280 ₽','1 432 ₽','28%'],['CRM / повторные',fmt(totals.repeat),fmt(totals.repeat*.76),pct(34),pct(28),pct(36),mln(5961100),'112 ₽','0 ₽','∞']]);
+ const funnel=[['Сессии',fmt(totals.visits)],['Сценарий выбран',fmt(totals.visits*.78)],['Диагностика завершена',fmt(totals.visits*.61)],['Рекомендации сформированы',fmt(totals.visits*.54)],['Клик по офферу',fmt(totals.clicks)],['Заявки',fmt(totals.applications)],['Одобрения',fmt(totals.approvals)],['Выданные сделки',fmt(issued)]];
  document.getElementById('mainFunnel').innerHTML=funnel.slice(0,5).map((x,i)=>`<div class="step"><b>${x[1]}</b><span>${x[0]}</span><div class="progress" style="margin-top:12px"><div class="bar" style="width:${100-i*13}%"></div></div></div>`).join('');
- document.getElementById('flowComparison').innerHTML=flows.map(f=>`<div class="card scenario-card"><div class="scenario-head"><h3>${f.name}</h3><span class="pill">${f.offers} offers</span></div><div class="mini-row"><span>Approval</span><b>${pct(f.approval)}</b></div><div class="mini-row"><span>Issued</span><b>${pct(f.issued)}</b></div><div class="mini-row"><span>Revenue / user</span><b>${f.revenue} ₽</b></div><div class="mini-row"><span>Decision time</span><b>${f.time}</b></div><p class="muted">${f.note}</p></div>`).join('');
- table('funnelTable',['Month','Visits','Offer clicks','Applications','Approvals','Approval rate','Revenue'],months.map((m,i)=>[m,fmt(visits[i]),fmt(offerClicks[i]),fmt(applications[i]),fmt(approvals[i]),pct(ratio(approvals[i],applications[i])*100),money(revenue[i])]));
- document.getElementById('scenarioGrid').innerHTML=scenarios.map(s=>`<div class="card scenario-card" data-drill="${s.name}"><div class="scenario-head"><h3>${s.name}</h3><span class="pill">${fmt(s.users)} users</span></div><div class="mini-row"><span>Completion</span><b>${pct(s.completion)}</b></div><div class="mini-row"><span>Diagnostic</span><b>${pct(s.diag)}</b></div><div class="mini-row"><span>Approval</span><b>${pct(s.approval)}</b></div><div class="mini-row"><span>Repeat</span><b>${pct(s.repeat)}</b></div><div class="mini-row"><span>Revenue</span><b>${mln(s.revenue)}</b></div><div class="progress"><div class="bar" style="width:${s.completion}%"></div></div><p class="muted">Застревание: диагностика и подтверждение данных. Лучший ответ: ${s.best}. Время: ${s.time}.</p></div>`).join('');
- table('jtbdTable',['Scenario','Question heat','Stuck step','Time','Best downstream approval answer','Revenue','Repeat'],scenarios.map(s=>[s.name,`${pct(100-s.completion)} drop-off`,'diagnostic_answered',s.time,s.best,mln(s.revenue),pct(s.repeat)]));
- kpi('aiKpis',[{label:'Recommendation sessions',value:fmt(totals.visits*.54),sub:'logged recommendation session id'},{label:'CTR top-3',value:'41%',sub:'offer_clicked / impressions',cls:'positive'},{label:'Approval uplift',value:'+8 п.п.',sub:'vs classic listing',cls:'positive'},{label:'Explainability coverage',value:'94%',sub:'reason code present',cls:'positive'}]);
- table('aiTable',['Session id','Scenario','Top-3 offers','Reason code','Predicted approval','Actual outcome','Revenue uplift','CTR','Coverage'],aiRows.map(r=>[r[0],r[1],r[2],r[3],pct(r[4]*100),r[5],pct(r[6]),pct(r[7]),pct(r[8])]));
- table('sosTable',['Metric','Value'],sosRows);
- document.getElementById('partnerCards').innerHTML=partners.slice(0,3).map(p=>`<div class="card partner-card"><div class="partner-head"><h3>${p.name}</h3><span class="pill">${p.type}</span></div><div class="mini-row"><span>SLA</span><b>${p.sla}</b></div><div class="mini-row"><span>Approval</span><b>${pct(p.approval)}</b></div><div class="mini-row"><span>EPC</span><b>${p.epc} ₽</b></div><div class="actions"><button class="action">Pause partner</button><button class="action">Pin offer</button><button class="action">Downgrade</button></div></div>`).join('');
- table('partnerTable',['Partner','Integration','Status','SLA','Response','Approve rate','Issue rate','Revenue','EPC','eCPA','Complaint','Top rejection','Action'],partners.map(p=>[p.name,p.type,p.status,p.sla,p.response,pct(p.approval),pct(p.issue),mln(p.revenue),p.epc+' ₽',p.ecpa+' ₽',pct(p.complaints),p.reject,p.action]));
- kpi('retentionKpis',[{label:'Repeat rate',value:'5.1%',sub:'target 6%'},{label:'Days to repeat',value:'21',sub:'median days'},{label:'Reactivation SMS',value:'12.8%',sub:'best channel',cls:'positive'},{label:'Post-deal revenue',value:mln(9860000),sub:'repeat + cross-sell',cls:'positive'}]);
- table('retentionTable',['Event','Users / events','Conversion'],retentionEvents);
+ document.getElementById('flowComparison').innerHTML=flows.map(f=>`<div class="card scenario-card"><div class="scenario-head"><h3>${f.name}</h3><span class="pill">${f.offers} оффера</span></div><div class="mini-row"><span>Одобрение</span><b>${pct(f.approval)}</b></div><div class="mini-row"><span>Выдачи</span><b>${pct(f.issued)}</b></div><div class="mini-row"><span>Выручка / пользователь</span><b>${f.revenue} ₽</b></div><div class="mini-row"><span>Время решения</span><b>${f.time}</b></div><p class="muted">${f.note}</p></div>`).join('');
+ table('funnelTable',['Месяц','Визиты','Клики по офферам','Заявки','Одобрения','Доля одобрений','Выручка'],months.map((m,i)=>[m,fmt(visits[i]),fmt(offerClicks[i]),fmt(applications[i]),fmt(approvals[i]),pct(ratio(approvals[i],applications[i])*100),money(revenue[i])]));
+ document.getElementById('scenarioGrid').innerHTML=scenarios.map(s=>`<div class="card scenario-card" data-drill="${s.name}"><div class="scenario-head"><h3>${s.name}</h3><span class="pill">${fmt(s.users)} пользователей</span></div><div class="mini-row"><span>Завершение</span><b>${pct(s.completion)}</b></div><div class="mini-row"><span>Диагностика</span><b>${pct(s.diag)}</b></div><div class="mini-row"><span>Одобрение</span><b>${pct(s.approval)}</b></div><div class="mini-row"><span>Повтор</span><b>${pct(s.repeat)}</b></div><div class="mini-row"><span>Выручка</span><b>${mln(s.revenue)}</b></div><div class="progress"><div class="bar" style="width:${s.completion}%"></div></div><p class="muted">Застревание: диагностика и подтверждение данных. Лучший ответ: ${s.best}. Время: ${s.time}.</p></div>`).join('');
+ table('jtbdTable',['Сценарий','Потери на вопросах','Узкое место','Время','Лучший ответ для одобрения','Выручка','Повтор'],scenarios.map(s=>[s.name,`${pct(100-s.completion)} отвал`,'ответы диагностики',s.time,s.best,mln(s.revenue),pct(s.repeat)]));
+ kpi('aiKpis',[{label:'Сессии с рекомендациями',value:fmt(totals.visits*.54),sub:'логируется ID сессии рекомендации'},{label:'CTR топ-3',value:'41%',sub:'клики по офферу / показы',cls:'positive'},{label:'Прирост одобрений',value:'+8 п.п.',sub:'к обычному списку',cls:'positive'},{label:'Покрытие объяснениями',value:'94%',sub:'присутствует причина рекомендации',cls:'positive'}]);
+ table('aiTable',['ID сессии','Сценарий','Топ-3 оффера','Причина рекомендации','Прогноз одобрения','Фактический результат','Прирост выручки','CTR','Покрытие'],aiRows.map(r=>[r[0],r[1],r[2],r[3],pct(r[4]*100),r[5],pct(r[6]),pct(r[7]),pct(r[8])]));
+ table('sosTable',['Метрика','Значение'],sosRows);
+ document.getElementById('partnerCards').innerHTML=partners.slice(0,3).map(p=>`<div class="card partner-card"><div class="partner-head"><h3>${p.name}</h3><span class="pill">${p.type}</span></div><div class="mini-row"><span>SLA</span><b>${p.sla}</b></div><div class="mini-row"><span>Одобрение</span><b>${pct(p.approval)}</b></div><div class="mini-row"><span>EPC</span><b>${p.epc} ₽</b></div><div class="actions"><button class="action">Пауза партнёра</button><button class="action">Закрепить оффер</button><button class="action">Понизить</button></div></div>`).join('');
+ table('partnerTable',['Партнёр','Интеграция','Статус','SLA','Ответ','Доля одобрений','Доля выдач','Выручка','EPC','eCPA','Жалобы','Главная причина отказа','Действие'],partners.map(p=>[p.name,p.type,p.status,p.sla,p.response,pct(p.approval),pct(p.issue),mln(p.revenue),p.epc+' ₽',p.ecpa+' ₽',pct(p.complaints),p.reject,p.action]));
+ kpi('retentionKpis',[{label:'Доля повторов',value:'5.1%',sub:'цель 6%'},{label:'Дней до повтора',value:'21',sub:'медиана дней'},{label:'Реактивация SMS',value:'12.8%',sub:'лучший канал',cls:'positive'},{label:'Выручка после сделки',value:mln(9860000),sub:'повторы + кросс-продажи',cls:'positive'}]);
+ table('retentionTable',['Событие','Пользователи / события','Конверсия'],retentionEvents);
  const unitLtv=ratio(totals.revenue,totals.approvals)*LTV_REPEAT_CROSS_SELL_FACTOR;
- kpi('unitKpis',[{label:'EPC',value:Math.round(ratio(totals.revenue,totals.clicks))+' ₽',sub:'revenue / clicks'},{label:'CAC funded',value:Math.round(cac)+' ₽',sub:'spend / first funded users'},{label:'LTV',value:Math.round(unitLtv)+' ₽',sub:'net revenue with repeat'},{label:'LTV / CAC',value:(unitLtv/cac).toFixed(1)+'x',sub:'healthy if > 3x',cls:'positive'}]);
- document.getElementById('formulaList').innerHTML=['EPC = revenue / offer clicks','CAC = spend / approved users или first funded users','LTV = cumulative net revenue per user with repeat and cross-sell','Contribution margin = revenue - media spend - variable partner costs','Payback period = CAC / monthly margin per user','Marketing PnL = revenue - media spend - operating costs'].map(x=>`<div class="mini-row"><span>${x}</span><b>tracked</b></div>`).join('');
- table('unitTable',['Channel','Integration mix','Revenue','Spend','Gross profit','EPC','CAC approved','LTV/CAC','Payback','Marketing PnL'],[['SEO','CPA + direct API',mln(totals.seoRevenue),mln(totals.seoSpend),mln(totals.seoRevenue-totals.seoSpend),'108 ₽','246 ₽','6.1x','4.2 мес',mln(totals.seoRevenue-totals.seoSpend)],['Yandex Direct','CPA + direct API',mln(totals.directRevenue),mln(totals.directSpend),mln(totals.directRevenue-totals.directSpend),'99 ₽','1 701 ₽','1.8x','8.9 мес',mln(totals.directRevenue-totals.directSpend)],['PR','CPA',mln(totals.prRevenue),mln(totals.prSpend),mln(totals.prRevenue-totals.prSpend),'280 ₽','1 432 ₽','2.2x','7.1 мес',mln(totals.prRevenue-totals.prSpend)],['Repeat','direct API + cross-sell',mln(5961100),'0 ₽',mln(5961100),'112 ₽','0 ₽','∞','same day',mln(5961100)]]);
- document.getElementById('alertsGrid').innerHTML=alerts.map(a=>`<div class="card alert-card"><div class="alert-head"><h3>${a.entity}</h3><span class="delta ${a.severity==='red'?'bad':a.severity==='yellow'?'warn':'good'}">${a.severity}</span></div><div class="mini-row"><span>First seen</span><b>Today</b></div><p class="muted">${a.reason}</p><div class="actions"><button class="action">${a.action}</button></div></div>`).join('');
- document.getElementById('experimentsGrid').innerHTML=experiments.slice(0,3).map(e=>`<div class="card"><div class="card-title"><div><h3>${e.name}</h3><p>${e.id}</p></div><span class="pill">${e.status}</span></div><div class="mini-row"><span>Primary</span><b>${e.primary}</b></div><div class="mini-row"><span>Confidence</span><b>${e.confidence}</b></div><div class="mini-row"><span>Result</span><b>${e.result}</b></div></div>`).join('');
- table('experimentsTable',['Experiment','Primary metric','Guardrail','Segment','Confidence','Snapshot','Decision'],experiments.map(e=>[e.name,e.primary,e.guardrail,e.segment,e.confidence,e.result,e.status]));
+ kpi('unitKpis',[{label:'EPC',value:Math.round(ratio(totals.revenue,totals.clicks))+' ₽',sub:'выручка / клики'},{label:'CAC выдачи',value:Math.round(cac)+' ₽',sub:'расходы / первые выдачи'},{label:'LTV',value:Math.round(unitLtv)+' ₽',sub:'чистая выручка с повторами'},{label:'LTV / CAC',value:(unitLtv/cac).toFixed(1)+'x',sub:'здорово при > 3x',cls:'positive'}]);
+ document.getElementById('formulaList').innerHTML=['EPC = выручка / клики по офферам','CAC = расходы / одобренные пользователи или первые выдачи','LTV = накопленная чистая выручка на пользователя с повторами и кросс-продажами','Маржинальная прибыль = выручка - медиарасходы - переменные партнёрские расходы','Срок окупаемости = CAC / месячная маржа на пользователя','Маркетинговый PnL = выручка - медиарасходы - операционные расходы'].map(x=>`<div class="mini-row"><span>${x}</span><b>отслеживается</b></div>`).join('');
+ table('unitTable',['Канал','Микс интеграций','Выручка','Расходы','Валовая прибыль','EPC','CAC одобрения','LTV/CAC','Окупаемость','Маркетинговый PnL'],[['SEO','CPA + прямой API',mln(totals.seoRevenue),mln(totals.seoSpend),mln(totals.seoRevenue-totals.seoSpend),'108 ₽','246 ₽','6.1x','4.2 мес',mln(totals.seoRevenue-totals.seoSpend)],['Яндекс Директ','CPA + прямой API',mln(totals.directRevenue),mln(totals.directSpend),mln(totals.directRevenue-totals.directSpend),'99 ₽','1 701 ₽','1.8x','8.9 мес',mln(totals.directRevenue-totals.directSpend)],['PR','CPA',mln(totals.prRevenue),mln(totals.prSpend),mln(totals.prRevenue-totals.prSpend),'280 ₽','1 432 ₽','2.2x','7.1 мес',mln(totals.prRevenue-totals.prSpend)],['Повторы','прямой API + кросс-продажи',mln(5961100),'0 ₽',mln(5961100),'112 ₽','0 ₽','∞','в тот же день',mln(5961100)]]);
+ document.getElementById('alertsGrid').innerHTML=alerts.map(a=>`<div class="card alert-card"><div class="alert-head"><h3>${a.entity}</h3><span class="delta ${a.severity==='red'?'bad':a.severity==='yellow'?'warn':'good'}">${a.severity==='red'?'критично':a.severity==='yellow'?'внимание':'норма'}</span></div><div class="mini-row"><span>Первое обнаружение</span><b>Сегодня</b></div><p class="muted">${a.reason}</p><div class="actions"><button class="action">${a.action}</button></div></div>`).join('');
+ document.getElementById('experimentsGrid').innerHTML=experiments.slice(0,3).map(e=>`<div class="card"><div class="card-title"><div><h3>${e.name}</h3><p>${e.id}</p></div><span class="pill">${e.status}</span></div><div class="mini-row"><span>Главная метрика</span><b>${e.primary}</b></div><div class="mini-row"><span>Уверенность</span><b>${e.confidence}</b></div><div class="mini-row"><span>Результат</span><b>${e.result}</b></div></div>`).join('');
+ table('experimentsTable',['Эксперимент','Главная метрика','Ограничение','Сегмент','Уверенность','Снимок','Решение'],experiments.map(e=>[e.name,e.primary,e.guardrail,e.segment,e.confidence,e.result,e.status]));
  renderCharts();
 }
 const tabs=document.querySelectorAll('.tab'),panels=document.querySelectorAll('.panel');tabs.forEach(t=>t.addEventListener('click',()=>{tabs.forEach(x=>x.classList.remove('active'));panels.forEach(x=>x.classList.remove('active'));t.classList.add('active');document.getElementById('tab-'+t.dataset.tab).classList.add('active');setTimeout(renderCharts,40)}));
 document.querySelectorAll('.chip').forEach(b=>b.addEventListener('click',()=>{document.querySelectorAll('.chip').forEach(x=>x.classList.remove('active'));b.classList.add('active')}));
 document.getElementById('themeToggle').addEventListener('click',()=>{const root=document.documentElement;root.dataset.theme=root.dataset.theme==='dark'?'light':'dark';setTimeout(renderCharts,40)});
-const drawer=document.getElementById('drawer'),drawerContent=document.getElementById('drawerContent');document.addEventListener('click',e=>{const card=e.target.closest('[data-drill]');if(!card)return;drawerContent.innerHTML=`<h2>${escapeHtml(card.dataset.drill)}</h2><p class="muted">Drill-down доступен до user, session, application, partner event с учётом прав доступа. В демо показан агрегированный слой без чувствительных данных.</p><div class="mini-list"><div class="mini-row"><span>Source</span><b>validated mart</b></div><div class="mini-row"><span>Status</span><b>raw / validated / attributed</b></div><div class="mini-row"><span>Identifiers</span><b>masked / hashed</b></div></div>`;drawer.classList.add('open')});document.getElementById('drawerClose').addEventListener('click',()=>drawer.classList.remove('open'));
+const drawer=document.getElementById('drawer'),drawerContent=document.getElementById('drawerContent');document.addEventListener('click',e=>{const card=e.target.closest('[data-drill]');if(!card)return;drawerContent.innerHTML=`<h2>${escapeHtml(card.dataset.drill)}</h2><p class="muted">Детализация доступна до пользователя, сессии, заявки и события партнёра с учётом прав доступа. В демо показан агрегированный слой без чувствительных данных.</p><div class="mini-list"><div class="mini-row"><span>Источник</span><b>проверенная витрина</b></div><div class="mini-row"><span>Статус</span><b>сырой / проверенный / атрибутированный</b></div><div class="mini-row"><span>Идентификаторы</span><b>замаскированы / хэшированы</b></div></div>`;drawer.classList.add('open')});document.getElementById('drawerClose').addEventListener('click',()=>drawer.classList.remove('open'));
 init();
 </script>
 </body>
