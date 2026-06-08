@@ -174,14 +174,19 @@ class Chart{
   const colors=chartColors(); const pad={l:42,r:12,t:12,b:28}; const plotW=width-pad.l-pad.r, plotH=height-pad.t-pad.b;
   const datasets=cfg.data.datasets||[], labels=cfg.data.labels||[];
   const values=datasets.flatMap(ds=>(ds.data||[]).map(Number)).filter(Number.isFinite);
-  const min=Math.min(0,...values), max=Math.max(1,...values), range=max-min||1; const scale=v=>pad.t+plotH-((v-min)/range)*plotH;
+  const min=Math.min(0,...values), max=Math.max(1,...values), valueRange=max-min||1; const scale=v=>pad.t+plotH-((v-min)/valueRange)*plotH;
   ctx.strokeStyle=colors.line;ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(pad.l,pad.t);ctx.lineTo(pad.l,pad.t+plotH);ctx.lineTo(width-pad.r,pad.t+plotH);ctx.stroke();
   const zeroY=scale(0);ctx.strokeStyle=colors.line;ctx.beginPath();ctx.moveTo(pad.l,zeroY);ctx.lineTo(width-pad.r,zeroY);ctx.stroke();
   ctx.fillStyle=colors.muted;ctx.font='11px -apple-system, BlinkMacSystemFont, sans-serif';
   labels.forEach((label,i)=>{if(i%Math.ceil(labels.length/CHART_LABEL_DENSITY)!==0)return;const x=pad.l+(i/(Math.max(labels.length-1,1)))*plotW;ctx.fillText(String(label).slice(0,CHART_LABEL_MAX_LENGTH),x-CHART_LABEL_OFFSET,height-8)});
   const barSets=datasets.filter(ds=>(ds.type||cfg.type)!=='line'), lineSets=datasets.filter(ds=>(ds.type||cfg.type)==='line');
   const groupW=plotW/Math.max(labels.length,1), barW=Math.max(3,groupW/Math.max(barSets.length+1,2));
-  barSets.forEach((ds,di)=>{(ds.data||[]).forEach((v,i)=>{const raw=Number(v), y=scale(raw), top=Math.min(y,zeroY), h=Math.max(1,Math.abs(zeroY-y));const x=pad.l+i*groupW+barW*di+barW*.5;ctx.fillStyle=Array.isArray(ds.backgroundColor)?ds.backgroundColor[i]||colors.blue:ds.backgroundColor||colors.blue;ctx.fillRect(x,top,barW,h)})});
+  barSets.forEach((ds,di)=>{(ds.data||[]).forEach((v,i)=>{
+   const raw=Number(v), y=scale(raw), top=Math.min(y,zeroY), h=Math.max(1,Math.abs(zeroY-y));
+   const x=pad.l+i*groupW+barW*di+barW*.5;
+   ctx.fillStyle=Array.isArray(ds.backgroundColor)?ds.backgroundColor[i]||colors.blue:ds.backgroundColor||colors.blue;
+   ctx.fillRect(x,top,barW,h)
+  })});
   lineSets.forEach(ds=>{ctx.strokeStyle=ds.borderColor||colors.blue;ctx.lineWidth=2;ctx.beginPath();(ds.data||[]).forEach((v,i)=>{const x=pad.l+(i/(Math.max(labels.length-1,1)))*plotW,y=scale(Number(v));i?ctx.lineTo(x,y):ctx.moveTo(x,y)});ctx.stroke()});
  }
 }
