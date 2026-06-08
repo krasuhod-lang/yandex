@@ -37,9 +37,9 @@ main{max-width:var(--max);margin:0 auto;padding:28px 24px 56px}.panel{display:no
       </div>
       <div class="filters" aria-label="Фильтры верхнего уровня">
         <button class="chip active">Today</button><button class="chip">7D</button><button class="chip">30D</button><button class="chip">MoM</button><button class="chip">QoQ</button>
-        <select><option>Все роли</option><option>CEO</option><option>Product</option><option>Growth</option><option>CRM</option><option>Ops</option></select>
-        <select><option>Все каналы</option><option>SEO</option><option>Яндекс.Директ</option><option>PR</option><option>Повторный</option></select>
-        <select><option>Все сценарии</option><option>До зарплаты</option><option>Есть долги</option><option>Хочу машину</option><option>Накопления</option><option>Страхование</option></select>
+        <select aria-label="Роль"><option>Все роли</option><option>CEO</option><option>Product</option><option>Growth</option><option>CRM</option><option>Ops</option></select>
+        <select aria-label="Канал"><option>Все каналы</option><option>SEO</option><option>Яндекс.Директ</option><option>PR</option><option>Повторный</option></select>
+        <select aria-label="Сценарий"><option>Все сценарии</option><option>До зарплаты</option><option>Есть долги</option><option>Хочу машину</option><option>Накопления</option><option>Страхование</option></select>
         <button class="theme" id="themeToggle" aria-label="Сменить тему">Тема</button>
       </div>
     </div>
@@ -152,15 +152,18 @@ main{max-width:var(--max);margin:0 auto;padding:28px 24px 56px}.panel{display:no
 
 <script>
 
+const MIN_CANVAS_WIDTH=320, DEFAULT_CANVAS_WIDTH=640, DEFAULT_CANVAS_HEIGHT=140;
+const CHART_LABEL_DENSITY=6, CHART_LABEL_MAX_LENGTH=6, CHART_LABEL_OFFSET=14;
+const HTML_ESCAPE_MAP={'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;',"'":'&#39;'};
+const ALLOWED_METRIC_CLASSES=new Set(['positive','negative','accent']);
 class Chart{
- constructor(canvas,config){this.canvas=canvas;this.config=config;if(!canvas)return;this.ctx=canvas.getContext('2d');this.draw()}
+ constructor(canvas,config){this.canvas=canvas;this.config=config;if(!canvas){console.warn('Chart canvas is missing');return}this.ctx=canvas.getContext('2d');this.draw()}
  destroy(){if(this.ctx)this.ctx.clearRect(0,0,this.canvas.width,this.canvas.height)}
  draw(){
   if(!this.ctx||!this.canvas)return;
-  const CHART_LABEL_DENSITY=6, CHART_LABEL_MAX_LENGTH=6;
   const ctx=this.ctx, cfg=this.config, dpr=window.devicePixelRatio||1;
   const rect=this.canvas.getBoundingClientRect();
-  const width=Math.max(320,rect.width||this.canvas.parentElement.clientWidth||640), height=Number(this.canvas.getAttribute('height')||140);
+  const width=Math.max(MIN_CANVAS_WIDTH,rect.width||this.canvas.parentElement.clientWidth||DEFAULT_CANVAS_WIDTH), height=Number(this.canvas.getAttribute('height')||DEFAULT_CANVAS_HEIGHT);
   this.canvas.width=width*dpr;this.canvas.height=height*dpr;ctx.setTransform(dpr,0,0,dpr,0,0);ctx.clearRect(0,0,width,height);
   const colors=chartColors(); const pad={l:42,r:12,t:12,b:28}; const plotW=width-pad.l-pad.r, plotH=height-pad.t-pad.b;
   const datasets=cfg.data.datasets||[], labels=cfg.data.labels||[];
@@ -168,7 +171,7 @@ class Chart{
   const min=Math.min(0,...values), max=Math.max(1,...values); const scale=v=>pad.t+plotH-((v-min)/(max-min))*plotH;
   ctx.strokeStyle=colors.line;ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(pad.l,pad.t);ctx.lineTo(pad.l,pad.t+plotH);ctx.lineTo(width-pad.r,pad.t+plotH);ctx.stroke();
   ctx.fillStyle=colors.muted;ctx.font='11px -apple-system, BlinkMacSystemFont, sans-serif';
-  labels.forEach((label,i)=>{if(i%Math.ceil(labels.length/CHART_LABEL_DENSITY)!==0)return;const x=pad.l+(i/(Math.max(labels.length-1,1)))*plotW;ctx.fillText(String(label).slice(0,CHART_LABEL_MAX_LENGTH),x-14,height-8)});
+  labels.forEach((label,i)=>{if(i%Math.ceil(labels.length/CHART_LABEL_DENSITY)!==0)return;const x=pad.l+(i/(Math.max(labels.length-1,1)))*plotW;ctx.fillText(String(label).slice(0,CHART_LABEL_MAX_LENGTH),x-CHART_LABEL_OFFSET,height-8)});
   const barSets=datasets.filter(ds=>(ds.type||cfg.type)!=='line'), lineSets=datasets.filter(ds=>(ds.type||cfg.type)==='line');
   const groupW=plotW/Math.max(labels.length,1), barW=Math.max(3,groupW/Math.max(barSets.length+1,2));
   barSets.forEach((ds,di)=>{ctx.fillStyle=ds.backgroundColor||colors.blue;(ds.data||[]).forEach((v,i)=>{const x=pad.l+i*groupW+barW*di+barW*.5;const y=scale(Number(v));ctx.fillRect(x,y,barW,Math.max(1,pad.t+plotH-y))})});
@@ -247,7 +250,7 @@ function mln(n){return (n/1000000).toLocaleString('ru-RU',{maximumFractionDigits
 function pct(n){return Number(n).toLocaleString('ru-RU',{maximumFractionDigits:1})+'%'}
 function ratio(a,b){return b? a/b:0}
 function cls(v){return v>=0?'positive':'negative'}
-function escapeHtml(value){return String(value).replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]))}
+function escapeHtml(value){return String(value).replace(/[&<>"']/g,ch=>HTML_ESCAPE_MAP[ch])}
 function table(id,head,rows){
  const el=document.getElementById(id);
  const safeHead=head.map(h=>`<th>${escapeHtml(h)}</th>`).join('');
@@ -259,8 +262,7 @@ function kpi(container,items){
   const label=escapeHtml(x.label);
   const value=escapeHtml(x.value);
   const sub=escapeHtml(x.sub);
-  const allowedMetricClasses=new Set(['positive','negative','accent']);
-  const cls=allowedMetricClasses.has(x.cls)?x.cls:'';
+  const cls=ALLOWED_METRIC_CLASSES.has(x.cls)?x.cls:'';
   return `<div class="card tight" data-drill="${label}"><div class="metric-label">${label}</div><div class="metric-value ${cls}">${value}</div><div class="metric-sub">${sub}</div></div>`;
  }).join('')
 }
