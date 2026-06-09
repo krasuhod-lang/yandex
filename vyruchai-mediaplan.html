@@ -23,7 +23,33 @@ button,select{font:inherit}button{cursor:pointer}.app{min-height:100vh}.topbar{p
 main{max-width:var(--max);margin:0 auto;padding:28px 24px 56px;display:flex;flex-direction:column;gap:var(--gap)}.panel{display:none;flex-direction:column;gap:var(--gap)}.panel.active{display:flex}.hero{display:grid;grid-template-columns:1.25fr .75fr;gap:var(--gap)}.hero-card{background:linear-gradient(135deg,var(--surface),var(--surface-2));border:1px solid var(--line);border-radius:var(--radius);padding:var(--pad);box-shadow:var(--shadow);min-height:240px;display:flex;flex-direction:column;gap:12px}.eyebrow{font-size:12px;text-transform:uppercase;letter-spacing:.12em;color:var(--muted);font-weight:700}.hero h1{margin:0;font-size:clamp(32px,3.6vw,52px);line-height:1.02;letter-spacing:-.045em}.lead{margin:0;max-width:780px;color:var(--muted);font-size:16px}.hero-side{display:grid;gap:var(--gap)}
 .grid{display:grid;gap:var(--gap)}.grid.kpis{grid-template-columns:repeat(4,minmax(0,1fr))}.grid.two{grid-template-columns:1fr 1fr}.grid.three{grid-template-columns:repeat(3,minmax(0,1fr))}.grid.four{grid-template-columns:repeat(4,minmax(0,1fr))}.card{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:var(--pad);box-shadow:var(--shadow-soft);display:flex;flex-direction:column;gap:14px;min-width:0}.card.tight{padding:var(--pad-sm);gap:8px}.card-title{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;margin:0}.card-title h2,.card-title h3{margin:0;font-size:17px;letter-spacing:-.02em}.card-title p{margin:4px 0 0;color:var(--muted);font-size:13px}.metric-label{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;font-weight:700}.metric-value{font-size:30px;line-height:1.05;letter-spacing:-.04em;font-weight:700;margin:0}.metric-sub{color:var(--muted);font-size:13px;margin:0}.delta{font-size:12px;border-radius:999px;padding:4px 8px;font-weight:700}.delta.good{background:color-mix(in srgb,var(--green) 13%,transparent);color:var(--green)}.delta.warn{background:color-mix(in srgb,var(--orange) 15%,transparent);color:var(--orange)}.delta.bad{background:color-mix(in srgb,var(--red) 12%,transparent);color:var(--red)}
 .status{width:10px;height:10px;border-radius:50%;display:inline-block;margin-right:6px;vertical-align:middle}.status.green{background:var(--green)}.status.yellow{background:var(--orange)}.status.red{background:var(--red)}.mini-list{display:grid;gap:10px}.mini-row{display:flex;justify-content:space-between;gap:16px;padding:10px 0;border-bottom:1px solid var(--line)}.mini-row:last-child{border-bottom:0}.mini-row span:first-child{color:var(--muted)}.mini-row b{font-variant-numeric:tabular-nums;text-align:right}.table-wrap{overflow:auto;border:1px solid var(--line);border-radius:var(--radius);background:var(--surface);box-shadow:var(--shadow-soft)}table{width:100%;border-collapse:collapse;font-size:13px}th,td{padding:12px 14px;border-bottom:1px solid var(--line);text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums}th:first-child,td:first-child{text-align:left;font-weight:600}thead th{position:sticky;top:0;background:var(--surface-3);color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:.07em;z-index:1}tbody tr:hover{background:var(--surface-2)}tbody tr:last-child td{border-bottom:0}.positive{color:var(--green);font-weight:700}.negative{color:var(--red);font-weight:700}.accent{color:var(--blue);font-weight:700}.muted{color:var(--muted)}
-.progress{height:8px;background:var(--surface-3);border-radius:999px;overflow:hidden}.bar{height:100%;border-radius:999px;background:var(--blue)}.scenario-card,.partner-card,.alert-card{gap:10px}.scenario-head,.partner-head,.alert-head{display:flex;justify-content:space-between;gap:12px;align-items:flex-start}.pill{border:1px solid var(--line);border-radius:999px;padding:5px 9px;font-size:12px;color:var(--muted);background:var(--surface-2);white-space:nowrap}.actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:auto}.action{border:1px solid var(--line);background:var(--surface-2);border-radius:999px;padding:8px 12px;font-size:12px;color:var(--text)}.action:hover{border-color:var(--blue);color:var(--blue)}.flow{display:grid;grid-template-columns:repeat(5,1fr);gap:var(--gap)}.step{border:1px solid var(--line);border-radius:var(--radius-sm);padding:16px;background:var(--surface);box-shadow:var(--shadow-soft)}.step b{display:block;font-size:22px;letter-spacing:-.03em}.step span{color:var(--muted);font-size:12px}.divider-title{font-size:20px;letter-spacing:-.03em;margin:8px 0 0;font-weight:700}.chart-legend{display:flex;flex-wrap:wrap;gap:14px;font-size:12px;color:var(--muted);margin:0}.chart-legend .lg{display:inline-flex;align-items:center;gap:6px}.chart-legend .sw{width:10px;height:10px;border-radius:3px;display:inline-block}.chart-box{position:relative;width:100%}.drawer{position:fixed;top:0;right:0;bottom:0;width:min(460px,100%);background:var(--surface);border-left:1px solid var(--line);box-shadow:var(--shadow);transform:translateX(105%);transition:transform .22s ease;z-index:50;padding:24px;overflow:auto}.drawer.open{transform:translateX(0)}.drawer-close{float:right;border:1px solid var(--line);background:var(--surface-2);border-radius:999px;padding:8px 12px}.drawer h2{letter-spacing:-.035em}.footer{max-width:var(--max);margin:24px auto 0;padding:18px 24px 34px;color:var(--muted);font-size:12px;border-top:1px solid var(--line)}
+.progress{height:8px;background:var(--surface-3);border-radius:999px;overflow:hidden}.bar{height:100%;border-radius:999px;background:var(--blue)}
+canvas{display:block;width:100%;max-width:100%;height:auto}
+.chart-card{min-height:340px}
+.exec-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:var(--gap)}
+@media(max-width:980px){.exec-grid{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:560px){.exec-grid{grid-template-columns:1fr}}
+.exec-card{position:relative;border:1px solid var(--line);border-radius:var(--radius);padding:22px;background:linear-gradient(180deg,var(--surface),var(--surface-2));box-shadow:var(--shadow-soft);display:flex;flex-direction:column;gap:6px;min-height:148px}
+.exec-card .eyebrow{font-size:11px}
+.exec-card .metric-value{font-size:28px}
+.exec-card .metric-sub{font-size:12.5px;color:var(--muted)}
+.exec-card .tag{position:absolute;top:18px;right:18px;font-size:11px;padding:3px 9px;border-radius:999px;border:1px solid var(--line);color:var(--muted);background:var(--surface)}
+.exec-card.good .tag{color:var(--green);border-color:color-mix(in srgb,var(--green) 35%,var(--line))}
+.exec-card.warn .tag{color:var(--orange);border-color:color-mix(in srgb,var(--orange) 35%,var(--line))}
+.exec-card.bad  .tag{color:var(--red);border-color:color-mix(in srgb,var(--red) 35%,var(--line))}
+.product-row{display:grid;grid-template-columns:1.4fr .8fr .8fr 2fr;gap:14px;align-items:center;padding:12px 0;border-bottom:1px solid var(--line)}
+.product-row:last-child{border-bottom:0}
+.product-row .pname{font-weight:600}
+.product-row .pmeta{color:var(--muted);font-size:12.5px}
+.product-row .pval{font-variant-numeric:tabular-nums;text-align:right;font-weight:600}
+.product-row .pbar{height:8px;border-radius:999px;background:var(--surface-3);overflow:hidden}
+.product-row .pbar>span{display:block;height:100%;border-radius:999px}
+.cost-bar{display:flex;height:14px;border-radius:999px;overflow:hidden;border:1px solid var(--line);background:var(--surface-3)}
+.cost-bar>span{display:block;height:100%}
+.cost-legend{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px 18px;margin-top:6px}
+.cost-legend .lg{display:flex;justify-content:space-between;align-items:center;gap:10px;font-size:13px;color:var(--muted)}
+.cost-legend .lg .sw{width:10px;height:10px;border-radius:3px;display:inline-block;margin-right:8px}
+.cost-legend .lg b{color:var(--text);font-variant-numeric:tabular-nums}.scenario-card,.partner-card,.alert-card{gap:10px}.scenario-head,.partner-head,.alert-head{display:flex;justify-content:space-between;gap:12px;align-items:flex-start}.pill{border:1px solid var(--line);border-radius:999px;padding:5px 9px;font-size:12px;color:var(--muted);background:var(--surface-2);white-space:nowrap}.actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:auto}.action{border:1px solid var(--line);background:var(--surface-2);border-radius:999px;padding:8px 12px;font-size:12px;color:var(--text)}.action:hover{border-color:var(--blue);color:var(--blue)}.flow{display:grid;grid-template-columns:repeat(5,1fr);gap:var(--gap)}.step{border:1px solid var(--line);border-radius:var(--radius-sm);padding:16px;background:var(--surface);box-shadow:var(--shadow-soft)}.step b{display:block;font-size:22px;letter-spacing:-.03em}.step span{color:var(--muted);font-size:12px}.divider-title{font-size:20px;letter-spacing:-.03em;margin:8px 0 0;font-weight:700}.chart-legend{display:flex;flex-wrap:wrap;gap:14px;font-size:12px;color:var(--muted);margin:0}.chart-legend .lg{display:inline-flex;align-items:center;gap:6px}.chart-legend .sw{width:10px;height:10px;border-radius:3px;display:inline-block}.chart-box{position:relative;width:100%}.drawer{position:fixed;top:0;right:0;bottom:0;width:min(460px,100%);background:var(--surface);border-left:1px solid var(--line);box-shadow:var(--shadow);transform:translateX(105%);transition:transform .22s ease;z-index:50;padding:24px;overflow:auto}.drawer.open{transform:translateX(0)}.drawer-close{float:right;border:1px solid var(--line);background:var(--surface-2);border-radius:999px;padding:8px 12px}.drawer h2{letter-spacing:-.035em}.footer{max-width:var(--max);margin:24px auto 0;padding:18px 24px 34px;color:var(--muted);font-size:12px;border-top:1px solid var(--line)}
 @media(max-width:980px){.hero,.grid.two,.grid.three,.grid.four{grid-template-columns:1fr}.grid.kpis{grid-template-columns:repeat(2,1fr)}.flow{grid-template-columns:1fr}.topbar-inner{align-items:flex-start;flex-direction:column}.filters{width:100%}}@media(max-width:560px){main{padding:20px 14px}.tabs,.topbar-inner{padding-left:14px;padding-right:14px}.grid.kpis{grid-template-columns:1fr}.hero-card{padding:22px}.metric-value{font-size:28px}}
 </style>
 </head>
@@ -72,14 +98,32 @@ main{max-width:var(--max);margin:0 auto;padding:28px 24px 56px;display:flex;flex
       </div>
       <h2 class="divider-title">Вводные данные</h2>
       <div class="grid three" id="inputDataList"></div>
+      <h2 class="divider-title">Дашборд для генерального директора</h2>
+      <div class="exec-grid" id="execGrid"></div>
       <div id="kpiGrid" class="grid kpis"></div>
       <div class="grid two">
-        <div class="card"><div class="card-title"><div><h2>Выручка, расходы и прибыль</h2><p>Данные из PNL, тыс. ₽</p></div></div><canvas id="chartOverview" height="130"></canvas></div>
+        <div class="card chart-card"><div class="card-title"><div><h2>Выручка, расходы и прибыль</h2><p>Данные из PNL, тыс. ₽</p></div></div><canvas id="chartOverview" height="280"></canvas></div>
         <div class="card"><div class="card-title"><div><h2>Что делать сегодня</h2><p>Сигналы для масштабирования, ремонта или отключения</p></div></div><div id="actionsList" class="mini-list"></div></div>
       </div>
       <div class="grid two">
-        <div class="card"><div class="card-title"><div><h2>Динамика инвестиций и окупаемости</h2><p>Накопленные вложения, выручка и прибыль, млн ₽</p></div></div><canvas id="chartInvestment" height="150"></canvas></div>
+        <div class="card chart-card"><div class="card-title"><div><h2>Динамика инвестиций и окупаемости</h2><p>Накопленные вложения, выручка и прибыль, млн ₽</p></div></div><canvas id="chartInvestment" height="280"></canvas></div>
         <div class="card"><div class="card-title"><div><h2>Срок окупаемости</h2><p>Когда проект перекрывает накопленный убыток</p></div></div><div id="paybackList" class="mini-list"></div></div>
+      </div>
+      <h2 class="divider-title">CAC по каналам</h2>
+      <div class="grid kpis" id="cacKpis"></div>
+      <div class="grid two">
+        <div class="card chart-card"><div class="card-title"><div><h2>CAC по каналам, ₽ за выдачу</h2><p>Стоимость одного выданного клиента в каждом канале</p></div></div><canvas id="chartCacChannels" height="280"></canvas></div>
+        <div class="card"><div class="card-title"><div><h2>Сравнительная экономика каналов</h2><p>LTV, CAC и окупаемость по каждому каналу</p></div></div><div class="table-wrap" style="border:0;box-shadow:none"><table id="cacTable"></table></div></div>
+      </div>
+      <h2 class="divider-title">Структура расходов</h2>
+      <div class="grid two">
+        <div class="card chart-card"><div class="card-title"><div><h2>Расходы по статьям, тыс. ₽</h2><p>Стек по месяцам: медиа-каналы, ФОТ и инфраструктура</p></div></div><canvas id="chartCostMix" height="280"></canvas></div>
+        <div class="card"><div class="card-title"><div><h2>Распределение расходов за период</h2><p>Доля каждой статьи в общем бюджете</p></div></div><div class="cost-bar" id="costBar"></div><div class="cost-legend" id="costLegend"></div></div>
+      </div>
+      <h2 class="divider-title">Продажи по продуктам</h2>
+      <div class="grid two">
+        <div class="card"><div class="card-title"><div><h2>Что и сколько продали</h2><p>Структура выручки по продуктовым линиям</p></div></div><div id="productList"></div></div>
+        <div class="card chart-card"><div class="card-title"><div><h2>Динамика продуктов, млн ₽</h2><p>Линии: микрозаймы, кредиты, карты, страхование, повторы</p></div></div><canvas id="chartProducts" height="280"></canvas></div>
       </div>
       <h2 class="divider-title">Сводная таблица PNL</h2>
       <div class="table-wrap"><table id="pnlTable"></table></div>
@@ -88,8 +132,8 @@ main{max-width:var(--max);margin:0 auto;padding:28px 24px 56px;display:flex;flex
     <section id="tab-traffic" class="panel">
       <div class="grid kpis" id="trafficKpis"></div>
       <div class="grid two">
-        <div class="card"><div class="card-title"><div><h2>Трафик по каналам</h2><p>Уникальные визиты по месяцам</p></div></div><canvas id="chartTraffic" height="150"></canvas></div>
-        <div class="card"><div class="card-title"><div><h2>EPC</h2><p>Выручка на клик по офферу</p></div></div><canvas id="chartEpc" height="150"></canvas></div>
+        <div class="card chart-card"><div class="card-title"><div><h2>Трафик по каналам</h2><p>Уникальные визиты по месяцам</p></div></div><canvas id="chartTraffic" height="280"></canvas></div>
+        <div class="card chart-card"><div class="card-title"><div><h2>EPC</h2><p>Выручка на клик по офферу</p></div></div><canvas id="chartEpc" height="280"></canvas></div>
       </div>
       <h2 class="divider-title">Дашборд привлечения</h2>
       <div class="table-wrap"><table id="acquisitionTable"></table></div>
@@ -126,7 +170,7 @@ main{max-width:var(--max);margin:0 auto;padding:28px 24px 56px;display:flex;flex
     <section id="tab-retention" class="panel">
       <div class="grid kpis" id="retentionKpis"></div>
       <div class="grid two">
-        <div class="card"><div class="card-title"><div><h2>Повторные визиты и LTV-когорты</h2><p>Монетизация после сделки и возврат</p></div></div><canvas id="chartRetention" height="150"></canvas></div>
+        <div class="card chart-card"><div class="card-title"><div><h2>Повторные визиты и LTV-когорты</h2><p>Монетизация после сделки и возврат</p></div></div><canvas id="chartRetention" height="280"></canvas></div>
         <div class="card"><div class="card-title"><div><h2>События удержания</h2><p>Цепочка после первой сделки</p></div></div><div class="table-wrap"><table id="retentionTable"></table></div></div>
       </div>
     </section>
@@ -134,7 +178,7 @@ main{max-width:var(--max);margin:0 auto;padding:28px 24px 56px;display:flex;flex
     <section id="tab-unit" class="panel">
       <div class="grid kpis" id="unitKpis"></div>
       <div class="grid two">
-        <div class="card"><div class="card-title"><div><h2>Маркетинговый PnL</h2><p>Маржинальная прибыль, валовая прибыль и окупаемость</p></div></div><canvas id="chartUnit" height="150"></canvas></div>
+        <div class="card chart-card"><div class="card-title"><div><h2>Маркетинговый PnL</h2><p>Маржинальная прибыль, валовая прибыль и окупаемость</p></div></div><canvas id="chartUnit" height="280"></canvas></div>
         <div class="card"><div class="card-title"><div><h2>Формулы</h2><p>Единый слой расчётов для прямого API и CPA</p></div></div><div id="formulaList" class="mini-list"></div></div>
       </div>
       <h2 class="divider-title">Юнит-экономика по каналам</h2>
@@ -300,6 +344,46 @@ const CHANNELS={
 // Дисконтирование денежных потоков: 20% годовых ⇒ ~1,53% в месяц. Накопленная дисконтированная прибыль = NPV-кривая.
 const MONTHLY_DISCOUNT_RATE=Math.pow(1.20,1/12)-1;
 function cumulativeDiscounted(arr){const acc=[];let total=0;arr.forEach((v,i)=>{total+=v/Math.pow(1+MONTHLY_DISCOUNT_RATE,i);acc.push(total)});return acc}
+
+// Декомпозиция расходов: общий expenses[] = бюджеты каналов + ФОТ + инфраструктура.
+// "Прочее" = expenses - (Директ + SEO + PR). Делим на ФОТ (≈70%) и Инфраструктура/прочее (≈30%).
+const expensesOther=expenses.map((v,i)=>Math.max(0,v-budgetDirect[i]-budgetSEO[i]-budgetPR[i]));
+const expensesPayroll=expensesOther.map(v=>v*0.70);
+const expensesInfra=expensesOther.map(v=>v*0.30);
+const COST_ITEMS=[
+ {key:'direct',label:'Яндекс.Директ',data:budgetDirect,color:'blue'},
+ {key:'seo',label:'SEO / контент',data:budgetSEO,color:'green'},
+ {key:'pr',label:'PR / медиа',data:budgetPR,color:'violet'},
+ {key:'payroll',label:'ФОТ команды',data:expensesPayroll,color:'orange'},
+ {key:'infra',label:'Инфраструктура и прочее',data:expensesInfra,color:'red'}
+];
+
+// Продуктовая разбивка выручки. Проценты получены из микса партнёров (МФО, банк, карта, страхование, повторы)
+// и применяются к месячной выручке, сохраняя итог равным totals.revenue.
+const PRODUCT_MIX=[
+ {key:'mfo',label:'Микрозаймы (МФО)',share:0.55,partners:'Центрофинанс, МФО Север, МФО Риск'},
+ {key:'loan',label:'Кредиты и рефинансирование',share:0.14,partners:'Банк Город'},
+ {key:'card',label:'Кредитные карты',share:0.12,partners:'Карта Плюс'},
+ {key:'insurance',label:'Страхование',share:0.06,partners:'Страховой партнёр'},
+ {key:'repeat',label:'Повторы и кросс-продажи',share:0.08,partners:'CRM, SMS D+14'},
+ {key:'other',label:'CPA-комиссии и прочее',share:0.05,partners:'Партнёрская сеть'}
+];
+const productSeries=Object.fromEntries(PRODUCT_MIX.map(p=>[p.key,revenue.map(v=>v*p.share)]));
+const productTotals=Object.fromEntries(PRODUCT_MIX.map(p=>[p.key,totals.revenue*p.share]));
+
+// CAC по каналам: расходы канала / выданные клиенты канала.
+// Доля одобрений канала ≈ доля выручки канала; выдачи = одобрения × ISSUED_TO_APPROVAL_RATE.
+function channelCac(){
+ const totalIssued=totals.approvals*ISSUED_TO_APPROVAL_RATE;
+ const make=(rev,spend)=>{const issued=totalIssued*(rev/totals.revenue);return {rev,spend,issued,cac:issued?spend/issued:0}};
+ return {
+  'Все каналы':{...make(totals.revenue,totals.expenses),label:'все каналы'},
+  'SEO':{...make(totals.seoRevenue,totals.seoSpend),label:'SEO'},
+  'Яндекс.Директ':{...make(totals.directRevenue,totals.directSpend),label:'Яндекс.Директ'},
+  'PR':{...make(totals.prRevenue,totals.prSpend),label:'PR'},
+  'Повторный':{...make(REPEAT_REVENUE_TOTAL,0),label:'CRM / повторные'}
+ };
+}
 const INPUT_DATA=[
  {title:'Период и источник',value:'Май 2026 — декабрь 2027',text:'Встроенная PNL-модель из Excel: выручка, расходы, трафик, клики, заявки, одобрения и канальные бюджеты.'},
  {title:'Маркетинговые инвестиции',value:'39,0 млн ₽',text:'Сумма расходов на Директ, SEO, PR и операционные затраты за 20 месяцев.'},
@@ -378,7 +462,7 @@ function kpi(container,items){
 function chartColors(){const s=getComputedStyle(document.documentElement);return {text:s.getPropertyValue('--text').trim(),muted:s.getPropertyValue('--muted').trim(),line:s.getPropertyValue('--line').trim(),blue:s.getPropertyValue('--blue').trim(),green:s.getPropertyValue('--green').trim(),orange:s.getPropertyValue('--orange').trim(),red:s.getPropertyValue('--red').trim(),violet:s.getPropertyValue('--violet').trim()}}
 const charts={};
 const state={window:null,period:'Сегодня',role:'Все роли',channel:'Все каналы',scenario:'Все сценарии'};
-const CHART_PANELS={chartOverview:'overview',chartInvestment:'overview',chartTraffic:'traffic',chartEpc:'traffic',chartRetention:'retention',chartUnit:'unit'};
+const CHART_PANELS={chartOverview:'overview',chartInvestment:'overview',chartCacChannels:'overview',chartCostMix:'overview',chartProducts:'overview',chartTraffic:'traffic',chartEpc:'traffic',chartRetention:'retention',chartUnit:'unit'};
 function sliceWindow(arr){const w=state.window;return w&&w<arr.length?arr.slice(arr.length-w):arr.slice()}
 function activeChartIds(){const panelId=document.querySelector('.panel.active')?.id||'tab-overview';const tab=panelId.replace('tab-','');return Object.entries(CHART_PANELS).filter(([,p])=>p===tab).map(([id])=>id)}
 function renderCharts(){
@@ -434,6 +518,17 @@ function renderCharts(){
   ]}},
   chartUnit:{type:'bar',data:{labels,datasets:[
    {label:'Маржинальная прибыль ('+ch.label+'), тыс. ₽',data:sliceWindow(fProfit).map(v=>v/1000),backgroundColor:sliceWindow(fProfit).map(v=>v>=0?c.green+'bb':c.red+'99')}
+  ]}},
+  chartCacChannels:(function(){const cc=channelCac();const order=['SEO','Яндекс.Директ','PR','Повторный','Все каналы'];return {type:'bar',data:{labels:order,datasets:[
+   {label:'CAC, ₽',data:order.map(k=>Math.round(cc[k].cac)),backgroundColor:order.map(k=>k==='Все каналы'?c.muted+'aa':k==='SEO'?c.green+'cc':k==='Яндекс.Директ'?c.blue+'cc':k==='PR'?c.violet+'cc':c.orange+'cc')}
+  ]}}})(),
+  chartCostMix:{type:'bar',stacked:true,data:{labels,datasets:COST_ITEMS.map(item=>({label:item.label,data:sliceWindow(item.data).map(v=>v/1000),backgroundColor:c[item.color]+'cc'}))}},
+  chartProducts:{type:'line',data:{labels,datasets:[
+   {label:'Микрозаймы',data:sliceWindow(productSeries.mfo).map(v=>v/1000000),borderColor:c.blue,borderWidth:2.5},
+   {label:'Кредиты',data:sliceWindow(productSeries.loan).map(v=>v/1000000),borderColor:c.green,borderWidth:2.5},
+   {label:'Карты',data:sliceWindow(productSeries.card).map(v=>v/1000000),borderColor:c.violet,borderWidth:2.5},
+   {label:'Страхование',data:sliceWindow(productSeries.insurance).map(v=>v/1000000),borderColor:c.orange,borderWidth:2},
+   {label:'Повторы / кросс',data:sliceWindow(productSeries.repeat).map(v=>v/1000000),borderColor:c.red,borderWidth:2}
   ]}}
  };
  ids.forEach(id=>{const el=document.getElementById(id);if(el&&cfg[id])charts[id]=new Chart(el,cfg[id])});
@@ -468,11 +563,65 @@ function init(){
  const cac=ratio(totals.expenses,issued);
  const ltv=ratio(totals.revenue,totals.approvals)*LTV_REPEAT_CROSS_SELL_FACTOR;
  document.getElementById('inputDataList').innerHTML=INPUT_DATA.map(x=>`<div class="card tight"><div class="metric-label">${escapeHtml(x.title)}</div><div class="metric-value">${escapeHtml(x.value)}</div><div class="metric-sub">${escapeHtml(x.text)}</div></div>`).join('');
+ // ===== Дашборд для генерального директора =====
+ const cc=channelCac();
+ const channelByRoi=[['SEO',totals.seoRevenue,totals.seoSpend],['Яндекс.Директ',totals.directRevenue,totals.directSpend],['PR',totals.prRevenue,totals.prSpend]].map(([n,r,s])=>({n,r,s,roi:s?(r-s)/s:0,roas:s?r/s:0}));
+ const topChannel=channelByRoi.slice().sort((a,b)=>b.roi-a.roi)[0];
+ const weakChannel=channelByRoi.slice().sort((a,b)=>a.roi-b.roi)[0];
+ const maxDrawdown=Math.min(...cumulativeProfit);
+ const lastM=revenue.length-1;
+ const yoy=revenue[0]?(revenue[lastM]/revenue[0]):0;
+ const issuedAll=Math.round(totals.approvals*ISSUED_TO_APPROVAL_RATE);
+ const cacAll=issuedAll?totals.expenses/issuedAll:0;
+ const ltvAll=ratio(totals.revenue,totals.approvals)*LTV_REPEAT_CROSS_SELL_FACTOR;
+ const execCards=[
+  {tone:'good',tag:'итог',label:'Чистая прибыль за 20 мес.',value:mln(totals.profit),sub:'операционная маржа '+pct(ratio(totals.profit,totals.revenue)*100)},
+  {tone:'good',tag:'безубыточность',label:'Первый прибыльный месяц',value:months[firstMonthlyProfitIndex]||'—',sub:'месячная маржа выходит в плюс'},
+  {tone:'good',tag:'окупаемость',label:'Возврат инвестиций',value:months[paybackIndex]||'—',sub:'когда покроется накопленный минус'},
+  {tone:'warn',tag:'cash burn',label:'Максимальный накопленный минус',value:mln(maxDrawdown),sub:'необходимый объём финансирования'},
+  {tone:'good',tag:'лидер',label:'Лучший канал по ROI',value:topChannel.n,sub:'ROAS '+topChannel.roas.toFixed(1)+'x · ROI '+pct(topChannel.roi*100)},
+  {tone:'warn',tag:'слабое звено',label:'Канал с худшим ROI',value:weakChannel.n,sub:'ROAS '+weakChannel.roas.toFixed(1)+'x · ROI '+pct(weakChannel.roi*100)},
+  {tone:'good',tag:'юнит-экономика',label:'LTV / CAC',value:(ltvAll/cacAll).toFixed(1)+'x',sub:'LTV '+Math.round(ltvAll)+' ₽ · CAC '+Math.round(cacAll)+' ₽'},
+  {tone:'good',tag:'рост',label:'Темп роста выручки',value:'×'+yoy.toFixed(1),sub:'декабрь 2027 к маю 2026'}
+ ];
+ document.getElementById('execGrid').innerHTML=execCards.map(x=>`<div class="exec-card ${x.tone}"><span class="tag">${escapeHtml(x.tag)}</span><div class="metric-label">${escapeHtml(x.label)}</div><div class="metric-value">${escapeHtml(x.value)}</div><div class="metric-sub">${escapeHtml(x.sub)}</div></div>`).join('');
  kpi('kpiGrid',[{label:'Пользователи / сессии',value:fmt(totals.visits),sub:'20 месяцев, все каналы'},{label:'Отправленные заявки',value:fmt(totals.applications),sub:'CR в заявку '+pct(ratio(totals.applications,totals.visits)*100)},{label:'Доля одобрений',value:pct(approvalRate),sub:fmt(totals.approvals)+' одобрений',cls:'positive'},{label:'Выданные сделки',value:fmt(issued),sub:'оценка выдач = 76% одобрений'},{label:'Выручка',value:mln(totals.revenue),sub:'единый источник данных — PNL',cls:'positive'},{label:'EPC',value:Math.round(ratio(totals.revenue,totals.clicks))+' ₽',sub:'выручка / клики на офферы',cls:'positive'},{label:'CAC',value:Math.round(cac)+' ₽',sub:'расходы / выданные сделки',cls:'negative'},{label:'LTV / CAC',value:(ltv/cac).toFixed(1)+'x',sub:'LTV учитывает повторы и кросс-продажи',cls:'positive'},{label:'Доля повторов',value:'5.1%',sub:'цель 6% в ближайшем периоде'},{label:'Валовая прибыль',value:mln(gross),sub:'выручка минус расходы',cls:'positive'},{label:'Маржинальность',value:pct(ratio(gross,totals.revenue)*100),sub:'маржинальность по PNL',cls:'positive'},{label:'PnL',value:mln(totals.profit),sub:'нарастающим итогом',cls:'positive'}]);
  document.getElementById('paybackList').innerHTML=[['Первая месячная прибыль',months[firstMonthlyProfitIndex]||'—'],['Окупаемость накопленных инвестиций',months[paybackIndex]||'—'],['Максимальный накопленный минус',mln(Math.min(...cumulativeProfit))],['Финальный накопленный PnL',mln(totals.profit)]].map((r,i)=>`<div class="mini-row"><span><span class="status ${i===3?'green':i===2?'red':'yellow'}"></span> ${r[0]}</span><b>${r[1]}</b></div>`).join('');
  document.getElementById('actionsList').innerHTML=[['Масштабировать','SEO long-tail и Центрофинанс API дают лучший ROI, EPC и одобрение'],['Исправить','У Банка Город расхождение прогноза и фактического одобрения'],['Отключить','МФО Риск выводится из SOS из-за SLA и жалоб'],['Растить','Удержание D+14 увеличивает повторы и LTV без CAC'],['Контроль','Директ масштабировать только при EPC выше CPC и CAC ниже LTV']].map((r,i)=>`<div class="mini-row"><span><span class="status ${i===2?'red':i===1||i===4?'yellow':'green'}"></span> ${r[0]}</span><b>${r[1]}</b></div>`).join('');
- const pnlRows=[['Выручка',...revenue.map(money),money(totals.revenue)],['Расходы',...expenses.map(money),money(totals.expenses)],['Прибыль',...profit.map(v=>money(v)),money(totals.profit)],['Визиты',...visits.map(fmt),fmt(totals.visits)],['Клики на офферы',...offerClicks.map(fmt),fmt(totals.clicks)],['Заявки',...applications.map(fmt),fmt(totals.applications)],['Апрувы',...approvals.map(fmt),fmt(totals.approvals)]];
+ const pnlRows=[
+  ['Выручка — итого',...revenue.map(money),money(totals.revenue)],
+  ['  · SEO',...revenueSEO.map(money),money(totals.seoRevenue)],
+  ['  · Яндекс.Директ',...revenuePPC.map(money),money(totals.directRevenue)],
+  ['  · PR',...revenuePR.map(money),money(totals.prRevenue)],
+  ['  · Повторы / CRM',...revenueRepeat.map(money),money(REPEAT_REVENUE_TOTAL)],
+  ['Расходы — итого',...expenses.map(money),money(totals.expenses)],
+  ['  · Яндекс.Директ',...budgetDirect.map(money),money(sum(budgetDirect))],
+  ['  · SEO',...budgetSEO.map(money),money(sum(budgetSEO))],
+  ['  · PR',...budgetPR.map(money),money(sum(budgetPR))],
+  ['  · ФОТ команды',...expensesPayroll.map(money),money(sum(expensesPayroll))],
+  ['  · Инфраструктура и прочее',...expensesInfra.map(money),money(sum(expensesInfra))],
+  ['Прибыль',...profit.map(v=>money(v)),money(totals.profit)],
+  ['Визиты',...visits.map(fmt),fmt(totals.visits)],
+  ['Клики на офферы',...offerClicks.map(fmt),fmt(totals.clicks)],
+  ['Заявки',...applications.map(fmt),fmt(totals.applications)],
+  ['Апрувы',...approvals.map(fmt),fmt(totals.approvals)]
+ ];
  table('pnlTable',['Показатель',...months,'Итого'],pnlRows);
+ // ===== CAC по каналам =====
+ const cacOrder=['SEO','Яндекс.Директ','PR','Повторный','Все каналы'];
+ const cacKpiCls={'SEO':'positive','Яндекс.Директ':'negative','PR':'accent','Повторный':'positive','Все каналы':'accent'};
+ kpi('cacKpis',cacOrder.map(k=>{const x=cc[k];return {label:'CAC · '+(k==='Все каналы'?'все каналы':k),value:Math.round(x.cac).toLocaleString('ru-RU')+' ₽',sub:'выдач '+fmt(x.issued)+' · бюджет '+mln(x.spend),cls:cacKpiCls[k]}}));
+ table('cacTable',['Канал','Выручка','Расход','Выдач','CAC, ₽','LTV, ₽','LTV / CAC','ROAS'],cacOrder.map(k=>{const x=cc[k];const ltv=x.issued?(x.rev/x.issued)*LTV_REPEAT_CROSS_SELL_FACTOR:0;const lc=x.cac?ltv/x.cac:0;const roas=x.spend?x.rev/x.spend:0;return [k==='Все каналы'?'Все каналы (итого)':k,mln(x.rev),mln(x.spend),fmt(x.issued),Math.round(x.cac).toLocaleString('ru-RU'),Math.round(ltv).toLocaleString('ru-RU'),(isFinite(lc)?lc.toFixed(1):'∞')+'x',(isFinite(roas)?roas.toFixed(1):'∞')+'x']}));
+ // ===== Структура расходов =====
+ const colorVals=chartColors();
+ const totalCost=COST_ITEMS.reduce((acc,it)=>acc+sum(it.data),0)||1;
+ const costSums=COST_ITEMS.map(it=>({...it,total:sum(it.data),pct:sum(it.data)/totalCost*100}));
+ document.getElementById('costBar').innerHTML=costSums.map(s=>`<span style="flex:${s.total};background:${colorVals[s.color]}"></span>`).join('');
+ document.getElementById('costLegend').innerHTML=costSums.map(s=>`<div class="lg"><span><span class="sw" style="background:${colorVals[s.color]}"></span>${escapeHtml(s.label)}</span><b>${mln(s.total)} · ${pct(s.pct)}</b></div>`).join('');
+ // ===== Продажи по продуктам =====
+ const productMax=Math.max(...PRODUCT_MIX.map(p=>productTotals[p.key]))||1;
+ const productPalette={mfo:colorVals.blue,loan:colorVals.green,card:colorVals.violet,insurance:colorVals.orange,repeat:colorVals.red,other:colorVals.muted};
+ document.getElementById('productList').innerHTML=PRODUCT_MIX.map(p=>{const v=productTotals[p.key];const w=v/productMax*100;return `<div class="product-row"><div><div class="pname">${escapeHtml(p.label)}</div><div class="pmeta">${escapeHtml(p.partners)}</div></div><div class="pval">${mln(v)}</div><div class="pval">${pct(p.share*100)}</div><div class="pbar"><span style="width:${w.toFixed(1)}%;background:${productPalette[p.key]}"></span></div></div>`}).join('');
  kpi('trafficKpis',[{label:'Выручка SEO',value:mln(totals.seoRevenue),sub:'ROI 75%',cls:'positive'},{label:'Выручка Директа',value:mln(totals.directRevenue),sub:'ROI 13%'},{label:'Выручка PR',value:mln(totals.prRevenue),sub:'ROI 28%'},{label:'Повторные визиты',value:fmt(totals.repeat),sub:'CAC 0 ₽',cls:'positive'}]);
  ACQUISITION_ROWS[0].row[1]=fmt(sum(trafficSEO));ACQUISITION_ROWS[0].row[2]=fmt(sum(trafficSEO)*.92);ACQUISITION_ROWS[0].row[6]=mln(totals.seoRevenue);
  ACQUISITION_ROWS[1].row[1]=fmt(sum(trafficPPC));ACQUISITION_ROWS[1].row[2]=fmt(sum(trafficPPC)*.88);ACQUISITION_ROWS[1].row[6]=mln(totals.directRevenue);
