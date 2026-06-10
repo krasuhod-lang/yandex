@@ -4,11 +4,11 @@
 
 ## Актуальная структура репозитория
 
-- `/home/runner/work/yandex/yandex/krasuhod-lang/yandex/vyruchai-mediaplan.html` — основной HTML-файл интерфейса
-- `/home/runner/work/yandex/yandex/krasuhod-lang/yandex/dashboard-app.js` — логика дашборда, фильтры, рендер, drill-down и встроенные demo-данные
-- `/home/runner/work/yandex/yandex/krasuhod-lang/yandex/PNL - Выручай.ру.xlsx` — исходный Excel-срез для demo-контекста
-- `/home/runner/work/yandex/yandex/krasuhod-lang/yandex/Новая таблица (1).xlsx` — дополнительный Excel-файл в репозитории
-- `/home/runner/work/yandex/yandex/krasuhod-lang/yandex/Раунд 2 - Выручай сэнсэй с деньгами будет всё окей.pptx` — презентационный материал
+- `./vyruchai-mediaplan.html` — основной HTML-файл интерфейса
+- `./dashboard-app.js` — логика дашборда, фильтры, рендер, drill-down и встроенные demo-данные
+- `./PNL - Выручай.ру.xlsx` — исходный Excel-срез для demo-контекста
+- `./Новая таблица (1).xlsx` — дополнительный Excel-файл в репозитории
+- `./Раунд 2 - Выручай сэнсэй с деньгами будет всё окей.pptx` — презентационный материал
 
 ## Что реализовано сейчас
 
@@ -26,7 +26,6 @@
 ### Вариант 1: Python HTTP server
 
 ```bash
-cd /home/runner/work/yandex/yandex/krasuhod-lang/yandex
 python3 -m http.server 8000
 ```
 

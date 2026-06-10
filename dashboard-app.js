@@ -290,8 +290,7 @@ const CHANNELS={
  'PR':{rev:revenuePR,cost:expensesPR,traffic:trafficPR,epc:channelEpc(revenuePR,trafficPR),label:'PR'},
  'Повторный':{rev:revenueRepeat,cost:expensesRepeat,traffic:repeat,epc:revenueRepeat.map((v,i)=>repeat[i]?v/repeat[i]:0),label:'CRM / повторные'}
 };
-// Дисконтирование денежных потоков: 20% годовых ⇒ ~1,53% в месяц. Накопленная дисконтированная прибыль = NPV-кривая.
-function cumulativeDiscounted(arr){const acc=[];let total=0;const rate=monthlyDiscountRate();arr.forEach((v,i)=>{total+=v/Math.pow(1+rate,i);acc.push(total)});return acc}
+// Дисконтирование денежных потоков: 20% годовых ⇒ ~1,53% в месяц. Накопленная дисконтированная прибыль считается ниже, в слое логики.
 
 // Декомпозиция расходов: общий expenses[] = бюджеты каналов + ФОТ + инфраструктура.
 // "Прочее" = expenses - (Директ + SEO + PR). Делим на ФОТ (≈70%) и Инфраструктура/прочее (≈30%).
@@ -321,17 +320,6 @@ const productTotals=Object.fromEntries(PRODUCT_MIX.map(p=>[p.key,totals.revenue*
 
 // CAC по каналам: расходы канала / выданные клиенты канала.
 // Доля одобрений канала ≈ доля выручки канала; выдачи = одобрения × ISSUED_TO_APPROVAL_RATE.
-function channelCac(){
- const totalIssued=totals.approvals*modelInputs.issuedToApprovalRate;
- const make=(rev,spend)=>{const issued=totalIssued*(rev/totals.revenue);return {rev,spend,issued,cac:issued?spend/issued:0}};
- return {
-  'Все каналы':{...make(totals.revenue,totals.expenses),label:'все каналы'},
-  'SEO':{...make(totals.seoRevenue,totals.seoSpend),label:'SEO'},
-  'Яндекс.Директ':{...make(totals.directRevenue,totals.directSpend),label:'Яндекс.Директ'},
-  'PR':{...make(totals.prRevenue,totals.prSpend),label:'PR'},
-  'Повторный':{...make(REPEAT_REVENUE_TOTAL,0),label:'CRM / повторные'}
- };
-}
 const STORAGE_KEYS={prefs:'vyruchai-dashboard-prefs-v2',model:'vyruchai-dashboard-model-v2',actions:'vyruchai-dashboard-actions-v2'};
 const DEFAULT_MODEL_INPUTS={issuedToApprovalRate:0.76,ltvFactor:1.34,annualDiscountRate:0.20,targetRepeatShare:0.06};
 let modelInputs={...DEFAULT_MODEL_INPUTS};
@@ -346,21 +334,6 @@ function normalizeModelInputs(raw){
   annualDiscountRate:clamp(Number(raw?.annualDiscountRate)||DEFAULT_MODEL_INPUTS.annualDiscountRate,0,1),
   targetRepeatShare:clamp(Number(raw?.targetRepeatShare)||DEFAULT_MODEL_INPUTS.targetRepeatShare,0,1)
  };
-}
-function currentStamp(){return new Date().toLocaleString('ru-RU',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'})}
-function persistPreferences(){safeWrite(STORAGE_KEYS.prefs,{window:state.window,role:state.role,channel:state.channel,scenario:state.scenario,activeTab:state.activeTab,theme:document.documentElement.dataset.theme||'light'})}
-function persistModelInputs(){safeWrite(STORAGE_KEYS.model,modelInputs);safeWrite(STORAGE_KEYS.actions,recentActions)}
-function recordAction(text){
- recentActions=[{time:currentStamp(),text},...recentActions].slice(0,6);
- safeWrite(STORAGE_KEYS.actions,recentActions);
-}
-function monthlyDiscountRate(){return Math.pow(1+modelInputs.annualDiscountRate,1/12)-1}
-function buildInputData(){
- return [
-  {title:'Период и база модели',value:'Май 2026 — декабрь 2027',text:'20 месяцев PnL, каналы, заявки, одобрения, расходы и продуктовый микс внутри одного сценария.'},
-  {title:'Инвестиции и капитал',value:mln(totals.expenses),text:`Пик потребности в капитале ${mln(Math.abs(Math.min(...cumulativeProfit)))}; окупаемость накопленных вложений ${months[paybackIndex]||'—'}.`},
-  {title:'Драйверы математики',value:`${pct(modelInputs.issuedToApprovalRate*100)} → ${modelInputs.ltvFactor.toFixed(2)}x`,text:`Конверсия одобрений в выдачи, multiplier LTV и дисконтирование ${pct(modelInputs.annualDiscountRate*100)} годовых.`}
- ];
 }
 const scenarios=[
  {name:'Дотянуть до зарплаты',users:742000,completion:74,diag:83,match:69,approval:31,repeat:5.8,revenue:28400000,time:'2:18',best:'Наличие стабильной зарплаты'},
@@ -573,14 +546,6 @@ function currentStamp(){return new Date().toLocaleString('ru-RU',{day:'2-digit',
 function recordAction(text){recentActions=[{time:currentStamp(),text},...recentActions].slice(0,6);safeWrite(STORAGE_KEYS.actions,recentActions)}
 function monthlyDiscountRate(){return Math.pow(1+modelInputs.annualDiscountRate,1/12)-1}
 function cumulativeDiscounted(arr){const acc=[];let total=0;const rate=monthlyDiscountRate();arr.forEach((v,i)=>{total+=v/Math.pow(1+rate,i);acc.push(total)});return acc}
-function buildInputData(ch){
- const comparison=comparePeriods(ch.rev);
- return [
-  {title:'Период и база модели',value:'Май 2026 — декабрь 2027',text:`${windowSize(months.length)} мес. в активном окне; роль ${activeRoleProfile().label.toLowerCase()}.`},
-  {title:'Инвестиции и капитал',value:mln(sum(sliceWindow(ch.cost))),text:`Пик потребности ${mln(Math.abs(Math.min(...cumulativeProfit)))}; предыдущий период ${comparison.previous?mln(comparison.previous):'—'}.`},
-  {title:'Драйверы математики',value:`${pct(modelInputs.issuedToApprovalRate*100)} → ${modelInputs.ltvFactor.toFixed(2)}x`,text:`NPV ${pct(modelInputs.annualDiscountRate*100)} годовых; цель repeat ${pct(modelInputs.targetRepeatShare*100)}.`}
- ];
-}
 function channelCac(){
  const totalIssued=totals.approvals*modelInputs.issuedToApprovalRate;
  const make=(rev,spend)=>{const issued=totalIssued*(rev/totals.revenue);return {rev,spend,issued,cac:issued?spend/issued:0}};
@@ -591,6 +556,14 @@ function channelCac(){
   'PR':{...make(totals.prRevenue,totals.prSpend),label:'PR'},
   'Повторный':{...make(REPEAT_REVENUE_TOTAL,0),label:'CRM / повторные'}
  };
+}
+function buildInputData(ch){
+ const comparison=comparePeriods(ch.rev);
+ return [
+  {title:'Период и база модели',value:'Май 2026 — декабрь 2027',text:`${windowSize(months.length)} мес. в активном окне; роль ${activeRoleProfile().label.toLowerCase()}.`},
+  {title:'Инвестиции и капитал',value:mln(sum(sliceWindow(ch.cost))),text:`Пик потребности ${mln(Math.abs(Math.min(...cumulativeProfit)))}; предыдущий период ${comparison.previous?mln(comparison.previous):'—'}.`},
+  {title:'Драйверы математики',value:`${pct(modelInputs.issuedToApprovalRate*100)} → ${modelInputs.ltvFactor.toFixed(2)}x`,text:`NPV ${pct(modelInputs.annualDiscountRate*100)} годовых; цель repeat ${pct(modelInputs.targetRepeatShare*100)}.`}
+ ];
 }
 function renderModelDirtyState(){
  const draft=currentDraftInputs();
@@ -811,7 +784,7 @@ function init(){
 const tabs=document.querySelectorAll('.tab'),panels=document.querySelectorAll('.panel');
 tabs.forEach(t=>t.addEventListener('click',()=>{tabs.forEach(x=>x.classList.remove('active'));panels.forEach(x=>x.classList.remove('active'));t.classList.add('active');document.getElementById('tab-'+t.dataset.tab).classList.add('active');state.activeTab=t.dataset.tab;persistPreferences();requestAnimationFrame(renderCharts)}));
 document.querySelectorAll('.chip').forEach(b=>b.addEventListener('click',()=>{document.querySelectorAll('.chip').forEach(x=>x.classList.remove('active'));b.classList.add('active');const w=Number(b.dataset.window||0);state.window=w>0?w:null;persistPreferences();renderAll()}));
-document.querySelectorAll('.filters select').forEach(sel=>{const label=sel.getAttribute('aria-label');sel.addEventListener('change',()=>{const v=sel.value;if(label==='Канал')state.channel=v;else if(label==='Сценарий')state.scenario=v;else if(label==='Роль'){state.role=v;if(state.activeTab==='overview'&&ROLE_PROFILES[v]?.recommendedTab)state.activeTab=ROLE_PROFILES[v].recommendedTab}else if(label==='Роль')state.role=v;persistPreferences();renderAll()})});
+document.querySelectorAll('.filters select').forEach(sel=>{const label=sel.getAttribute('aria-label');sel.addEventListener('change',()=>{const v=sel.value;if(label==='Канал')state.channel=v;else if(label==='Сценарий')state.scenario=v;else if(label==='Роль'){state.role=v;if(state.activeTab==='overview'&&ROLE_PROFILES[v]?.recommendedTab)state.activeTab=ROLE_PROFILES[v].recommendedTab};persistPreferences();renderAll()})});
 document.getElementById('themeToggle').addEventListener('click',()=>{const root=document.documentElement;root.dataset.theme=root.dataset.theme==='dark'?'light':'dark';persistPreferences();requestAnimationFrame(renderCharts)});
 document.querySelectorAll('#inputIssuedRate,#inputLtvFactor,#inputAnnualDiscount,#inputRepeatTarget').forEach(input=>input.addEventListener('input',renderModelDirtyState));
 document.getElementById('saveModelInputs').addEventListener('click',()=>{modelInputs=currentDraftInputs();recordAction(`Обновлены вводные модели: выдача ${pct(modelInputs.issuedToApprovalRate*100)}, LTV ${modelInputs.ltvFactor.toFixed(2)}x, NPV ${pct(modelInputs.annualDiscountRate*100)}`);persistModelInputs();renderAll()});
