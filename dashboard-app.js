@@ -412,6 +412,7 @@ function emptyCard(message){return `<div class="card"><p class="muted">${escapeH
 function renderJtbdRationale(){
  const host=document.getElementById('jtbdRationale');
  if(!host)return;
+ if(!scenarios.length){host.innerHTML='';const st=document.getElementById('jtbdShareTable');if(st)st.innerHTML='';return}
  const totalUsers=scenarios.reduce((a,s)=>a+s.users,0)||1;
  const totalRev=scenarios.reduce((a,s)=>a+s.revenue,0)||1;
  const enriched=scenarios.map(s=>({...s,demand:s.users/totalUsers*100,revShare:s.revenue/totalRev*100,gap:(s.revenue/totalRev*100)-(s.users/totalUsers*100)}));
