@@ -320,9 +320,11 @@ const productTotals=Object.fromEntries(PRODUCT_MIX.map(p=>[p.key,totals.revenue*
 
 // CAC по каналам: расходы канала / выданные клиенты канала.
 // Доля одобрений канала ≈ доля выручки канала; выдачи = одобрения × ISSUED_TO_APPROVAL_RATE.
-const STORAGE_KEYS={prefs:'vyruchai-dashboard-prefs-v2',model:'vyruchai-dashboard-model-v2',actions:'vyruchai-dashboard-actions-v2'};
+const STORAGE_VERSION='v2';
+const STORAGE_KEYS={prefs:`vyruchai-dashboard-prefs-${STORAGE_VERSION}`,model:`vyruchai-dashboard-model-${STORAGE_VERSION}`,actions:`vyruchai-dashboard-actions-${STORAGE_VERSION}`};
 // Базовые допущения demo-модели: 76% одобрений доходят до выдачи, LTV выше базовой выручки в 1.34x, NPV считаем от 20% годовых, цель repeat-share — 6%.
 const DEFAULT_MODEL_INPUTS={issuedToApprovalRate:0.76,ltvFactor:1.34,annualDiscountRate:0.20,targetRepeatShare:0.06};
+// Храним 6 последних действий: этого хватает, чтобы показать недавние изменения без перегрузки control card.
 const MAX_RECENT_ACTIONS=6;
 let modelInputs={...DEFAULT_MODEL_INPUTS};
 let recentActions=[];
@@ -668,7 +670,8 @@ function openDrawer(kind,id){
  drawer.focus();
  requestAnimationFrame(()=>drawer.querySelector('.drawer-close')?.focus());
 }
-function closeDrawer(){const drawer=document.getElementById('drawer');if(!drawer)return;drawer.classList.remove('open');if(lastDrawerFocus&&document.contains(lastDrawerFocus)&&typeof lastDrawerFocus.focus==='function'&&!lastDrawerFocus.disabled&&lastDrawerFocus.offsetParent!==null)lastDrawerFocus.focus()}
+function canRestoreFocus(element){return !!(element&&document.contains(element)&&typeof element.focus==='function'&&!element.disabled&&element.offsetParent!==null)}
+function closeDrawer(){const drawer=document.getElementById('drawer');if(!drawer)return;drawer.classList.remove('open');if(canRestoreFocus(lastDrawerFocus))lastDrawerFocus.focus()}
 function renderContextualViews(){
  const ch=resolveChannelSeries();
  const approvalRate=ratio(totals.approvals,totals.applications)*100;
@@ -793,7 +796,7 @@ document.querySelectorAll('#inputIssuedRate,#inputLtvFactor,#inputAnnualDiscount
 document.getElementById('saveModelInputs').addEventListener('click',()=>{modelInputs=currentDraftInputs();recordAction(`Обновлены вводные модели: выдача ${pct(modelInputs.issuedToApprovalRate*100)}, LTV ${modelInputs.ltvFactor.toFixed(2)}x, NPV ${pct(modelInputs.annualDiscountRate*100)}`);persistModelInputs();renderAll()});
 document.getElementById('resetModelInputs').addEventListener('click',()=>{fillModelInputs(DEFAULT_MODEL_INPUTS);recordAction('Поля модели сброшены к базовому пресету');renderModelDirtyState()});
 document.addEventListener('click',e=>{const preset=e.target.closest('[data-preset-id]');if(preset){const cfg=MODEL_PRESETS.find(x=>x.id===preset.dataset.presetId);if(cfg){fillModelInputs(cfg.values);state.role=cfg.role;state.channel=cfg.channel;state.scenario=cfg.scenario;state.activeTab=ROLE_PROFILES[cfg.role]?.recommendedTab||state.activeTab;persistPreferences();recordAction(`Выбран пресет ${cfg.label}: ${cfg.note}`);renderAll();}return;}const drill=e.target.closest('[data-drill-kind]');if(drill){openDrawer(drill.dataset.drillKind,drill.dataset.drillId);return;}});
-document.addEventListener('keydown',e=>{const drill=e.target.closest?.('[data-drill-kind]');if(drill&&(e.key==='Enter'||e.key===' ')){e.preventDefault();openDrawer(drill.dataset.drillKind,drill.dataset.drillId);}if(e.key==='Escape')closeDrawer()});
+document.addEventListener('keydown',e=>{const drill=e.target.closest?.('[data-drill-kind]');const nativeTag=['BUTTON','A','INPUT','SELECT','TEXTAREA'].includes(e.target?.tagName);if(drill&&(e.key==='Enter'||(e.key===' '&&!nativeTag))){e.preventDefault();openDrawer(drill.dataset.drillKind,drill.dataset.drillId);}if(e.key==='Escape')closeDrawer()});
 document.getElementById('drawerClose').addEventListener('click',closeDrawer);
 let resizeTimer;window.addEventListener('resize',()=>{clearTimeout(resizeTimer);resizeTimer=setTimeout(renderCharts,120)});
 init();
