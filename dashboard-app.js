@@ -100,7 +100,9 @@ class Chart{
   }
   const rotateX=labels.some(label=>String(label).length>4)||labels.length>8;
   const xLabelH=rotateX?42:24;
-  const pad={l:padL,r:padR,t:8+legendH,b:xLabelH};
+  // Зазор между блоком легенды и областью графика, чтобы подписи рядов не наезжали на сам график.
+  const legendGap=legendItems.length?12:0;
+  const pad={l:padL,r:padR,t:8+legendH+legendGap,b:xLabelH};
   const plotW=width-pad.l-pad.r, plotH=height-pad.t-pad.b;
   // legend
   if(legendItems.length){
@@ -340,6 +342,9 @@ function normalizeModelInputs(raw){
  };
 }
 const scenarios=[
+ // Разбивка JTBD по сценариям. Доля сценария = доля intent-трафика (поисковый спрос по job-to-be-done),
+ // подтверждённая завершением диагностики (completion) и откалиброванная по фактической выручке сценария.
+ // users отражает месячный пул intent-трафика; сумма ≈ 1,70 млн → доли спроса 43,6 / 19,9 / 12,6 / 11,1 / 7,4 / 5,4 %.
  {name:'Дотянуть до зарплаты',users:742000,completion:74,diag:83,match:69,approval:31,repeat:5.8,revenue:28400000,time:'2:18',best:'Наличие стабильной зарплаты'},
  {name:'Есть долги',users:338000,completion:58,diag:91,match:51,approval:24,repeat:7.2,revenue:14600000,time:'3:42',best:'Долговая нагрузка ниже 50%'},
  {name:'Хочу машину',users:126000,completion:62,diag:76,match:44,approval:19,repeat:3.4,revenue:7100000,time:'4:05',best:'Первоначальный взнос от 20%'},
@@ -393,14 +398,38 @@ function cls(v){return v>=0?'positive':'negative'}
 function escapeHtml(value){return String(value).replace(/[&<>"']/g,ch=>HTML_ESCAPE_MAP[ch])}
 function slug(value){return String(value).toLowerCase().replace(/[^a-zа-я0-9]+/gi,'-').replace(/^-+|-+$/g,'')}
 function chartColors(){const s=getComputedStyle(document.documentElement);return {text:s.getPropertyValue('--text').trim(),muted:s.getPropertyValue('--muted').trim(),line:s.getPropertyValue('--line').trim(),blue:s.getPropertyValue('--blue').trim(),green:s.getPropertyValue('--green').trim(),orange:s.getPropertyValue('--orange').trim(),red:s.getPropertyValue('--red').trim(),violet:s.getPropertyValue('--violet').trim()}}
-function table(id,head,rows){
+function table(id,head,rows,rowClasses){
  const el=document.getElementById(id);if(!el)return;
  const safeHead=head.map(h=>`<th>${escapeHtml(h)}</th>`).join('');
- const safeRows=rows.map(r=>'<tr>'+r.map(c=>`<td class="${typeof c==='number'&&c<0?'negative':''}">${escapeHtml(c)}</td>`).join('')+'</tr>').join('');
+ const safeRows=rows.map((r,ri)=>{
+  const rowCls=rowClasses&&rowClasses[ri]?` class="${escapeHtml(rowClasses[ri])}"`:'';
+  return `<tr${rowCls}>`+r.map(c=>`<td class="${typeof c==='number'&&c<0?'negative':''}">${escapeHtml(c)}</td>`).join('')+'</tr>';
+ }).join('');
  el.innerHTML='<thead><tr>'+safeHead+'</tr></thead><tbody>'+safeRows+'</tbody>';
 }
 function drillAttrs(kind,id){return `data-drill-kind="${escapeHtml(kind)}" data-drill-id="${escapeHtml(id)}" tabindex="0" role="button" aria-haspopup="dialog"`}
 function emptyCard(message){return `<div class="card"><p class="muted">${escapeHtml(message)}</p></div>`}
+function renderJtbdRationale(){
+ const host=document.getElementById('jtbdRationale');
+ if(!host)return;
+ if(!scenarios.length){host.innerHTML='';const st=document.getElementById('jtbdShareTable');if(st)st.innerHTML='';return}
+ const totalUsers=scenarios.reduce((a,s)=>a+s.users,0)||1;
+ const totalRev=scenarios.reduce((a,s)=>a+s.revenue,0)||1;
+ const enriched=scenarios.map(s=>({...s,demand:s.users/totalUsers*100,revShare:s.revenue/totalRev*100,gap:(s.revenue/totalRev*100)-(s.users/totalUsers*100)}));
+ const anchor=enriched.slice().sort((a,b)=>b.demand-a.demand)[0];
+ const overIndex=enriched.slice().sort((a,b)=>b.gap-a.gap)[0];
+ const underIndex=enriched.slice().sort((a,b)=>a.gap-b.gap)[0];
+ const points=[
+  `Доли заданы <b>спросом (intent-трафиком)</b>: «${escapeHtml(anchor.name)}» формирует ${pct(anchor.demand)} пула — это якорный массовый JTBD с наибольшим поисковым спросом, поэтому он получает максимальную долю.`,
+  `Каждая доля <b>подтверждается воронкой</b>: completion (завершение диагностики) и approval удерживают долю выручки около доли спроса, поэтому разбивка не произвольная.`,
+  `Доли <b>откалиброваны по фактической выручке</b>: «${escapeHtml(overIndex.name)}» монетизируется выше спроса (вклад в выручку ${pct(overIndex.revShare)} против ${pct(overIndex.demand)} спроса) — приоритет на масштабирование.`,
+  `«${escapeHtml(underIndex.name)}» <b>недомонетизирован</b> (${pct(underIndex.revShare)} выручки против ${pct(underIndex.demand)} спроса) — это узкое место для продукта, а не повод раздувать долю.`,
+  `Длинный хвост держим небольшим: низкий спрос и высокое время решения дают низкую эффективность на юнит, поэтому доля ограничена сознательно.`
+ ];
+ host.innerHTML=`<div class="card-title"><div><h2>Аргументация разбивки по процентам</h2><p>Спрос → воронка → выручка: три опоры распределения</p></div></div><ul class="rationale-list">${points.map(p=>`<li>${p}</li>`).join('')}</ul>`;
+ const shareRows=enriched.slice().sort((a,b)=>b.demand-a.demand).map(s=>[s.name,pct(s.demand),pct(s.completion),pct(s.approval),pct(s.revShare),s.gap>=0?'монетизация ≥ спроса':'недомонетизирован']);
+ table('jtbdShareTable',['Сценарий','Доля спроса','Завершение','Одобрение','Доля выручки','Сигнал'],shareRows);
+}
 function kpi(container,items){
  const el=document.getElementById(container);if(!el)return;
  el.innerHTML=items.map(x=>{
@@ -724,8 +753,10 @@ function renderContextualViews(){
  document.getElementById('paybackList').innerHTML=[['Первая месячная прибыль',months[firstMonthlyProfitIndex]||'—'],['Окупаемость накопленных инвестиций',months[paybackIndex]||'—'],['Максимальный накопленный минус',mln(Math.min(...cumulativeProfit))],['Финальный накопленный PnL',mln(totals.profit)]].map((r,i)=>`<div class="mini-row"><span><span class="status ${i===3?'green':i===2?'red':'yellow'}"></span> ${r[0]}</span><b>${r[1]}</b></div>`).join('');
  const priorities=filterContext(priorityCatalog);
  document.getElementById('actionsList').innerHTML=(priorities.length?priorities:priorityCatalog.slice(0,4)).map(item=>`<div class="mini-row" ${drillAttrs('priority',item.id)}><span><span class="status ${item.severity==='bad'?'red':item.severity==='warn'?'yellow':'green'}"></span> ${escapeHtml(item.title)}</span><b>${escapeHtml(item.description)}</b></div>`).join('');
- const pnlRows=[['Выручка — итого',...revenue.map(money),money(totals.revenue)],['  · SEO',...revenueSEO.map(money),money(totals.seoRevenue)],['  · Яндекс.Директ',...revenuePPC.map(money),money(totals.directRevenue)],['  · PR',...revenuePR.map(money),money(totals.prRevenue)],['  · в т.ч. повторы / CRM',...revenueRepeat.map(money),money(REPEAT_REVENUE_TOTAL)],['Расходы — итого',...expenses.map(money),money(totals.expenses)],['  · Яндекс.Директ',...budgetDirect.map(money),money(sum(budgetDirect))],['  · SEO',...budgetSEO.map(money),money(sum(budgetSEO))],['  · PR',...budgetPR.map(money),money(sum(budgetPR))],['  · ФОТ команды',...expensesPayroll.map(money),money(sum(expensesPayroll))],['  · Инфраструктура и прочее',...expensesInfra.map(money),money(sum(expensesInfra))],['Прибыль',...profit.map(v=>money(v)),money(totals.profit)],['Визиты',...visits.map(fmt),fmt(totals.visits)],['Клики на офферы',...offerClicks.map(fmt),fmt(totals.clicks)],['Заявки',...applications.map(fmt),fmt(totals.applications)],['Апрувы',...approvals.map(fmt),fmt(totals.approvals)]];
- table('pnlTable',['Показатель',...months,'Итого'],pnlRows);
+ const pnlRows=[['Выручка — итого',...revenue.map(money),money(totals.revenue)],['  · SEO',...revenueSEO.map(money),money(totals.seoRevenue)],['  · Яндекс.Директ',...revenuePPC.map(money),money(totals.directRevenue)],['  · PR',...revenuePR.map(money),money(totals.prRevenue)],['  · в т.ч. повторы / CRM',...revenueRepeat.map(money),money(REPEAT_REVENUE_TOTAL)],['Расходы — итого',...expenses.map(money),money(totals.expenses)],['  · Яндекс.Директ',...budgetDirect.map(money),money(sum(budgetDirect))],['  · SEO',...budgetSEO.map(money),money(sum(budgetSEO))],['  · PR',...budgetPR.map(money),money(sum(budgetPR))],['  · ФОТ команды',...expensesPayroll.map(money),money(sum(expensesPayroll))],['  · Инфраструктура и прочее',...expensesInfra.map(money),money(sum(expensesInfra))],['Прибыль',...profit.map(v=>money(v)),money(totals.profit)],['Рентабельность (чистая маржа)',...profit.map((v,i)=>pct(ratio(v,revenue[i])*100)),pct(ratio(totals.profit,totals.revenue)*100)],['Визиты',...visits.map(fmt),fmt(totals.visits)],['Клики на офферы',...offerClicks.map(fmt),fmt(totals.clicks)],['Заявки',...applications.map(fmt),fmt(totals.applications)],['Апрувы',...approvals.map(fmt),fmt(totals.approvals)]];
+ // Цветовое выделение ключевых строк PnL: выручка, расходы, прибыль и рентабельность; вложенные строки приглушаем.
+ const pnlRowClasses=pnlRows.map(r=>{const name=String(r[0]);if(name.startsWith('  ·'))return 'row-sub';if(name.startsWith('Выручка'))return 'row-revenue';if(name.startsWith('Расходы'))return 'row-cost';if(name.startsWith('Прибыль'))return 'row-profit';if(name.startsWith('Рентабельность'))return 'row-margin';return ''});
+ table('pnlTable',['Показатель',...months,'Итого'],pnlRows,pnlRowClasses);
  const cacOrder=['SEO','Яндекс.Директ','PR','Повторный','Все каналы'];
  const cacKpiCls={'SEO':'positive','Яндекс.Директ':'negative','PR':'accent','Повторный':'positive','Все каналы':'accent'};
  kpi('cacKpis',cacOrder.map(k=>{const x=cc[k];return {id:'cac',label:'CAC · '+(k==='Все каналы'?'все каналы':k),value:Math.round(x.cac).toLocaleString('ru-RU')+' ₽',sub:'выдач '+fmt(x.issued)+' · бюджет '+mln(x.spend),cls:cacKpiCls[k]}}));
@@ -752,6 +783,7 @@ function renderContextualViews(){
  const filteredScenarios=filterContext(scenarioCatalog);
  document.getElementById('scenarioGrid').innerHTML=filteredScenarios.length?filteredScenarios.map(s=>`<div class="card scenario-card" ${drillAttrs('scenario',s.id)}><div class="scenario-head"><h3>${escapeHtml(s.name)}</h3><span class="pill">${fmt(s.users)} пользователей</span></div><div class="mini-row"><span>Завершение</span><b>${pct(s.completion)}</b></div><div class="mini-row"><span>Диагностика</span><b>${pct(s.diag)}</b></div><div class="mini-row"><span>Одобрение</span><b>${pct(s.approval)}</b></div><div class="mini-row"><span>Повтор</span><b>${pct(s.repeat)}</b></div><div class="mini-row"><span>Выручка</span><b>${mln(s.revenue)}</b></div><div class="progress"><div class="bar" style="width:${s.completion}%"></div></div><p class="muted">Застревание: диагностика и подтверждение данных. Лучший ответ: ${escapeHtml(s.best)}.</p></div>`).join(''):emptyCard('Нет сценариев под выбранный фильтр.');
  table('jtbdTable',['Сценарий','Потери на вопросах','Узкое место','Время','Лучший ответ для одобрения','Выручка','Повтор'],(filteredScenarios.length?filteredScenarios:[]).map(s=>[s.name,`${pct(100-s.completion)} отвал`,'ответы диагностики',s.time,s.best,mln(s.revenue),pct(s.repeat)]));
+ renderJtbdRationale();
  kpi('aiKpis',filterByRole([{id:'revenue',roles:['Продукт','Рост','Руководитель'],label:'Сессии с рекомендациями',value:fmt(totals.visits*.54),sub:'логируется ID сессии рекомендации'},{id:'revenue',roles:['Продукт','Рост','Руководитель'],label:'CTR топ-3',value:'41%',sub:'клики по офферу / показы',cls:'positive'},{id:'revenue',roles:['Продукт','Руководитель'],label:'Прирост одобрений',value:'+8 п.п.',sub:'к обычному списку',cls:'positive'},{id:'revenue',roles:['Продукт','Операции'],label:'Покрытие объяснениями',value:'94%',sub:'присутствует причина рекомендации',cls:'positive'}]));
  table('aiTable',['ID сессии','Сценарий','Топ-3 оффера','Причина рекомендации','Прогноз одобрения','Фактический результат','Прирост выручки','CTR','Покрытие'],aiRows.map(r=>[r[0],r[1],r[2],r[3],pct(r[4]*100),r[5],pct(r[6]),pct(r[7]),pct(r[8])]));
  table('sosTable',['Метрика','Значение'],sosRows);

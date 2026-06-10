@@ -116,7 +116,21 @@ tbody tr:last-child td{border-bottom:0}
 .positive{color:var(--green);font-weight:700}
 .negative{color:var(--red);font-weight:700}
 .accent{color:var(--blue);font-weight:700}
+/* Цветовое выделение ключевых строк PnL */
+tbody tr.row-sub td:first-child{color:var(--muted);font-weight:500;padding-left:30px}
+tbody tr.row-revenue td{background:color-mix(in srgb,var(--green) 7%,transparent)}
+tbody tr.row-revenue td:first-child{color:var(--green);box-shadow:inset 3px 0 0 var(--green)}
+tbody tr.row-cost td{background:color-mix(in srgb,var(--red) 7%,transparent)}
+tbody tr.row-cost td:first-child{color:var(--red);box-shadow:inset 3px 0 0 var(--red)}
+tbody tr.row-profit td{background:color-mix(in srgb,var(--blue) 9%,transparent);font-weight:700}
+tbody tr.row-profit td:first-child{color:var(--blue);box-shadow:inset 3px 0 0 var(--blue)}
+tbody tr.row-margin td{background:color-mix(in srgb,var(--violet) 9%,transparent);font-weight:700}
+tbody tr.row-margin td:first-child{color:var(--violet);box-shadow:inset 3px 0 0 var(--violet)}
 .muted{color:var(--muted)}
+.rationale-list{margin:6px 0 0;padding-left:0;list-style:none;display:grid;gap:11px}
+.rationale-list li{position:relative;padding-left:22px;font-size:13.5px;color:var(--muted);line-height:1.5}
+.rationale-list li b{color:var(--text);font-weight:600}
+.rationale-list li::before{content:"";position:absolute;left:2px;top:7px;width:8px;height:8px;border-radius:50%;background:linear-gradient(150deg,var(--blue),var(--violet))}
 .progress{height:8px;background:var(--surface-3);border-radius:980px;overflow:hidden}
 .bar{height:100%;border-radius:980px;background:linear-gradient(90deg,var(--blue),color-mix(in srgb,var(--blue) 70%,var(--violet)))}
 
@@ -343,6 +357,11 @@ canvas{display:block;width:100%;max-width:100%;height:auto;cursor:crosshair}
 
     <section id="tab-jtbd" class="panel">
       <div class="grid three" id="scenarioGrid"></div>
+      <h2 class="divider-title">Почему распределение JTBD именно такое</h2>
+      <div class="grid two">
+        <div class="card" id="jtbdRationale"></div>
+        <div class="card"><div class="card-title"><div><h2>Декомпозиция долей по сценариям</h2><p>Доля спроса × завершение × вклад в выручку</p></div></div><div class="table-wrap" style="border:0;box-shadow:none"><table id="jtbdShareTable"></table></div></div>
+      </div>
       <h2 class="divider-title">Карта вопросов и последующее одобрение</h2>
       <div class="table-wrap"><table id="jtbdTable"></table></div>
     </section>
