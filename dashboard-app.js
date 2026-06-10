@@ -290,7 +290,7 @@ const CHANNELS={
  'PR':{rev:revenuePR,cost:expensesPR,traffic:trafficPR,epc:channelEpc(revenuePR,trafficPR),label:'PR'},
  'Повторный':{rev:revenueRepeat,cost:expensesRepeat,traffic:repeat,epc:revenueRepeat.map((v,i)=>repeat[i]?v/repeat[i]:0),label:'CRM / повторные'}
 };
-// Дисконтирование денежных потоков: 20% годовых ⇒ ~1,53% в месяц. Накопленная дисконтированная прибыль считается ниже, в слое логики.
+// Дисконтирование денежных потоков: накопленная дисконтированная прибыль считается в функции cumulativeDiscounted() ниже в логике рендера.
 
 // Декомпозиция расходов: общий expenses[] = бюджеты каналов + ФОТ + инфраструктура.
 // "Прочее" = expenses - (Директ + SEO + PR). Делим на ФОТ (≈70%) и Инфраструктура/прочее (≈30%).
@@ -663,9 +663,9 @@ function openDrawer(kind,id){
  const actions=(payload.actions||[]).map(x=>`<div class="mini-row"><span>${escapeHtml(x)}</span><b>следующий шаг</b></div>`).join('');
  content.innerHTML=`<h2 id="drawerTitle">${escapeHtml(payload.title)}</h2><p class="muted">${escapeHtml(payload.summary)}</p><div class="drawer-section"><div class="section-note">Как считается</div><div class="note-banner">${escapeHtml(payload.formula||'—')}</div></div><div class="drawer-section"><div class="section-note">Ключевые значения</div><div class="drawer-list">${rows}</div></div><div class="drawer-section"><div class="section-note">Что делать</div><div class="drawer-list">${actions}</div></div>`;
  drawer.classList.add('open');
- drawer.querySelector('.drawer-close')?.focus();
+ drawer.focus();
 }
-function closeDrawer(){const drawer=document.getElementById('drawer');if(!drawer)return;drawer.classList.remove('open');if(lastDrawerFocus&&typeof lastDrawerFocus.focus==='function')lastDrawerFocus.focus()}
+function closeDrawer(){const drawer=document.getElementById('drawer');if(!drawer)return;drawer.classList.remove('open');if(lastDrawerFocus&&document.contains(lastDrawerFocus)&&typeof lastDrawerFocus.focus==='function')lastDrawerFocus.focus()}
 function renderContextualViews(){
  const ch=resolveChannelSeries();
  const approvalRate=ratio(totals.approvals,totals.applications)*100;
