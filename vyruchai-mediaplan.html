@@ -196,10 +196,15 @@ canvas{display:block;width:100%;max-width:100%;height:auto;cursor:crosshair}
 .action:hover{border-color:var(--blue);color:var(--blue);box-shadow:var(--shadow-soft)}
 
 /* ---------- Funnel ---------- */
-.flow{display:grid;grid-template-columns:repeat(5,1fr);gap:var(--gap)}
+.flow{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:var(--gap)}
 .step{border:1px solid var(--line);border-radius:var(--radius-sm);padding:18px;background:var(--surface);box-shadow:var(--shadow-soft)}
 .step b{display:block;font-size:23px;letter-spacing:-.03em;font-variant-numeric:tabular-nums}
 .step span{color:var(--muted);font-size:12px}
+
+/* Drag-to-scroll: горизонтальное перетаскивание зажатой левой кнопкой мыши (для широких таблиц вроде PNL). */
+.table-wrap.drag-scroll{cursor:grab;user-select:none;-webkit-user-select:none}
+.table-wrap.drag-scroll.is-dragging{cursor:grabbing;scroll-behavior:auto}
+.table-wrap.drag-scroll.is-dragging *{pointer-events:none}
 .divider-title{font-size:22px;letter-spacing:-.03em;margin:6px 0 -4px;font-weight:700}
 
 /* ---------- Drawer ---------- */
@@ -334,7 +339,31 @@ canvas{display:block;width:100%;max-width:100%;height:auto;cursor:crosshair}
         <div class="card chart-card"><div class="card-title"><div><h2>Динамика продуктов, млн ₽</h2><p>Линии: микрозаймы, кредиты, карты, страхование, повторы</p></div></div><div class="chart-box"><canvas id="chartProducts"></canvas></div></div>
       </div>
       <h2 class="divider-title">Сводная таблица PNL</h2>
-      <div class="table-wrap"><table id="pnlTable"></table></div>
+      <div class="card" style="padding:14px 18px;">
+        <p class="muted" style="margin:0;font-size:13px;">Совет: зажмите <b>левую кнопку мыши</b> и потяните таблицу влево / вправо — все 18 месяцев перелистаются без полосы прокрутки.</p>
+      </div>
+      <div class="table-wrap drag-scroll" data-drag-scroll><table id="pnlTable"></table></div>
+      <h2 class="divider-title">Целевой сценарий: 40 млн ₽ выручки в декабре 2027</h2>
+      <div class="card">
+        <div class="card-title"><div><h2>Что нужно, чтобы выйти на 40 млн ₽/мес</h2><p>Базовый план в декабре 2027 даёт 12,3 млн ₽; целевой — 40 млн ₽. Ниже разложение по воронке и точкам роста.</p></div></div>
+        <div id="targetScenarioKpis" class="grid kpis"></div>
+        <div class="grid two">
+          <div class="card chart-card"><div class="card-title"><div><h2>Выручка: база vs цель 40 млн</h2><p>Месячная траектория, тыс. ₽</p></div></div><div class="chart-box"><canvas id="chartTargetScenario"></canvas></div></div>
+          <div class="card"><div class="card-title"><div><h2>Воронка декабря 2027 — целевая vs базовая</h2><p>Что должно вырасти на каждом шаге</p></div></div><div class="table-wrap" style="border:0;box-shadow:none"><table id="targetFunnelTable"></table></div></div>
+        </div>
+        <div class="card-title" style="margin-top:8px"><div><h3>Точки роста до 40 млн ₽/мес</h3><p>Куда направлять бюджет, продукт и CRM, чтобы закрыть разрыв</p></div></div>
+        <ul class="rationale-list" id="targetGrowthLevers"></ul>
+      </div>
+      <h2 class="divider-title">База Центрофинанса как identity-слой</h2>
+      <div class="card">
+        <div class="card-title"><div><h2>Идентификация без выгрузки PII партнёрам</h2><p>База Центрофинанса используется как наш собственный match-сервис: партнёр получает «совпадение / score / payload-токен», а не персональные данные.</p></div></div>
+        <div id="centrofinansKpis" class="grid kpis"></div>
+        <div class="grid two">
+          <div class="card"><div class="card-title"><div><h3>Архитектура потоков</h3><p>Пользователь → наш match-API → партнёр</p></div></div><ul class="rationale-list" id="centrofinansFlow"></ul></div>
+          <div class="card"><div class="card-title"><div><h3>Что защищено и что улучшится</h3><p>Контур безопасности и эффект для воронки</p></div></div><ul class="rationale-list" id="centrofinansEffect"></ul></div>
+        </div>
+        <div class="note-banner" id="centrofinansLegal"></div>
+      </div>
     </section>
 
     <section id="tab-traffic" class="panel">
@@ -399,6 +428,15 @@ canvas{display:block;width:100%;max-width:100%;height:auto;cursor:crosshair}
     </section>
 
     <section id="tab-alerts" class="panel">
+      <div class="card">
+        <div class="card-title"><div><h2>Что такое сигналы</h2><p>Сигналы — это автоматические уведомления, которые срабатывают, когда ключевая метрика уходит за контрольный порог: SLA партнёра, gap «прогноз vs факт», CAC выше нормы, доля повторов ниже цели, доля пустых рекомендаций. Каждый сигнал имеет уровень (норма / внимание / критично), владельца роли и предписанное действие.</p></div></div>
+        <ul class="rationale-list">
+          <li><b>Норма (зелёный)</b> — метрика лучше плана; держим режим, тиражируем подход.</li>
+          <li><b>Внимание (жёлтый)</b> — отклонение в пределах 10–25% от порога; разбираем причину в течение спринта.</li>
+          <li><b>Критично (красный)</b> — отклонение более 25% или системный риск (пустые ответы, репутация); переключаем партнёра / канал в SOS-режим или ставим на паузу.</li>
+          <li>Каждый сигнал кликабелен: drill-down открывает контекст, владельца, действие и связанные метрики.</li>
+        </ul>
+      </div>
       <div class="grid three" id="alertsGrid"></div>
     </section>
 

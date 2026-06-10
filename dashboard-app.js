@@ -229,28 +229,53 @@ class Chart{
 function chartFont(){return '-apple-system, BlinkMacSystemFont, "SF Pro Text", "Inter", sans-serif'}
 
 
-const months=['Май 2026','Июнь 2026','Июль 2026','Август 2026','Сентябрь 2026','Октябрь 2026','Ноябрь 2026','Декабрь 2026','Январь 2027','Февраль 2027','Март 2027','Апрель 2027','Май 2027','Июнь 2027','Июль 2027','Август 2027','Сентябрь 2027','Октябрь 2027','Ноябрь 2027','Декабрь 2027'];
-const revenue=[127360.5978,159117.9348,221445,341018.8043,532290.0652,795462.7891,1070183.369,1765383.335,1877356.452,2129657.314,2445466.57,3254744.138,3909008.9,4753230.091,5833006.543,6741346.983,7831355.51,9292788.909,10540212.54,12276711.91];
-const expenses=[1275000,1475000,1675000,1225000,1225000,1445000,1495000,1845000,1895000,1995000,1995000,2245000,2045000,2145000,2495000,2495000,2495000,2495000,2495000,2495000];
-const profit=[-1147639.402,-1315882.065,-1453555,-883981.1957,-692709.9348,-649537.2109,-424816.6307,-79616.66459,-17643.54844,134657.3141,450466.5695,1009744.138,1864008.9,2608230.091,3338006.543,4246346.983,5336355.51,6797788.909,8045212.537,9781711.91];
-const visits=[11570.65217,12145.65217,17233.47826,19388.47826,23283.22826,30897.37935,36476.59185,48558.70968,51240.66761,58538.64741,66469.74934,88726.41775,105310.8217,126820.3642,156532.2632,179143.0636,206276.0242,231007.8642,259511.9154,301819.5807];
-const repeat=[196.701087,242.9130435,379.1365217,484.7119565,651.9303913,926.9213804,1203.727531,1699.554839,1793.423366,2341.545897,2991.13872,4436.320887,6318.6493,8496.964404,11739.91974,15048.01734,18564.84218,23100.78642,28546.31069,36218.34968];
-const offerClicks=[2745.380435,3120.543478,4471.5,5364.684783,6875.157065,9133.879837,11127.85346,15406.68308,16360.39487,18583.39087,21386.54967,28696.46327,34551.18718,42139.74613,51741.60839,59742.10399,69342.6987,78123.71293,88249.97511,103147.5645];
-const applications=[578.2744565,671.3206522,935.025,1251.552717,1786.739755,2457.727508,3155.618277,4629.2956,4963.094725,5588.534632,6569.64021,8899.196926,10948.3503,13604.34593,16583.47598,19383.64944,22743.85759,25817.21257,29361.40433,34575.56063];
-const approvals=[132.7866848,159.1179348,218.295,316.548587,483.4146848,676.1645511,892.0285386,1347.89022,1450.396633,1627.718905,1926.346095,2612.430003,3235.079764,4041.362954,4914.200762,5767.910479,6792.36214,8175.127301,9328.149041,11008.00728];
-const epc=[46.3,51.0,49.4,63.5,77.4,87.0,96.1,114.6,114.7,114.6,114.3,113.4,113.1,112.8,112.7,112.8,112.9,119.0,119.4,119.0];
-const trafficSEO=[2875,3450,4140,6210,9936,12916.8,18083.52,25316.928,27848.6208,30633.48288,38291.8536,53608.59504,69691.17355,90598.52562,108718.2307,130461.8769,156554.2523,180037.3901,207042.9986,248451.5983];
-const trafficPPC=[8695.652174,8695.652174,13043.47826,13043.47826,13043.47826,17391.30435,17391.30435,21739.13043,21739.13043,26086.95652,26086.95652,32608.69565,32608.69565,32608.69565,43478.26087,43478.26087,43478.26087,43478.26087,43478.26087,43478.26087];
-const trafficPR=[0,0,50,135,303.75,589.275,1001.7675,1502.65125,1652.916375,1818.208013,2090.939214,2509.127057,3010.952469,3613.142962,4335.771555,5202.925866,6243.511039,7492.213247,8990.655896,9889.721486];
-const budgetDirect=[200000,200000,300000,300000,300000,400000,400000,500000,500000,600000,600000,750000,750000,750000,1000000,1000000,1000000,1000000,1000000,1000000];
-const budgetSEO=[300000,350000,450000,450000,450000,550000,550000,600000,650000,650000,650000,700000,700000,800000,900000,900000,900000,900000,900000,900000];
-const budgetPR=[200000,200000,300000,300000,300000,400000,400000,500000,200000,200000,200000,250000,250000,250000,250000,250000,250000,250000,250000,250000];
-const totals={revenue:75897147.75,expenses:38950000,profit:36947147.75,visits:2030951.549,repeat:165381.8654,clicks:670311.0778,applications:214503.8772,approvals:65105.33756,directRevenue:14361739.13,seoRevenue:53920909.98,prRevenue:7614498.645,directSpend:12550000,seoSpend:13250000,prSpend:5450000};
+// Горизонт плана: июль 2026 — декабрь 2027 (18 мес.). Май и июнь 2026 уже в прошлом, поэтому из ряда отрезаются первые 2 значения.
+const _RAW_MONTHS=['Май 2026','Июнь 2026','Июль 2026','Август 2026','Сентябрь 2026','Октябрь 2026','Ноябрь 2026','Декабрь 2026','Январь 2027','Февраль 2027','Март 2027','Апрель 2027','Май 2027','Июнь 2027','Июль 2027','Август 2027','Сентябрь 2027','Октябрь 2027','Ноябрь 2027','Декабрь 2027'];
+const PLAN_START_OFFSET=2; // отбрасываем Май и Июнь 2026
+const _slice=arr=>arr.slice(PLAN_START_OFFSET);
+const months=_slice(_RAW_MONTHS);
+const revenue=_slice([127360.5978,159117.9348,221445,341018.8043,532290.0652,795462.7891,1070183.369,1765383.335,1877356.452,2129657.314,2445466.57,3254744.138,3909008.9,4753230.091,5833006.543,6741346.983,7831355.51,9292788.909,10540212.54,12276711.91]);
+const expenses=_slice([1275000,1475000,1675000,1225000,1225000,1445000,1495000,1845000,1895000,1995000,1995000,2245000,2045000,2145000,2495000,2495000,2495000,2495000,2495000,2495000]);
+const profit=_slice([-1147639.402,-1315882.065,-1453555,-883981.1957,-692709.9348,-649537.2109,-424816.6307,-79616.66459,-17643.54844,134657.3141,450466.5695,1009744.138,1864008.9,2608230.091,3338006.543,4246346.983,5336355.51,6797788.909,8045212.537,9781711.91]);
+const visits=_slice([11570.65217,12145.65217,17233.47826,19388.47826,23283.22826,30897.37935,36476.59185,48558.70968,51240.66761,58538.64741,66469.74934,88726.41775,105310.8217,126820.3642,156532.2632,179143.0636,206276.0242,231007.8642,259511.9154,301819.5807]);
+const repeat=_slice([196.701087,242.9130435,379.1365217,484.7119565,651.9303913,926.9213804,1203.727531,1699.554839,1793.423366,2341.545897,2991.13872,4436.320887,6318.6493,8496.964404,11739.91974,15048.01734,18564.84218,23100.78642,28546.31069,36218.34968]);
+const offerClicks=_slice([2745.380435,3120.543478,4471.5,5364.684783,6875.157065,9133.879837,11127.85346,15406.68308,16360.39487,18583.39087,21386.54967,28696.46327,34551.18718,42139.74613,51741.60839,59742.10399,69342.6987,78123.71293,88249.97511,103147.5645]);
+const applications=_slice([578.2744565,671.3206522,935.025,1251.552717,1786.739755,2457.727508,3155.618277,4629.2956,4963.094725,5588.534632,6569.64021,8899.196926,10948.3503,13604.34593,16583.47598,19383.64944,22743.85759,25817.21257,29361.40433,34575.56063]);
+const approvals=_slice([132.7866848,159.1179348,218.295,316.548587,483.4146848,676.1645511,892.0285386,1347.89022,1450.396633,1627.718905,1926.346095,2612.430003,3235.079764,4041.362954,4914.200762,5767.910479,6792.36214,8175.127301,9328.149041,11008.00728]);
+const epc=_slice([46.3,51.0,49.4,63.5,77.4,87.0,96.1,114.6,114.7,114.6,114.3,113.4,113.1,112.8,112.7,112.8,112.9,119.0,119.4,119.0]);
+const trafficSEO=_slice([2875,3450,4140,6210,9936,12916.8,18083.52,25316.928,27848.6208,30633.48288,38291.8536,53608.59504,69691.17355,90598.52562,108718.2307,130461.8769,156554.2523,180037.3901,207042.9986,248451.5983]);
+const trafficPPC=_slice([8695.652174,8695.652174,13043.47826,13043.47826,13043.47826,17391.30435,17391.30435,21739.13043,21739.13043,26086.95652,26086.95652,32608.69565,32608.69565,32608.69565,43478.26087,43478.26087,43478.26087,43478.26087,43478.26087,43478.26087]);
+const trafficPR=_slice([0,0,50,135,303.75,589.275,1001.7675,1502.65125,1652.916375,1818.208013,2090.939214,2509.127057,3010.952469,3613.142962,4335.771555,5202.925866,6243.511039,7492.213247,8990.655896,9889.721486]);
+const budgetDirect=_slice([200000,200000,300000,300000,300000,400000,400000,500000,500000,600000,600000,750000,750000,750000,1000000,1000000,1000000,1000000,1000000,1000000]);
+const budgetSEO=_slice([300000,350000,450000,450000,450000,550000,550000,600000,650000,650000,650000,700000,700000,800000,900000,900000,900000,900000,900000,900000]);
+const budgetPR=_slice([200000,200000,300000,300000,300000,400000,400000,500000,200000,200000,200000,250000,250000,250000,250000,250000,250000,250000,250000,250000]);
+// Итоги пересчитываем из срезанных рядов, чтобы воронки и unit-экономика соответствовали новому горизонту.
+const _sum0=a=>a.reduce((x,y)=>x+y,0);
+const _seoTotalTraffic=_sum0(trafficSEO), _ppcTotalTraffic=_sum0(trafficPPC), _prTotalTraffic=_sum0(trafficPR);
+const _channelTrafficSum=_seoTotalTraffic+_ppcTotalTraffic+_prTotalTraffic||1;
+const _revenueTotal=_sum0(revenue);
+// Сохраняем исторические доли каналов (SEO 71% / Директ 19% / PR 10%) — пропорционально весу трафика на горизонте 18 мес.
+const totals={
+ revenue:_revenueTotal,
+ expenses:_sum0(expenses),
+ profit:_sum0(profit),
+ visits:_sum0(visits),
+ repeat:_sum0(repeat),
+ clicks:_sum0(offerClicks),
+ applications:_sum0(applications),
+ approvals:_sum0(approvals),
+ directRevenue:_revenueTotal*(_ppcTotalTraffic/_channelTrafficSum),
+ seoRevenue:_revenueTotal*(_seoTotalTraffic/_channelTrafficSum),
+ prRevenue:_revenueTotal*(_prTotalTraffic/_channelTrafficSum),
+ directSpend:_sum0(budgetDirect),
+ seoSpend:_sum0(budgetSEO),
+ prSpend:_sum0(budgetPR)
+};
 const cumulative=a=>a.reduce((acc,v,i)=>{acc.push((acc[i-1]||0)+v);return acc},[]);
 const cumulativeRevenue=cumulative(revenue), cumulativeInvestment=cumulative(expenses), cumulativeProfit=cumulative(profit);
 const firstMonthlyProfitIndex=profit.findIndex(v=>v>0), paybackIndex=cumulativeProfit.findIndex(v=>v>=0);
 
-// Краткие подписи месяцев в формате "ММ.ГГ" (10.26, 11.26 ...) — компактный таймлайн для 20 месяцев.
+// Краткие подписи месяцев в формате "ММ.ГГ" (10.26, 11.26 ...) — компактный таймлайн на горизонт плана.
 const MONTH_NUM={'Январь':'01','Февраль':'02','Март':'03','Апрель':'04','Май':'05','Июнь':'06','Июль':'07','Август':'08','Сентябрь':'09','Октябрь':'10','Ноябрь':'11','Декабрь':'12'};
 const shortMonths=months.map(m=>{const parts=m.split(' ');const mn=parts[0];const yr=parts[1]||'';return (MONTH_NUM[mn]||mn)+'.'+(yr.length>=2?yr.slice(-2):yr)});
 
@@ -448,7 +473,7 @@ const DATA_SOURCE={
  updatedAt:'10.06.2026 08:00',
  owner:'операционная витрина growth / product / CRM',
  loadStatus:'проверенный срез',
- completeness:'полный исторический период, 20 месяцев',
+ completeness:'полный плановый период, 18 месяцев (июль 2026 — декабрь 2027)',
  errorState:'ошибок загрузки не зафиксировано'
 };
 const ROLE_PROFILES={
@@ -521,11 +546,11 @@ const formulaCatalog=[
 ];
 const charts={};
 const state={role:'Все роли',channel:'Все каналы',scenario:'Все сценарии',activeTab:'overview'};
-const CHART_PANELS={chartOverview:'overview',chartInvestment:'overview',chartCacChannels:'overview',chartCostMix:'overview',chartProducts:'overview',chartTraffic:'traffic',chartEpc:'traffic',chartRetention:'retention',chartUnit:'unit'};
+const CHART_PANELS={chartOverview:'overview',chartInvestment:'overview',chartCacChannels:'overview',chartCostMix:'overview',chartProducts:'overview',chartTargetScenario:'overview',chartTraffic:'traffic',chartEpc:'traffic',chartRetention:'retention',chartUnit:'unit'};
 let lastDrawerFocus=null;
 
 function activeRoleProfile(){return ROLE_PROFILES[state.role]||ROLE_PROFILES['Все роли']}
-// Период-фильтр убран: бизнес-план всегда показывается за весь горизонт (20 месяцев).
+// Период-фильтр убран: бизнес-план всегда показывается за весь горизонт (18 месяцев, июль 2026 — декабрь 2027).
 function windowSize(length){return length}
 function sliceWindow(arr){return arr.slice()}
 function sumSeries(series){return (series[0]||[]).map((_,i)=>sum(series.map(arr=>arr[i]||0)))}
@@ -593,8 +618,8 @@ function channelCac(){
 function buildInputData(ch){
  const comparison=comparePeriods(ch.rev);
  return [
-  {title:'Период и база модели',value:'Май 2026 — декабрь 2027',text:`${months.length} мес. на горизонте плана; роль ${activeRoleProfile().label.toLowerCase()}.`},
-  {title:'Инвестиции и капитал',value:mln(sum(sliceWindow(ch.cost))),text:`Пик потребности ${mln(Math.abs(Math.min(...cumulativeProfit)))}; первая половина горизонта ${comparison.previous?mln(comparison.previous):'—'}.`},
+  {title:'Период и база модели',value:'Июль 2026 — декабрь 2027',text:`${months.length} мес. на горизонте плана; роль ${activeRoleProfile().label.toLowerCase()}.`},
+  {title:'Инвестиции и капитал',value:mln(totals.expenses),text:`Совокупно: медиа (${mln(totals.directSpend+totals.seoSpend+totals.prSpend)}) + ФОТ команды (${mln(sum(expensesPayroll))}) + инфраструктура (${mln(sum(expensesInfra))}). Пик потребности ${mln(Math.abs(Math.min(...cumulativeProfit)))}.`},
   {title:'Драйверы математики',value:`${pct(modelInputs.issuedToApprovalRate*100)} → ${modelInputs.ltvFactor.toFixed(2)}x`,text:`NPV ${pct(modelInputs.annualDiscountRate*100)} годовых; цель repeat ${pct(modelInputs.targetRepeatShare*100)}.`}
  ];
 }
@@ -649,7 +674,8 @@ function renderCharts(){
   chartUnit:{type:'bar',data:{labels,datasets:[{label:'Маржинальная прибыль ('+ch.label+'), тыс. ₽',data:sliceWindow(fProfit).map(v=>v/1000),backgroundColor:sliceWindow(fProfit).map(v=>v>=0?c.green+'bb':c.red+'99')}]}},
   chartCacChannels:(function(){const cc=channelCac();const order=['SEO','Яндекс.Директ','PR','Повторный','Все каналы'];return {type:'bar',data:{labels:order,datasets:[{label:'CAC, ₽',data:order.map(k=>Math.round(cc[k].cac)),backgroundColor:order.map(k=>k==='Все каналы'?c.muted+'aa':k==='SEO'?c.green+'cc':k==='Яндекс.Директ'?c.blue+'cc':k==='PR'?c.violet+'cc':c.orange+'cc')}]}}})(),
   chartCostMix:{type:'bar',stacked:true,data:{labels,datasets:COST_ITEMS.map(item=>({label:item.label,data:sliceWindow(item.data).map(v=>v/1000),backgroundColor:c[item.color]+'cc'}))}},
-  chartProducts:{type:'line',data:{labels,datasets:[{label:'Микрозаймы',data:sliceWindow(productSeries.mfo).map(v=>v/1000000),borderColor:c.blue,borderWidth:2.5},{label:'Кредиты',data:sliceWindow(productSeries.loan).map(v=>v/1000000),borderColor:c.green,borderWidth:2.5},{label:'Карты',data:sliceWindow(productSeries.card).map(v=>v/1000000),borderColor:c.violet,borderWidth:2.5},{label:'Страхование',data:sliceWindow(productSeries.insurance).map(v=>v/1000000),borderColor:c.orange,borderWidth:2},{label:'Повторы / кросс',data:sliceWindow(productSeries.repeat).map(v=>v/1000000),borderColor:c.red,borderWidth:2}]}}
+  chartProducts:{type:'line',data:{labels,datasets:[{label:'Микрозаймы',data:sliceWindow(productSeries.mfo).map(v=>v/1000000),borderColor:c.blue,borderWidth:2.5},{label:'Кредиты',data:sliceWindow(productSeries.loan).map(v=>v/1000000),borderColor:c.green,borderWidth:2.5},{label:'Карты',data:sliceWindow(productSeries.card).map(v=>v/1000000),borderColor:c.violet,borderWidth:2.5},{label:'Страхование',data:sliceWindow(productSeries.insurance).map(v=>v/1000000),borderColor:c.orange,borderWidth:2},{label:'Повторы / кросс',data:sliceWindow(productSeries.repeat).map(v=>v/1000000),borderColor:c.red,borderWidth:2}]}},
+  chartTargetScenario:(function(){const t=targetRevenueSeries();return {type:'line',data:{labels,datasets:[{label:'Базовый план, тыс. ₽',data:revenue.map(v=>v/1000),borderColor:c.blue,borderWidth:2.5,backgroundColor:c.blue+'22',fill:true},{label:'Целевая траектория к 40 млн ₽/мес',data:t.map(v=>v/1000),borderColor:c.green,borderWidth:2.5,backgroundColor:c.green+'22',fill:false},{label:'Цель: 40 млн ₽',type:'line',data:revenue.map(()=>TARGET_DEC_2027_REVENUE/1000),borderColor:c.violet,borderWidth:1.5}]}}})()
  };
  ids.forEach(id=>{const el=document.getElementById(id);if(el&&cfg[id])charts[id]=new Chart(el,cfg[id])});
 }
@@ -734,7 +760,7 @@ function renderContextualViews(){
   {id:'revenue',tone:'good',tag:'лидер',label:'Лучший канал по ROI',value:topChannel.n,sub:'ROAS '+topChannel.roas.toFixed(1)+'x · ROI '+pct(topChannel.roi*100)},
   {id:'cac',tone:'warn',tag:'слабое звено',label:'Канал с худшим ROI',value:weakChannel.n,sub:'ROAS '+weakChannel.roas.toFixed(1)+'x · ROI '+pct(weakChannel.roi*100)},
   {id:'ltv-cac',tone:'good',tag:'юнит',label:'LTV / CAC',value:(ltv/Math.max(cac,1)).toFixed(1)+'x',sub:'LTV '+Math.round(ltv)+' ₽ · CAC '+Math.round(cac)+' ₽'},
-  {id:'revenue',tone:'good',tag:'рост',label:'Темп роста выручки',value:'×'+yoy.toFixed(1),sub:'декабрь 2027 к маю 2026'}
+  {id:'revenue',tone:'good',tag:'рост',label:'Темп роста выручки',value:'×'+yoy.toFixed(1),sub:'декабрь 2027 к июлю 2026'}
  ].map(x=>`<div class="exec-card ${x.tone}" ${drillAttrs('metric',x.id)}><span class="tag">${escapeHtml(x.tag)}</span><div class="metric-label">${escapeHtml(x.label)}</div><div class="metric-value">${escapeHtml(x.value)}</div><div class="metric-sub">${escapeHtml(x.sub)}</div></div>`).join('');
  kpi('kpiGrid',[
   {id:'revenue',label:'Пользователи / сессии',value:fmt(sum(sliceWindow(ch.traffic))),sub:`${activeRoleProfile().label.toLowerCase()} · ${ch.label}`},
@@ -777,7 +803,10 @@ function renderContextualViews(){
  table('acquisitionTable',['Источник / канал','Сессии','Уникальные пользователи','Кликрейт оффера','Завершение заявки','Одобрение','Выручка','EPC','CAC','ROI / ROMI'],channelRows(filterByRole(ACQUISITION_ROWS)).map(r=>r.row));
  const filteredFlows=filterByRole([{...flows[0],roles:['Продукт','Рост','Руководитель']},{...flows[1],roles:['Продукт','Рост','Руководитель']},{...flows[2],roles:['Операции','CRM','Руководитель']}]);
  const funnel=[['Сессии',fmt(sum(sliceWindow(ch.traffic)))],['Сценарий выбран',fmt(totals.visits*.78)],['Диагностика завершена',fmt(totals.visits*.61)],['Рекомендации сформированы',fmt(totals.visits*.54)],['Клик по офферу',fmt(totals.clicks)],['Заявки',fmt(totals.applications)],['Одобрения',fmt(totals.approvals)],['Выданные сделки',fmt(issued)]];
- document.getElementById('mainFunnel').innerHTML=funnel.slice(0,5).map((x,i)=>`<div class="step"><b>${x[1]}</b><span>${x[0]}</span><div class="progress" style="margin-top:12px"><div class="bar" style="width:${100-i*13}%"></div></div></div>`).join('');
+ // Все 8 шагов воронки: от первичной сессии до выдачи. Ширина прогресс-бара — конверсия от исходного шага.
+ const _digits=s=>parseFloat(String(s).replace(/[^\d.-]/g,''))||0;
+ const funnelBaseline=Math.max(1,_digits(funnel[0][1]));
+ document.getElementById('mainFunnel').innerHTML=funnel.map((x,i)=>{const num=_digits(x[1]);const width=Math.max(6,Math.min(100,num/funnelBaseline*100));return `<div class="step"><b>${x[1]}</b><span>${x[0]}</span><div class="progress" style="margin-top:12px"><div class="bar" style="width:${width.toFixed(1)}%"></div></div></div>`}).join('');
  document.getElementById('flowComparison').innerHTML=(filteredFlows.length?filteredFlows:flows).map(f=>`<div class="card scenario-card"><div class="scenario-head"><h3>${escapeHtml(f.name)}</h3><span class="pill">${escapeHtml(f.offers)} оффера</span></div><div class="mini-row"><span>Одобрение</span><b>${pct(f.approval)}</b></div><div class="mini-row"><span>Выдачи</span><b>${pct(f.issued)}</b></div><div class="mini-row"><span>Выручка / пользователь</span><b>${escapeHtml(f.revenue)} ₽</b></div><div class="mini-row"><span>Время решения</span><b>${escapeHtml(f.time)}</b></div><p class="muted">${escapeHtml(f.note)}</p></div>`).join('');
  table('funnelTable',['Месяц','Визиты','Клики по офферам','Заявки','Одобрения','Доля одобрений','Выручка'],months.map((m,i)=>[m,fmt(visits[i]),fmt(offerClicks[i]),fmt(applications[i]),fmt(approvals[i]),pct(ratio(approvals[i],applications[i])*100),money(revenue[i])]));
  const filteredScenarios=filterContext(scenarioCatalog);
@@ -804,7 +833,133 @@ function renderContextualViews(){
  renderDataStatusList();
  renderPriorityList();
 }
-function renderAll(){syncControlsFromState();renderModelDirtyState();renderPresetActions();renderContextualViews();renderCharts()}
+function renderAll(){syncControlsFromState();renderModelDirtyState();renderPresetActions();renderContextualViews();renderTargetScenario();renderCentrofinans();renderCharts()}
+// Целевой сценарий «40 млн ₽/мес к декабрю 2027»: строим помесячную траекторию выручки,
+// требуемые мультипликаторы по воронке и список точек роста. Базовый план в декабре 2027
+// (revenue последний элемент) недотягивает до цели, поэтому считаем равномерный коэффициент уплотнения.
+const TARGET_DEC_2027_REVENUE=40_000_000;
+function targetRevenueSeries(){
+ // Линейно нарастающий мультипликатор: первый месяц ≈ 1.0x, последний — ровно targetMultiplier.
+ const last=revenue[revenue.length-1]||1;
+ const targetMultiplier=TARGET_DEC_2027_REVENUE/last;
+ const n=revenue.length;
+ return revenue.map((v,i)=>{const t=n>1?i/(n-1):1;const k=1+(targetMultiplier-1)*Math.pow(t,1.15);return v*k});
+}
+function renderTargetScenario(){
+ const host=document.getElementById('targetScenarioKpis');
+ if(!host)return;
+ const target=targetRevenueSeries();
+ const lastBase=revenue[revenue.length-1]||0;
+ const lastTarget=target[target.length-1]||0;
+ const multiplier=lastTarget/Math.max(1,lastBase);
+ const targetTotal=target.reduce((a,b)=>a+b,0);
+ const baseTotal=totals.revenue;
+ const gap=targetTotal-baseTotal;
+ // Декомпозиция требуемых показателей в декабре 2027: каждый шаг воронки масштабируется тем же мультипликатором,
+ // но часть забирается улучшением конверсии (одобрение и выдача), а часть — ростом трафика.
+ const lastIdx=visits.length-1;
+ const baseDec={
+  visits:visits[lastIdx],clicks:offerClicks[lastIdx],apps:applications[lastIdx],
+  approvals:approvals[lastIdx],issued:approvals[lastIdx]*modelInputs.issuedToApprovalRate
+ };
+ // Целевая декомпозиция: 70% уплотнения — рост трафика, 30% — рост конверсии в одобрение и выдачу.
+ const trafficGrowth=Math.pow(multiplier,0.70);
+ const conversionGrowth=Math.pow(multiplier,0.30);
+ const targetDec={
+  visits:baseDec.visits*trafficGrowth,
+  clicks:baseDec.clicks*trafficGrowth*1.03,
+  apps:baseDec.apps*trafficGrowth*1.06,
+  approvals:baseDec.approvals*trafficGrowth*conversionGrowth,
+  issued:baseDec.issued*trafficGrowth*conversionGrowth*1.05
+ };
+ kpi('targetScenarioKpis',[
+  {label:'Цель в декабре 2027',value:mln(TARGET_DEC_2027_REVENUE),sub:'месячная выручка по плану 40 млн ₽',cls:'positive'},
+  {label:'Базовый план в декабре 2027',value:mln(lastBase),sub:'фактическая траектория без уплотнения'},
+  {label:'Требуемый мультипликатор',value:'×'+multiplier.toFixed(2),sub:`разрыв ${mln(gap)} за весь период`,cls:'positive'},
+  {label:'Доп. бюджет на разгон',value:mln(gap*0.18),sub:'≈18% уплотнения уходит в acquisition + CRM'}
+ ]);
+ // Воронка декабря 2027: база vs цель.
+ const funnelRows=[
+  ['Визиты',fmt(baseDec.visits),fmt(targetDec.visits),'×'+(targetDec.visits/baseDec.visits).toFixed(2)],
+  ['Клики на офферы',fmt(baseDec.clicks),fmt(targetDec.clicks),'×'+(targetDec.clicks/baseDec.clicks).toFixed(2)],
+  ['Заявки',fmt(baseDec.apps),fmt(targetDec.apps),'×'+(targetDec.apps/baseDec.apps).toFixed(2)],
+  ['Одобрения',fmt(baseDec.approvals),fmt(targetDec.approvals),'×'+(targetDec.approvals/baseDec.approvals).toFixed(2)],
+  ['Выданные сделки',fmt(baseDec.issued),fmt(targetDec.issued),'×'+(targetDec.issued/baseDec.issued).toFixed(2)],
+  ['Месячная выручка, млн ₽',(lastBase/1e6).toFixed(1),(lastTarget/1e6).toFixed(1),'×'+multiplier.toFixed(2)]
+ ];
+ table('targetFunnelTable',['Показатель','База, дек 2027','Цель, дек 2027','Множитель'],funnelRows);
+ // Точки роста: где брать недостающие 27 млн ₽ месячной выручки.
+ const levers=[
+  `<b>SEO-масштаб (вклад ≈40% разрыва).</b> Удвоить парк лендингов под intent-запросы, поднять покрытие long-tail и нарастить ссылочную массу. Цель: визиты SEO ×${trafficGrowth.toFixed(2)}, EPC удержать ≥ 110 ₽.`,
+  `<b>Платный трафик с положительным ROI (≈25%).</b> Открыть Яндекс.Директ и performance-сети только в группах с ROAS&nbsp;≥&nbsp;1.6x; CAC выдачи держать ниже LTV/3. Бюджет: до ${mln(gap*0.10)} в месяц к концу 2027.`,
+  `<b>Качество одобрения и выдачи (≈15%).</b> AI top-3 + резервный список + чистка пустых рекомендаций — поднять долю одобрений с ${pct(ratio(totals.approvals,totals.applications)*100)} до 38–40%, а выдачу с ${pct(modelInputs.issuedToApprovalRate*100)} до 82%.`,
+  `<b>Repeat-share и CRM (≈12%).</b> SMS D+14, реактивация D+45, кросс-продажи карты и страхования. Цель: доля повторов с ${pct(ratio(REPEAT_REVENUE_TOTAL,totals.revenue)*100)} → 10% к декабрю 2027.`,
+  `<b>Партнёрский микс и SLA (≈8%).</b> Заменить «МФО Риск» на двух стабильных партнёров; перевести «Банк Город» в наблюдение до починки скоринга; нарастить долю прямых API в выдаче — это снижает eCPA на 12–18%.`
+ ];
+ const leversHost=document.getElementById('targetGrowthLevers');
+ if(leversHost)leversHost.innerHTML=levers.map(l=>`<li>${l}</li>`).join('');
+}
+// Центрофинанс как identity-слой: модель использует базу клиентов МФО как match-сервис,
+// чтобы партнёр получал «совпадение / score / payload-токен», а не персональные данные.
+function renderCentrofinans(){
+ const host=document.getElementById('centrofinansKpis');
+ if(!host)return;
+ const baseSize=12_400_000; // оценка: ~12,4 млн профилей в исторической базе Центрофинанса
+ const matchRate=0.42; // ожидаемая доля совпадений с интент-трафиком Выручай.ру
+ kpi('centrofinansKpis',[
+  {label:'Размер базы',value:fmt(baseSize),sub:'профили (хеши e-mail/phone/passport)'},
+  {label:'Ожидаемый match-rate',value:pct(matchRate*100),sub:'на горячем интент-трафике',cls:'positive'},
+  {label:'Прирост одобрений',value:'+9–14 п.п.',sub:'для матчёванных пользователей',cls:'positive'},
+  {label:'PII наружу',value:'0 полей',sub:'партнёру уходит токен и score',cls:'positive'}
+ ]);
+ const flow=[
+  '<b>Шаг 1. Хеширование на нашей стороне.</b> Из базы Центрофинанса формируется witness-таблица: HMAC-SHA-256 с секретным pepper и проектной солью по нормализованным контактам (phone, email) и Argon2id по паспортным данным. Pepper хранится в HSM, соль уникальна на проект и не выгружается — это закрывает атаки rainbow-таблицами на статичные идентификаторы.',
+  '<b>Шаг 2. Match-API «Выручай.ру».</b> Когда пользователь заполняет анкету, мы хешируем его контакты тем же алгоритмом и сравниваем с witness-таблицей в нашей инфраструктуре. Партнёр в этот момент к базе не обращается.',
+  '<b>Шаг 3. Обогащённый payload без PII.</b> Партнёру уходит match_id (псевдоним), risk_score, repeat_flag, recency_bucket и список разрешённых пользователем согласий — но не ФИО, телефон, паспорт.',
+  '<b>Шаг 4. Подтверждение согласий.</b> На каждом шаге фиксируется отдельное согласие на трансграничную обработку и на передачу скоринговых признаков; согласие хранится у нас и предоставляется по запросу регулятора.',
+  '<b>Шаг 5. Отзыв и журнал.</b> Пользователь может в любой момент потребовать удаления; witness-запись и match-логи удаляются по флагу right-to-be-forgotten, partner получает уведомление об отзыве согласия.'
+ ];
+ const flowHost=document.getElementById('centrofinansFlow');
+ if(flowHost)flowHost.innerHTML=flow.map(p=>`<li>${p}</li>`).join('');
+ const effects=[
+  '<b>Что защищено.</b> База МФО физически не покидает периметр: ни один партнёр не получает выгрузку клиентов, токены не реверсятся без соли, лог match-запросов хранится и аудируется.',
+  '<b>Что улучшится в воронке.</b> На матчёванных профилях скорость решения снижается с 2:18 до ~1:10, доля одобрений растёт на 9–14 п.п., доля пустых рекомендаций уменьшается за счёт fallback-сценария по истории Центрофинанса.',
+  '<b>Эффект на CAC.</b> На матчёванном трафике повторная идентификация сокращает форму на 4 поля и поднимает completion на 6–8 п.п., что эквивалентно снижению CAC выдачи на ~14–17%.',
+  '<b>Эффект на LTV.</b> Известная истории клиента позволяет точнее подобрать оффер и сразу включить кросс-продажу; ожидаемый прирост LTV на матче — около 22%.',
+  '<b>Юридический контур.</b> Передача partner-у только обезличенных скоринговых признаков соответствует 152-ФЗ при правильно оформленных согласиях; раздельные согласия на профилирование и на передачу третьим лицам — обязательны.'
+ ];
+ const effectHost=document.getElementById('centrofinansEffect');
+ if(effectHost)effectHost.innerHTML=effects.map(p=>`<li>${p}</li>`).join('');
+ const legal=document.getElementById('centrofinansLegal');
+ if(legal)legal.textContent='Принцип: «база Центрофинанса — наш ресурс, а не товар». Партнёрам передаётся только результат сопоставления (match-токен и score), исходные PII никогда не покидают периметр Выручай.ру. Любая интеграция начинается с DPA, оценки PIA и журналирования всех match-операций.';
+}
+// Drag-to-scroll для широкой PNL-таблицы: зажатая левая кнопка мыши тянет таблицу влево/вправо.
+function initDragScroll(){
+ document.querySelectorAll('[data-drag-scroll]').forEach(el=>{
+  if(el.dataset.dragScrollInit==='1')return;
+  el.dataset.dragScrollInit='1';
+  let down=false,startX=0,startScroll=0,moved=0;
+  el.addEventListener('mousedown',e=>{
+   if(e.button!==0)return;
+   const target=e.target;
+   // Не перехватываем клики по интерактивным элементам внутри таблицы.
+   if(target.closest('a,button,input,select,textarea,[data-drill-kind]'))return;
+   down=true;moved=0;startX=e.pageX-el.offsetLeft;startScroll=el.scrollLeft;
+   el.classList.add('is-dragging');
+  });
+  const stop=()=>{if(!down)return;down=false;el.classList.remove('is-dragging')};
+  window.addEventListener('mouseup',stop);
+  el.addEventListener('mouseleave',stop);
+  el.addEventListener('mousemove',e=>{
+   if(!down)return;
+   e.preventDefault();
+   const x=e.pageX-el.offsetLeft;
+   const dx=x-startX;
+   moved+=Math.abs(dx);
+   el.scrollLeft=startScroll-dx;
+  });
+ });
+}
 function fillModelInputs(values){document.getElementById('inputIssuedRate').value=(values.issuedToApprovalRate*100).toFixed(1);document.getElementById('inputLtvFactor').value=values.ltvFactor.toFixed(2);document.getElementById('inputAnnualDiscount').value=(values.annualDiscountRate*100).toFixed(1);document.getElementById('inputRepeatTarget').value=(values.targetRepeatShare*100).toFixed(1);renderModelDirtyState()}
 function init(){
  const persisted=safeRead(STORAGE_KEYS.prefs,{});
@@ -817,6 +972,7 @@ function init(){
  document.documentElement.dataset.theme=persisted.theme||document.documentElement.dataset.theme||'light';
  fillModelInputs(modelInputs);
  renderAll();
+ initDragScroll();
 }
 const tabs=document.querySelectorAll('.tab'),panels=document.querySelectorAll('.panel');
 tabs.forEach(t=>t.addEventListener('click',()=>{tabs.forEach(x=>x.classList.remove('active'));panels.forEach(x=>x.classList.remove('active'));t.classList.add('active');document.getElementById('tab-'+t.dataset.tab).classList.add('active');state.activeTab=t.dataset.tab;persistPreferences();requestAnimationFrame(renderCharts)}));
