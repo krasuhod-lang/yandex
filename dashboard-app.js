@@ -321,7 +321,9 @@ const productTotals=Object.fromEntries(PRODUCT_MIX.map(p=>[p.key,totals.revenue*
 // CAC по каналам: расходы канала / выданные клиенты канала.
 // Доля одобрений канала ≈ доля выручки канала; выдачи = одобрения × ISSUED_TO_APPROVAL_RATE.
 const STORAGE_KEYS={prefs:'vyruchai-dashboard-prefs-v2',model:'vyruchai-dashboard-model-v2',actions:'vyruchai-dashboard-actions-v2'};
+// Базовые допущения demo-модели: 76% одобрений доходят до выдачи, LTV выше базовой выручки в 1.34x, NPV считаем от 20% годовых, цель repeat-share — 6%.
 const DEFAULT_MODEL_INPUTS={issuedToApprovalRate:0.76,ltvFactor:1.34,annualDiscountRate:0.20,targetRepeatShare:0.06};
+const MAX_RECENT_ACTIONS=6;
 let modelInputs={...DEFAULT_MODEL_INPUTS};
 let recentActions=[];
 function safeRead(key,fallback){try{const raw=localStorage.getItem(key);return raw?JSON.parse(raw):fallback}catch{return fallback}}
@@ -543,7 +545,7 @@ function syncControlsFromState(){
 function persistPreferences(){safeWrite(STORAGE_KEYS.prefs,{window:state.window,role:state.role,channel:state.channel,scenario:state.scenario,activeTab:state.activeTab,theme:document.documentElement.dataset.theme||'light'})}
 function persistModelInputs(){safeWrite(STORAGE_KEYS.model,modelInputs);safeWrite(STORAGE_KEYS.actions,recentActions)}
 function currentStamp(){return new Date().toLocaleString('ru-RU',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'})}
-function recordAction(text){recentActions=[{time:currentStamp(),text},...recentActions].slice(0,6);safeWrite(STORAGE_KEYS.actions,recentActions)}
+function recordAction(text){recentActions=[{time:currentStamp(),text},...recentActions].slice(0,MAX_RECENT_ACTIONS);safeWrite(STORAGE_KEYS.actions,recentActions)}
 function monthlyDiscountRate(){return Math.pow(1+modelInputs.annualDiscountRate,1/12)-1}
 function cumulativeDiscounted(arr){const acc=[];let total=0;const rate=monthlyDiscountRate();arr.forEach((v,i)=>{total+=v/Math.pow(1+rate,i);acc.push(total)});return acc}
 function channelCac(){
@@ -664,8 +666,9 @@ function openDrawer(kind,id){
  content.innerHTML=`<h2 id="drawerTitle">${escapeHtml(payload.title)}</h2><p class="muted">${escapeHtml(payload.summary)}</p><div class="drawer-section"><div class="section-note">Как считается</div><div class="note-banner">${escapeHtml(payload.formula||'—')}</div></div><div class="drawer-section"><div class="section-note">Ключевые значения</div><div class="drawer-list">${rows}</div></div><div class="drawer-section"><div class="section-note">Что делать</div><div class="drawer-list">${actions}</div></div>`;
  drawer.classList.add('open');
  drawer.focus();
+ requestAnimationFrame(()=>drawer.querySelector('.drawer-close')?.focus());
 }
-function closeDrawer(){const drawer=document.getElementById('drawer');if(!drawer)return;drawer.classList.remove('open');if(lastDrawerFocus&&document.contains(lastDrawerFocus)&&typeof lastDrawerFocus.focus==='function')lastDrawerFocus.focus()}
+function closeDrawer(){const drawer=document.getElementById('drawer');if(!drawer)return;drawer.classList.remove('open');if(lastDrawerFocus&&document.contains(lastDrawerFocus)&&typeof lastDrawerFocus.focus==='function'&&!lastDrawerFocus.disabled&&lastDrawerFocus.offsetParent!==null)lastDrawerFocus.focus()}
 function renderContextualViews(){
  const ch=resolveChannelSeries();
  const approvalRate=ratio(totals.approvals,totals.applications)*100;
