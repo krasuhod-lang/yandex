@@ -20,16 +20,16 @@ button,select{font:inherit}button{cursor:pointer}.app{min-height:100vh}.topbar{p
 .topbar-inner{max-width:var(--max);margin:0 auto;padding:16px 24px;display:flex;gap:18px;align-items:center;justify-content:space-between}.brand{display:flex;gap:12px;align-items:center}.mark{width:34px;height:34px;border-radius:10px;background:linear-gradient(145deg,#1d1d1f,#525257);display:grid;place-items:center;color:white;font-weight:700;letter-spacing:-.03em}.brand-title{font-weight:700;letter-spacing:-.02em}.brand-sub{font-size:12px;color:var(--muted)}
 .filters{display:flex;gap:10px;align-items:center;flex-wrap:wrap}.chip,select,.ghost-btn{border:1px solid var(--line);background:var(--surface);color:var(--text);border-radius:999px;padding:9px 12px;font-size:13px}.ghost-btn:hover,.chip.active{border-color:var(--blue);color:var(--blue)}.theme{width:38px;height:38px;border-radius:50%;border:1px solid var(--line);background:var(--surface);color:var(--text)}
 .tabs{max-width:var(--max);margin:0 auto;padding:0 24px;display:flex;gap:4px;overflow:auto;scrollbar-width:none}.tabs::-webkit-scrollbar{display:none}.tab{border:0;background:transparent;color:var(--muted);padding:13px 13px 14px;border-bottom:2px solid transparent;white-space:nowrap;font-size:13px;font-weight:600}.tab.active{color:var(--text);border-color:var(--text)}
-main{max-width:var(--max);margin:0 auto;padding:28px 24px 56px;display:flex;flex-direction:column;gap:var(--gap)}.panel{display:none;flex-direction:column;gap:var(--gap)}.panel.active{display:flex}.hero{display:grid;grid-template-columns:1.25fr .75fr;gap:var(--gap)}.hero-card{background:linear-gradient(135deg,var(--surface),var(--surface-2));border:1px solid var(--line);border-radius:var(--radius);padding:var(--pad);box-shadow:var(--shadow);min-height:240px;display:flex;flex-direction:column;gap:12px}.eyebrow{font-size:12px;text-transform:uppercase;letter-spacing:.12em;color:var(--muted);font-weight:700}.hero h1{margin:0;font-size:clamp(32px,3.6vw,52px);line-height:1.02;letter-spacing:-.045em}.lead{margin:0;max-width:780px;color:var(--muted);font-size:16px}.hero-side{display:grid;gap:var(--gap)}
+main{max-width:var(--max);margin:0 auto;padding:28px 24px 56px;display:flex;flex-direction:column;gap:var(--gap)}.panel{display:none;flex-direction:column;gap:var(--gap)}.panel.active{display:flex}.overview-lead{display:grid;grid-template-columns:minmax(0,1fr)}.lead-card{background:linear-gradient(180deg,var(--surface),var(--surface-2));min-height:0}.eyebrow{font-size:12px;text-transform:uppercase;letter-spacing:.12em;color:var(--muted);font-weight:700}.overview-lead h1{margin:0;font-size:clamp(30px,3.2vw,46px);line-height:1.04;letter-spacing:-.045em}.lead{margin:0;max-width:920px;color:var(--muted);font-size:16px}.committee-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:var(--gap)}.assumption-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}.field{display:grid;gap:8px}.field span{font-size:12px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);font-weight:700}.field input,.field textarea{width:100%;border:1px solid var(--line);background:var(--surface-2);color:var(--text);border-radius:14px;padding:12px 14px;font:inherit}.field input:focus,.field textarea:focus{outline:0;border-color:var(--blue);box-shadow:0 0 0 3px color-mix(in srgb,var(--blue) 14%,transparent)}.section-note{font-size:12px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);font-weight:700;margin-top:4px}
 .grid{display:grid;gap:var(--gap)}.grid.kpis{grid-template-columns:repeat(4,minmax(0,1fr))}.grid.two{grid-template-columns:1fr 1fr}.grid.three{grid-template-columns:repeat(3,minmax(0,1fr))}.grid.four{grid-template-columns:repeat(4,minmax(0,1fr))}.card{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:var(--pad);box-shadow:var(--shadow-soft);display:flex;flex-direction:column;gap:14px;min-width:0}.card.tight{padding:var(--pad-sm);gap:8px}.card-title{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;margin:0}.card-title h2,.card-title h3{margin:0;font-size:17px;letter-spacing:-.02em}.card-title p{margin:4px 0 0;color:var(--muted);font-size:13px}.metric-label{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;font-weight:700}.metric-value{font-size:30px;line-height:1.05;letter-spacing:-.04em;font-weight:700;margin:0}.metric-sub{color:var(--muted);font-size:13px;margin:0}.delta{font-size:12px;border-radius:999px;padding:4px 8px;font-weight:700}.delta.good{background:color-mix(in srgb,var(--green) 13%,transparent);color:var(--green)}.delta.warn{background:color-mix(in srgb,var(--orange) 15%,transparent);color:var(--orange)}.delta.bad{background:color-mix(in srgb,var(--red) 12%,transparent);color:var(--red)}
 .status{width:10px;height:10px;border-radius:50%;display:inline-block;margin-right:6px;vertical-align:middle}.status.green{background:var(--green)}.status.yellow{background:var(--orange)}.status.red{background:var(--red)}.mini-list{display:grid;gap:10px}.mini-row{display:flex;justify-content:space-between;gap:16px;padding:10px 0;border-bottom:1px solid var(--line)}.mini-row:last-child{border-bottom:0}.mini-row span:first-child{color:var(--muted)}.mini-row b{font-variant-numeric:tabular-nums;text-align:right}.table-wrap{overflow:auto;border:1px solid var(--line);border-radius:var(--radius);background:var(--surface);box-shadow:var(--shadow-soft)}table{width:100%;border-collapse:collapse;font-size:13px}th,td{padding:12px 14px;border-bottom:1px solid var(--line);text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums}th:first-child,td:first-child{text-align:left;font-weight:600}thead th{position:sticky;top:0;background:var(--surface-3);color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:.07em;z-index:1}tbody tr:hover{background:var(--surface-2)}tbody tr:last-child td{border-bottom:0}.positive{color:var(--green);font-weight:700}.negative{color:var(--red);font-weight:700}.accent{color:var(--blue);font-weight:700}.muted{color:var(--muted)}
 .progress{height:8px;background:var(--surface-3);border-radius:999px;overflow:hidden}.bar{height:100%;border-radius:999px;background:var(--blue)}
 canvas{display:block;width:100%;max-width:100%;height:auto;cursor:crosshair}
 .chart-card{min-height:0}
-.chart-card .chart-box{position:relative;width:100%;height:240px}
+.chart-card .chart-box{position:relative;width:100%;height:280px}
 .chart-card canvas{height:100%!important}
-@media(max-width:980px){.chart-card .chart-box{height:220px}}
-@media(max-width:560px){.chart-card .chart-box{height:200px}}
+@media(max-width:980px){.chart-card .chart-box{height:250px}}
+@media(max-width:560px){.chart-card .chart-box{height:220px}}
 .chart-tooltip{position:absolute;pointer-events:none;background:color-mix(in srgb,var(--surface) 96%,transparent);backdrop-filter:saturate(180%) blur(14px);border:1px solid var(--line);border-radius:12px;padding:10px 12px;box-shadow:var(--shadow);font-size:12px;min-width:140px;opacity:0;transform:translate(-50%,calc(-100% - 12px));transition:opacity .15s ease;z-index:5}
 .chart-tooltip.show{opacity:1}
 .chart-tooltip .tt-title{font-weight:700;letter-spacing:-.01em;margin-bottom:6px;color:var(--text)}
@@ -61,7 +61,7 @@ canvas{display:block;width:100%;max-width:100%;height:auto;cursor:crosshair}
 .cost-legend .lg{display:flex;justify-content:space-between;align-items:center;gap:10px;font-size:13px;color:var(--muted)}
 .cost-legend .lg .sw{width:10px;height:10px;border-radius:3px;display:inline-block;margin-right:8px}
 .cost-legend .lg b{color:var(--text);font-variant-numeric:tabular-nums}.scenario-card,.partner-card,.alert-card{gap:10px}.scenario-head,.partner-head,.alert-head{display:flex;justify-content:space-between;gap:12px;align-items:flex-start}.pill{border:1px solid var(--line);border-radius:999px;padding:5px 9px;font-size:12px;color:var(--muted);background:var(--surface-2);white-space:nowrap}.actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:auto}.action{border:1px solid var(--line);background:var(--surface-2);border-radius:999px;padding:8px 12px;font-size:12px;color:var(--text)}.action:hover{border-color:var(--blue);color:var(--blue)}.flow{display:grid;grid-template-columns:repeat(5,1fr);gap:var(--gap)}.step{border:1px solid var(--line);border-radius:var(--radius-sm);padding:16px;background:var(--surface);box-shadow:var(--shadow-soft)}.step b{display:block;font-size:22px;letter-spacing:-.03em}.step span{color:var(--muted);font-size:12px}.divider-title{font-size:20px;letter-spacing:-.03em;margin:8px 0 0;font-weight:700}.chart-legend{display:flex;flex-wrap:wrap;gap:14px;font-size:12px;color:var(--muted);margin:0}.chart-legend .lg{display:inline-flex;align-items:center;gap:6px}.chart-legend .sw{width:10px;height:10px;border-radius:3px;display:inline-block}.chart-box{position:relative;width:100%}.drawer{position:fixed;top:0;right:0;bottom:0;width:min(460px,100%);background:var(--surface);border-left:1px solid var(--line);box-shadow:var(--shadow);transform:translateX(105%);transition:transform .22s ease;z-index:50;padding:24px;overflow:auto}.drawer.open{transform:translateX(0)}.drawer-close{float:right;border:1px solid var(--line);background:var(--surface-2);border-radius:999px;padding:8px 12px}.drawer h2{letter-spacing:-.035em}.footer{max-width:var(--max);margin:24px auto 0;padding:18px 24px 34px;color:var(--muted);font-size:12px;border-top:1px solid var(--line)}
-@media(max-width:980px){.hero,.grid.two,.grid.three,.grid.four{grid-template-columns:1fr}.grid.kpis{grid-template-columns:repeat(2,1fr)}.flow{grid-template-columns:1fr}.topbar-inner{align-items:flex-start;flex-direction:column}.filters{width:100%}}@media(max-width:560px){main{padding:20px 14px}.tabs,.topbar-inner{padding-left:14px;padding-right:14px}.grid.kpis{grid-template-columns:1fr}.hero-card{padding:22px}.metric-value{font-size:28px}}
+@media(max-width:980px){.grid.two,.grid.three,.grid.four,.committee-grid,.assumption-grid{grid-template-columns:1fr}.grid.kpis{grid-template-columns:repeat(2,1fr)}.flow{grid-template-columns:1fr}.topbar-inner{align-items:flex-start;flex-direction:column}.filters{width:100%}}@media(max-width:560px){main{padding:20px 14px}.tabs,.topbar-inner{padding-left:14px;padding-right:14px}.grid.kpis,.committee-grid{grid-template-columns:1fr}.lead-card{padding:22px}.metric-value{font-size:28px}}
 </style>
 </head>
 <body>
@@ -96,20 +96,35 @@ canvas{display:block;width:100%;max-width:100%;height:auto;cursor:crosshair}
 
   <main>
     <section id="tab-overview" class="panel active">
-      <div class="hero">
-        <div class="hero-card">
-          <div class="eyebrow">Краткая сводка</div>
-          <h1>Единый центр управления ростом и доходностью</h1>
-          <p class="lead">Дашборд показывает полный путь пользователя: источник трафика, JTBD-сценарий, диагностика, AI или SOS-подбор, партнёр, сделка, возврат, LTV и PnL. Интерфейс очищен от эмодзи и декоративных шрифтов.</p>
-        </div>
-        <div class="hero-side">
-          <div class="card tight"><div class="metric-label">Статус периода</div><div class="metric-value positive">План сходится</div><div class="metric-sub">Операционная прибыль: февраль 2027; окупаемость накопленных инвестиций: июль 2027</div></div>
-          <div class="card tight"><div class="metric-label">Источник данных</div><div class="metric-value">Excel PNL</div><div class="metric-sub">20 месяцев, PNL, трафик, заявки, одобрения, каналы, расходы</div></div>
+      <div class="overview-lead">
+        <div class="card lead-card">
+          <div class="eyebrow">Инвестиционный комитет</div>
+          <h1>Экономика роста, окупаемости и управляемого риска</h1>
+          <p class="lead">Верхний слой собран вокруг драйверов бизнес-модели: источники выручки, unit-экономика каналов, нагрузка на капитал, repeat-эффект и контроль ключевых операционных отклонений.</p>
         </div>
       </div>
-      <h2 class="divider-title">Вводные данные</h2>
+      <h2 class="divider-title">Инвестиционный ракурс</h2>
+      <div class="committee-grid" id="committeeGrid"></div>
+      <h2 class="divider-title">Управляющие вводные</h2>
+      <div class="grid two">
+        <div class="card">
+          <div class="card-title"><div><h2>Допущения модели</h2><p>Параметры, из которых пересчитываются выдачи, LTV и дисконтированная окупаемость</p></div><button class="ghost-btn" id="saveModelInputs" type="button">Сохранить вводные</button></div>
+          <div class="assumption-grid">
+            <label class="field"><span>Одобрение → выдача, %</span><input id="inputIssuedRate" type="number" min="0" max="100" step="0.1" inputmode="decimal"></label>
+            <label class="field"><span>Мультипликатор LTV</span><input id="inputLtvFactor" type="number" min="1" max="5" step="0.01" inputmode="decimal"></label>
+            <label class="field"><span>Ставка дисконтирования, % годовых</span><input id="inputAnnualDiscount" type="number" min="0" max="100" step="0.1" inputmode="decimal"></label>
+            <label class="field"><span>Цель по доле повторов, %</span><input id="inputRepeatTarget" type="number" min="0" max="100" step="0.1" inputmode="decimal"></label>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-title"><div><h2>Контур контроля</h2><p>Ключевые драйверы модели и последние сохранённые действия</p></div></div>
+          <div class="mini-list" id="assumptionSummary"></div>
+          <div class="section-note">Последние действия</div>
+          <div class="mini-list" id="recentActions"></div>
+        </div>
+      </div>
       <div class="grid three" id="inputDataList"></div>
-      <h2 class="divider-title">Дашборд для генерального директора</h2>
+      <h2 class="divider-title">Дашборд для инвестиционного комитета</h2>
       <div class="exec-grid" id="execGrid"></div>
       <div id="kpiGrid" class="grid kpis"></div>
       <div class="grid two">
@@ -288,18 +303,40 @@ class Chart{
   ctx.setTransform(dpr,0,0,dpr,0,0);ctx.clearRect(0,0,width,height);
   const colors=chartColors();
   const datasets=cfg.data.datasets||[], labels=cfg.data.labels||[];
-  const legendH=datasets.some(d=>d.label)?22:0;
-  const xLabelH=22;
-  const pad={l:52,r:14,t:8+legendH,b:xLabelH};
-  // legend
-  if(legendH){
-   let lx=pad.l;const ly=4;ctx.font='12px '+chartFont();
-   datasets.forEach(ds=>{if(!ds.label)return;const rawColor=ds.borderColor||(Array.isArray(ds.backgroundColor)?ds.backgroundColor[0]:ds.backgroundColor)||colors.blue;const color=stripAlpha(rawColor);ctx.fillStyle=color;roundedRect(ctx,lx,ly+3,10,10,2);ctx.fill();ctx.fillStyle=colors.text;const text=ds.label;const w=ctx.measureText(text).width;ctx.fillText(text,lx+14,ly+13);lx+=14+w+16});
-  }
-  const plotW=width-pad.l-pad.r, plotH=height-pad.t-pad.b;
   const values=datasets.flatMap(ds=>(ds.data||[]).map(Number)).filter(Number.isFinite);
   const rawMin=Math.min(0,...values), rawMax=Math.max(1,...values);
   const {ticks,min,max}=niceTicks(rawMin,rawMax,5);
+  ctx.font='11px '+chartFont();
+  const yLabelW=Math.max(...ticks.map(t=>ctx.measureText(shortNum(t)).width),28);
+  const padL=Math.ceil(yLabelW)+12;
+  const padR=16;
+  ctx.font='12px '+chartFont();
+  const legendItems=datasets.filter(ds=>ds.label).map(ds=>{
+   const rawColor=ds.borderColor||(Array.isArray(ds.backgroundColor)?ds.backgroundColor[0]:ds.backgroundColor)||colors.blue;
+   const text=String(ds.label||'');
+   return {text,color:stripAlpha(rawColor),w:14+ctx.measureText(text).width+16};
+  });
+  const legendPos=[];
+  let legendH=0;
+  if(legendItems.length){
+   let lx=0,ly=0;
+   const rowH=18,maxLegendW=Math.max(120,width-padL-padR);
+   legendItems.forEach(item=>{
+    if(lx&&lx+item.w>maxLegendW){ly+=rowH;lx=0}
+    legendPos.push({x:padL+lx,y:4+ly,item});
+    lx+=item.w;
+   });
+   legendH=ly+rowH;
+  }
+  const rotateX=labels.some(label=>String(label).length>4)||labels.length>8;
+  const xLabelH=rotateX?42:24;
+  const pad={l:padL,r:padR,t:8+legendH,b:xLabelH};
+  const plotW=width-pad.l-pad.r, plotH=height-pad.t-pad.b;
+  // legend
+  if(legendItems.length){
+   ctx.font='12px '+chartFont();
+   legendPos.forEach(pos=>{ctx.fillStyle=pos.item.color;roundedRect(ctx,pos.x,pos.y+3,10,10,2);ctx.fill();ctx.fillStyle=colors.text;ctx.fillText(pos.item.text,pos.x+14,pos.y+13)});
+  }
   const range=max-min||1;
   const scale=v=>pad.t+plotH-((v-min)/range)*plotH;
   const y0=scale(0);
@@ -309,8 +346,10 @@ class Chart{
   ticks.forEach(t=>{const y=scale(t);ctx.strokeStyle=t===0?colors.line:colors.line+'66';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(pad.l,y);ctx.lineTo(width-pad.r,y);ctx.stroke();ctx.fillStyle=colors.muted;ctx.textAlign='right';ctx.fillText(shortNum(t),pad.l-8,y)});
   // X axis labels
   ctx.textBaseline='alphabetic';ctx.textAlign='center';ctx.fillStyle=colors.muted;
-  const step=Math.max(1,Math.ceil(labels.length*60/plotW));
-  labels.forEach((label,i)=>{if(i%step!==0&&i!==labels.length-1)return;const x=labels.length===1?pad.l+plotW/2:pad.l+(i/(labels.length-1))*plotW;const s=String(label);ctx.save();ctx.translate(x,height-6);if(s.length>4){ctx.rotate(-Math.PI/8);ctx.textAlign='right';ctx.fillText(s,0,0)}else{ctx.fillText(s,0,0)}ctx.restore()});
+  const maxLabelWidth=Math.max(...labels.map(label=>ctx.measureText(String(label)).width),24);
+  const approxSpan=rotateX?22:maxLabelWidth+14;
+  const step=Math.max(1,Math.ceil(labels.length*approxSpan/Math.max(plotW,1)));
+  labels.forEach((label,i)=>{if(i%step!==0&&i!==labels.length-1)return;const x=labels.length===1?pad.l+plotW/2:pad.l+(i/(labels.length-1))*plotW;const s=String(label);ctx.save();ctx.translate(x,height-(rotateX?8:6));if(rotateX){ctx.rotate(-Math.PI/6);ctx.textAlign='right';ctx.fillText(s,0,0)}else{ctx.fillText(s,0,0)}ctx.restore()});
   const barSets=datasets.filter(ds=>(ds.type||cfg.type)!=='line'), lineSets=datasets.filter(ds=>(ds.type||cfg.type)==='line');
   const stacked=!!cfg.stacked;
   const groupW=plotW/Math.max(labels.length,1);
@@ -482,8 +521,7 @@ const CHANNELS={
  'Повторный':{rev:revenueRepeat,cost:expensesRepeat,traffic:repeat,epc:revenueRepeat.map((v,i)=>repeat[i]?v/repeat[i]:0),label:'CRM / повторные'}
 };
 // Дисконтирование денежных потоков: 20% годовых ⇒ ~1,53% в месяц. Накопленная дисконтированная прибыль = NPV-кривая.
-const MONTHLY_DISCOUNT_RATE=Math.pow(1.20,1/12)-1;
-function cumulativeDiscounted(arr){const acc=[];let total=0;arr.forEach((v,i)=>{total+=v/Math.pow(1+MONTHLY_DISCOUNT_RATE,i);acc.push(total)});return acc}
+function cumulativeDiscounted(arr){const acc=[];let total=0;const rate=monthlyDiscountRate();arr.forEach((v,i)=>{total+=v/Math.pow(1+rate,i);acc.push(total)});return acc}
 
 // Декомпозиция расходов: общий expenses[] = бюджеты каналов + ФОТ + инфраструктура.
 // "Прочее" = expenses - (Директ + SEO + PR). Делим на ФОТ (≈70%) и Инфраструктура/прочее (≈30%).
@@ -514,7 +552,7 @@ const productTotals=Object.fromEntries(PRODUCT_MIX.map(p=>[p.key,totals.revenue*
 // CAC по каналам: расходы канала / выданные клиенты канала.
 // Доля одобрений канала ≈ доля выручки канала; выдачи = одобрения × ISSUED_TO_APPROVAL_RATE.
 function channelCac(){
- const totalIssued=totals.approvals*ISSUED_TO_APPROVAL_RATE;
+ const totalIssued=totals.approvals*modelInputs.issuedToApprovalRate;
  const make=(rev,spend)=>{const issued=totalIssued*(rev/totals.revenue);return {rev,spend,issued,cac:issued?spend/issued:0}};
  return {
   'Все каналы':{...make(totals.revenue,totals.expenses),label:'все каналы'},
@@ -524,15 +562,36 @@ function channelCac(){
   'Повторный':{...make(REPEAT_REVENUE_TOTAL,0),label:'CRM / повторные'}
  };
 }
-const INPUT_DATA=[
- {title:'Период и источник',value:'Май 2026 — декабрь 2027',text:'Встроенная PNL-модель из Excel: выручка, расходы, трафик, клики, заявки, одобрения и канальные бюджеты.'},
- {title:'Маркетинговые инвестиции',value:'39,0 млн ₽',text:'Сумма расходов на Директ, SEO, PR и операционные затраты за 20 месяцев.'},
- {title:'Ключевые допущения',value:'76% выдач',text:'76% одобрений становятся выдачами; LTV увеличивается за счёт повторных визитов и кросс-продаж на коэффициент 1,34.'}
-];
-// Доля одобренных заявок, которые ожидаемо становятся выдачами.
-const ISSUED_TO_APPROVAL_RATE=0.76;
-// Рост LTV за счёт повторного использования и кросс-продаж.
-const LTV_REPEAT_CROSS_SELL_FACTOR=1.34;
+const STORAGE_KEYS={prefs:'vyruchai-dashboard-prefs-v2',model:'vyruchai-dashboard-model-v2',actions:'vyruchai-dashboard-actions-v2'};
+const DEFAULT_MODEL_INPUTS={issuedToApprovalRate:0.76,ltvFactor:1.34,annualDiscountRate:0.20,targetRepeatShare:0.06};
+let modelInputs={...DEFAULT_MODEL_INPUTS};
+let recentActions=[];
+function safeRead(key,fallback){try{const raw=localStorage.getItem(key);return raw?JSON.parse(raw):fallback}catch{return fallback}}
+function safeWrite(key,value){try{localStorage.setItem(key,JSON.stringify(value))}catch{}}
+function clamp(value,min,max){return Math.min(max,Math.max(min,value))}
+function normalizeModelInputs(raw){
+ return {
+  issuedToApprovalRate:clamp(Number(raw?.issuedToApprovalRate)||DEFAULT_MODEL_INPUTS.issuedToApprovalRate,0,1),
+  ltvFactor:clamp(Number(raw?.ltvFactor)||DEFAULT_MODEL_INPUTS.ltvFactor,1,5),
+  annualDiscountRate:clamp(Number(raw?.annualDiscountRate)||DEFAULT_MODEL_INPUTS.annualDiscountRate,0,1),
+  targetRepeatShare:clamp(Number(raw?.targetRepeatShare)||DEFAULT_MODEL_INPUTS.targetRepeatShare,0,1)
+ };
+}
+function currentStamp(){return new Date().toLocaleString('ru-RU',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'})}
+function persistPreferences(){safeWrite(STORAGE_KEYS.prefs,{window:state.window,role:state.role,channel:state.channel,scenario:state.scenario,activeTab:state.activeTab,theme:document.documentElement.dataset.theme||'light'})}
+function persistModelInputs(){safeWrite(STORAGE_KEYS.model,modelInputs);safeWrite(STORAGE_KEYS.actions,recentActions)}
+function recordAction(text){
+ recentActions=[{time:currentStamp(),text},...recentActions].slice(0,6);
+ safeWrite(STORAGE_KEYS.actions,recentActions);
+}
+function monthlyDiscountRate(){return Math.pow(1+modelInputs.annualDiscountRate,1/12)-1}
+function buildInputData(){
+ return [
+  {title:'Период и база модели',value:'Май 2026 — декабрь 2027',text:'20 месяцев PnL, каналы, заявки, одобрения, расходы и продуктовый микс внутри одного сценария.'},
+  {title:'Инвестиции и капитал',value:mln(totals.expenses),text:`Пик потребности в капитале ${mln(Math.abs(Math.min(...cumulativeProfit)))}; окупаемость накопленных вложений ${months[paybackIndex]||'—'}.`},
+  {title:'Драйверы математики',value:`${pct(modelInputs.issuedToApprovalRate*100)} → ${modelInputs.ltvFactor.toFixed(2)}x`,text:`Конверсия одобрений в выдачи, multiplier LTV и дисконтирование ${pct(modelInputs.annualDiscountRate*100)} годовых.`}
+ ];
+}
 const scenarios=[
  {name:'Дотянуть до зарплаты',users:742000,completion:74,diag:83,match:69,approval:31,repeat:5.8,revenue:28400000,time:'2:18',best:'Наличие стабильной зарплаты'},
  {name:'Есть долги',users:338000,completion:58,diag:91,match:51,approval:24,repeat:7.2,revenue:14600000,time:'3:42',best:'Долговая нагрузка ниже 50%'},
@@ -601,10 +660,23 @@ function kpi(container,items){
 }
 function chartColors(){const s=getComputedStyle(document.documentElement);return {text:s.getPropertyValue('--text').trim(),muted:s.getPropertyValue('--muted').trim(),line:s.getPropertyValue('--line').trim(),blue:s.getPropertyValue('--blue').trim(),green:s.getPropertyValue('--green').trim(),orange:s.getPropertyValue('--orange').trim(),red:s.getPropertyValue('--red').trim(),violet:s.getPropertyValue('--violet').trim()}}
 const charts={};
-const state={window:null,period:'Сегодня',role:'Все роли',channel:'Все каналы',scenario:'Все сценарии'};
+const state={window:null,period:'Сегодня',role:'Все роли',channel:'Все каналы',scenario:'Все сценарии',activeTab:'overview'};
 const CHART_PANELS={chartOverview:'overview',chartInvestment:'overview',chartCacChannels:'overview',chartCostMix:'overview',chartProducts:'overview',chartTraffic:'traffic',chartEpc:'traffic',chartRetention:'retention',chartUnit:'unit'};
 function sliceWindow(arr){const w=state.window;return w&&w<arr.length?arr.slice(arr.length-w):arr.slice()}
 function activeChartIds(){const panelId=document.querySelector('.panel.active')?.id||'tab-overview';const tab=panelId.replace('tab-','');return Object.entries(CHART_PANELS).filter(([,p])=>p===tab).map(([id])=>id)}
+function syncControlsFromState(){
+ document.documentElement.dataset.theme=(safeRead(STORAGE_KEYS.prefs,{theme:'light'}).theme)||'light';
+ document.querySelectorAll('.chip').forEach(b=>b.classList.toggle('active',Number(b.dataset.window||0)===(state.window||0)));
+ document.querySelectorAll('.filters select').forEach(sel=>{
+  const label=sel.getAttribute('aria-label');
+  if(label==='Канал')sel.value=state.channel;
+  else if(label==='Сценарий')sel.value=state.scenario;
+  else if(label==='Роль')sel.value=state.role;
+ });
+ const tab=state.activeTab||'overview';
+ document.querySelectorAll('.tab').forEach(t=>t.classList.toggle('active',t.dataset.tab===tab));
+ document.querySelectorAll('.panel').forEach(p=>p.classList.toggle('active',p.id==='tab-'+tab));
+}
 function renderCharts(){
  const c=chartColors();
  const ids=activeChartIds();
@@ -697,23 +769,52 @@ function renderFilteredViews(){
  table('jtbdTable',['Сценарий','Потери на вопросах','Узкое место','Время','Лучший ответ для одобрения','Выручка','Повтор'],(sc.length?sc:[]).map(s=>[s.name,`${pct(100-s.completion)} отвал`,'ответы диагностики',s.time,s.best,mln(s.revenue),pct(s.repeat)]));
 }
 function init(){
+ const persisted=safeRead(STORAGE_KEYS.prefs,{});
+ modelInputs=normalizeModelInputs(safeRead(STORAGE_KEYS.model,DEFAULT_MODEL_INPUTS));
+ recentActions=Array.isArray(safeRead(STORAGE_KEYS.actions,[]))?safeRead(STORAGE_KEYS.actions,[]):[];
+ state.window=typeof persisted.window==='number'?persisted.window:null;
+ state.role=persisted.role||state.role;
+ state.channel=persisted.channel||state.channel;
+ state.scenario=persisted.scenario||state.scenario;
+ state.activeTab=persisted.activeTab||state.activeTab;
+ document.documentElement.dataset.theme=persisted.theme||document.documentElement.dataset.theme||'light';
  const approvalRate=ratio(totals.approvals,totals.applications)*100;
- const issued=Math.round(totals.approvals*ISSUED_TO_APPROVAL_RATE);
+ const issued=Math.round(totals.approvals*modelInputs.issuedToApprovalRate);
  const gross=totals.revenue-totals.expenses;
  const cac=ratio(totals.expenses,issued);
- const ltv=ratio(totals.revenue,totals.approvals)*LTV_REPEAT_CROSS_SELL_FACTOR;
- document.getElementById('inputDataList').innerHTML=INPUT_DATA.map(x=>`<div class="card tight"><div class="metric-label">${escapeHtml(x.title)}</div><div class="metric-value">${escapeHtml(x.value)}</div><div class="metric-sub">${escapeHtml(x.text)}</div></div>`).join('');
- // ===== Дашборд для генерального директора =====
+ const ltv=ratio(totals.revenue,totals.approvals)*modelInputs.ltvFactor;
+ document.getElementById('inputDataList').innerHTML=buildInputData().map(x=>`<div class="card tight"><div class="metric-label">${escapeHtml(x.title)}</div><div class="metric-value">${escapeHtml(x.value)}</div><div class="metric-sub">${escapeHtml(x.text)}</div></div>`).join('');
+ document.getElementById('inputIssuedRate').value=(modelInputs.issuedToApprovalRate*100).toFixed(1);
+ document.getElementById('inputLtvFactor').value=modelInputs.ltvFactor.toFixed(2);
+ document.getElementById('inputAnnualDiscount').value=(modelInputs.annualDiscountRate*100).toFixed(1);
+ document.getElementById('inputRepeatTarget').value=(modelInputs.targetRepeatShare*100).toFixed(1);
+ document.getElementById('assumptionSummary').innerHTML=[
+  ['Выдачи по модели',fmt(issued)],
+  ['LTV по модели',Math.round(ltv).toLocaleString('ru-RU')+' ₽'],
+  ['CAC по модели',Math.round(cac).toLocaleString('ru-RU')+' ₽'],
+  ['Цель по повторам',pct(modelInputs.targetRepeatShare*100)],
+  ['Ставка NPV',pct(modelInputs.annualDiscountRate*100)+' годовых']
+ ].map(r=>`<div class="mini-row"><span>${r[0]}</span><b>${r[1]}</b></div>`).join('');
+ document.getElementById('recentActions').innerHTML=recentActions.length?recentActions.map(item=>`<div class="mini-row"><span>${escapeHtml(item.text)}</span><b>${escapeHtml(item.time)}</b></div>`).join(''):'<div class="mini-row"><span>Изменений ещё не сохраняли</span><b>локально</b></div>';
+ const repeatShare=ratio(REPEAT_REVENUE_TOTAL,totals.revenue);
+ const maxDrawdown=Math.min(...cumulativeProfit);
+ const committeeCards=[
+  {tone:'good',tag:'окупаемость',label:'Возврат капитала',value:months[paybackIndex]||'—',sub:'накопленный PnL перекрывает инвестиции'},
+  {tone:'warn',tag:'потребность',label:'Пиковый капитал',value:mln(Math.abs(maxDrawdown)),sub:'максимальная нагрузка на фондирование'},
+  {tone:ltv/cac>=3?'good':'warn',tag:'unit',label:'Запас по LTV / CAC',value:(ltv/cac).toFixed(1)+'x',sub:'целевая граница инвесткомитета выше 3.0x'},
+  {tone:repeatShare>=modelInputs.targetRepeatShare?'good':'warn',tag:'retention',label:'Доля повторной выручки',value:pct(repeatShare*100),sub:'цель модели '+pct(modelInputs.targetRepeatShare*100)}
+ ];
+ document.getElementById('committeeGrid').innerHTML=committeeCards.map(x=>`<div class="exec-card ${x.tone}"><span class="tag">${escapeHtml(x.tag)}</span><div class="metric-label">${escapeHtml(x.label)}</div><div class="metric-value">${escapeHtml(x.value)}</div><div class="metric-sub">${escapeHtml(x.sub)}</div></div>`).join('');
+ // ===== Дашборд для инвестиционного комитета =====
  const cc=channelCac();
  const channelByRoi=[['SEO',totals.seoRevenue,totals.seoSpend],['Яндекс.Директ',totals.directRevenue,totals.directSpend],['PR',totals.prRevenue,totals.prSpend]].map(([n,r,s])=>({n,r,s,roi:s?(r-s)/s:0,roas:s?r/s:0}));
  const topChannel=channelByRoi.slice().sort((a,b)=>b.roi-a.roi)[0];
  const weakChannel=channelByRoi.slice().sort((a,b)=>a.roi-b.roi)[0];
- const maxDrawdown=Math.min(...cumulativeProfit);
  const lastM=revenue.length-1;
  const yoy=revenue[0]?(revenue[lastM]/revenue[0]):0;
- const issuedAll=Math.round(totals.approvals*ISSUED_TO_APPROVAL_RATE);
+ const issuedAll=Math.round(totals.approvals*modelInputs.issuedToApprovalRate);
  const cacAll=issuedAll?totals.expenses/issuedAll:0;
- const ltvAll=ratio(totals.revenue,totals.approvals)*LTV_REPEAT_CROSS_SELL_FACTOR;
+ const ltvAll=ratio(totals.revenue,totals.approvals)*modelInputs.ltvFactor;
  const execCards=[
   {tone:'good',tag:'итог',label:'Чистая прибыль за 20 мес.',value:mln(totals.profit),sub:'операционная маржа '+pct(ratio(totals.profit,totals.revenue)*100)},
   {tone:'good',tag:'безубыточность',label:'Первый прибыльный месяц',value:months[firstMonthlyProfitIndex]||'—',sub:'месячная маржа выходит в плюс'},
@@ -725,7 +826,7 @@ function init(){
   {tone:'good',tag:'рост',label:'Темп роста выручки',value:'×'+yoy.toFixed(1),sub:'декабрь 2027 к маю 2026'}
  ];
  document.getElementById('execGrid').innerHTML=execCards.map(x=>`<div class="exec-card ${x.tone}"><span class="tag">${escapeHtml(x.tag)}</span><div class="metric-label">${escapeHtml(x.label)}</div><div class="metric-value">${escapeHtml(x.value)}</div><div class="metric-sub">${escapeHtml(x.sub)}</div></div>`).join('');
- kpi('kpiGrid',[{label:'Пользователи / сессии',value:fmt(totals.visits),sub:'20 месяцев, все каналы'},{label:'Отправленные заявки',value:fmt(totals.applications),sub:'CR в заявку '+pct(ratio(totals.applications,totals.visits)*100)},{label:'Доля одобрений',value:pct(approvalRate),sub:fmt(totals.approvals)+' одобрений',cls:'positive'},{label:'Выданные сделки',value:fmt(issued),sub:'оценка выдач = 76% одобрений'},{label:'Выручка',value:mln(totals.revenue),sub:'единый источник данных — PNL',cls:'positive'},{label:'EPC',value:Math.round(ratio(totals.revenue,totals.clicks))+' ₽',sub:'выручка / клики на офферы',cls:'positive'},{label:'CAC',value:Math.round(cac)+' ₽',sub:'расходы / выданные сделки',cls:'negative'},{label:'LTV / CAC',value:(ltv/cac).toFixed(1)+'x',sub:'LTV учитывает повторы и кросс-продажи',cls:'positive'},{label:'Доля повторов',value:'5.1%',sub:'цель 6% в ближайшем периоде'},{label:'Валовая прибыль',value:mln(gross),sub:'выручка минус расходы',cls:'positive'},{label:'Маржинальность',value:pct(ratio(gross,totals.revenue)*100),sub:'маржинальность по PNL',cls:'positive'},{label:'PnL',value:mln(totals.profit),sub:'нарастающим итогом',cls:'positive'}]);
+ kpi('kpiGrid',[{label:'Пользователи / сессии',value:fmt(totals.visits),sub:'20 месяцев, все каналы'},{label:'Отправленные заявки',value:fmt(totals.applications),sub:'CR в заявку '+pct(ratio(totals.applications,totals.visits)*100)},{label:'Доля одобрений',value:pct(approvalRate),sub:fmt(totals.approvals)+' одобрений',cls:'positive'},{label:'Выданные сделки',value:fmt(issued),sub:'оценка выдач = '+pct(modelInputs.issuedToApprovalRate*100)+' одобрений'},{label:'Выручка',value:mln(totals.revenue),sub:'единый источник данных — PNL',cls:'positive'},{label:'EPC',value:Math.round(ratio(totals.revenue,totals.clicks))+' ₽',sub:'выручка / клики на офферы',cls:'positive'},{label:'CAC',value:Math.round(cac)+' ₽',sub:'расходы / выданные сделки',cls:'negative'},{label:'LTV / CAC',value:(ltv/cac).toFixed(1)+'x',sub:'LTV учитывает повторы и кросс-продажи',cls:'positive'},{label:'Доля повторов',value:pct(repeatShare*100),sub:'цель '+pct(modelInputs.targetRepeatShare*100)+' в ближайшем периоде'},{label:'Валовая прибыль',value:mln(gross),sub:'выручка минус расходы',cls:'positive'},{label:'Маржинальность',value:pct(ratio(gross,totals.revenue)*100),sub:'маржинальность по PNL',cls:'positive'},{label:'PnL',value:mln(totals.profit),sub:'нарастающим итогом',cls:'positive'}]);
  document.getElementById('paybackList').innerHTML=[['Первая месячная прибыль',months[firstMonthlyProfitIndex]||'—'],['Окупаемость накопленных инвестиций',months[paybackIndex]||'—'],['Максимальный накопленный минус',mln(Math.min(...cumulativeProfit))],['Финальный накопленный PnL',mln(totals.profit)]].map((r,i)=>`<div class="mini-row"><span><span class="status ${i===3?'green':i===2?'red':'yellow'}"></span> ${r[0]}</span><b>${r[1]}</b></div>`).join('');
  document.getElementById('actionsList').innerHTML=[['Масштабировать','SEO long-tail и Центрофинанс API дают лучший ROI, EPC и одобрение'],['Исправить','У Банка Город расхождение прогноза и фактического одобрения'],['Отключить','МФО Риск выводится из SOS из-за SLA и жалоб'],['Растить','Удержание D+14 увеличивает повторы и LTV без CAC'],['Контроль','Директ масштабировать только при EPC выше CPC и CAC ниже LTV']].map((r,i)=>`<div class="mini-row"><span><span class="status ${i===2?'red':i===1||i===4?'yellow':'green'}"></span> ${r[0]}</span><b>${r[1]}</b></div>`).join('');
  const pnlRows=[
@@ -751,7 +852,7 @@ function init(){
  const cacOrder=['SEO','Яндекс.Директ','PR','Повторный','Все каналы'];
  const cacKpiCls={'SEO':'positive','Яндекс.Директ':'negative','PR':'accent','Повторный':'positive','Все каналы':'accent'};
  kpi('cacKpis',cacOrder.map(k=>{const x=cc[k];return {label:'CAC · '+(k==='Все каналы'?'все каналы':k),value:Math.round(x.cac).toLocaleString('ru-RU')+' ₽',sub:'выдач '+fmt(x.issued)+' · бюджет '+mln(x.spend),cls:cacKpiCls[k]}}));
- table('cacTable',['Канал','Выручка','Расход','Выдач','CAC, ₽','LTV, ₽','LTV / CAC','ROAS'],cacOrder.map(k=>{const x=cc[k];const ltv=x.issued?(x.rev/x.issued)*LTV_REPEAT_CROSS_SELL_FACTOR:0;const lc=x.cac?ltv/x.cac:0;const roas=x.spend?x.rev/x.spend:0;return [k==='Все каналы'?'Все каналы (итого)':k,mln(x.rev),mln(x.spend),fmt(x.issued),Math.round(x.cac).toLocaleString('ru-RU'),Math.round(ltv).toLocaleString('ru-RU'),(isFinite(lc)?lc.toFixed(1):'∞')+'x',(isFinite(roas)?roas.toFixed(1):'∞')+'x']}));
+ table('cacTable',['Канал','Выручка','Расход','Выдач','CAC, ₽','LTV, ₽','LTV / CAC','ROAS'],cacOrder.map(k=>{const x=cc[k];const ltv=x.issued?(x.rev/x.issued)*modelInputs.ltvFactor:0;const lc=x.cac?ltv/x.cac:0;const roas=x.spend?x.rev/x.spend:0;return [k==='Все каналы'?'Все каналы (итого)':k,mln(x.rev),mln(x.spend),fmt(x.issued),Math.round(x.cac).toLocaleString('ru-RU'),Math.round(ltv).toLocaleString('ru-RU'),(isFinite(lc)?lc.toFixed(1):'∞')+'x',(isFinite(roas)?roas.toFixed(1):'∞')+'x']}));
  // ===== Структура расходов =====
  const colorVals=chartColors();
  const totalCost=COST_ITEMS.reduce((acc,it)=>acc+sum(it.data),0)||1;
@@ -778,20 +879,32 @@ function init(){
  table('partnerTable',['Партнёр','Интеграция','Статус','SLA','Ответ','Доля одобрений','Доля выдач','Выручка','EPC','eCPA','Жалобы','Главная причина отказа','Действие'],partners.map(p=>[p.name,p.type,p.status,p.sla,p.response,pct(p.approval),pct(p.issue),mln(p.revenue),p.epc+' ₽',p.ecpa+' ₽',pct(p.complaints),p.reject,p.action]));
  kpi('retentionKpis',[{label:'Доля повторов',value:'5.1%',sub:'цель 6%'},{label:'Дней до повтора',value:'21',sub:'медиана дней'},{label:'Реактивация SMS',value:'12.8%',sub:'лучший канал',cls:'positive'},{label:'Выручка после сделки',value:mln(9860000),sub:'повторы + кросс-продажи',cls:'positive'}]);
  table('retentionTable',['Событие','Пользователи / события','Конверсия'],retentionEvents);
- const unitLtv=ratio(totals.revenue,totals.approvals)*LTV_REPEAT_CROSS_SELL_FACTOR;
+ const unitLtv=ratio(totals.revenue,totals.approvals)*modelInputs.ltvFactor;
  kpi('unitKpis',[{label:'EPC',value:Math.round(ratio(totals.revenue,totals.clicks))+' ₽',sub:'выручка / клики'},{label:'CAC выдачи',value:Math.round(cac)+' ₽',sub:'расходы / первые выдачи'},{label:'LTV',value:Math.round(unitLtv)+' ₽',sub:'чистая выручка с повторами'},{label:'LTV / CAC',value:(unitLtv/cac).toFixed(1)+'x',sub:'здорово при > 3x',cls:'positive'}]);
  document.getElementById('formulaList').innerHTML=['EPC = выручка / клики по офферам','CAC = расходы / одобренные пользователи или первые выдачи','LTV = накопленная чистая выручка на пользователя с повторами и кросс-продажами','Маржинальная прибыль = выручка - медиарасходы - переменные партнёрские расходы','Срок окупаемости = CAC / месячная маржа на пользователя','Маркетинговый PnL = выручка - медиарасходы - операционные расходы'].map(x=>`<div class="mini-row"><span>${x}</span><b>отслеживается</b></div>`).join('');
  document.getElementById('alertsGrid').innerHTML=alerts.map(a=>`<div class="card alert-card"><div class="alert-head"><h3>${a.entity}</h3><span class="delta ${a.severity==='red'?'bad':a.severity==='yellow'?'warn':'good'}">${a.severity==='red'?'критично':a.severity==='yellow'?'внимание':'норма'}</span></div><div class="mini-row"><span>Первое обнаружение</span><b>Сегодня</b></div><p class="muted">${a.reason}</p><div class="actions"><button class="action">${a.action}</button></div></div>`).join('');
  document.getElementById('experimentsGrid').innerHTML=experiments.slice(0,3).map(e=>`<div class="card"><div class="card-title"><div><h3>${e.name}</h3><p>${e.id}</p></div><span class="pill">${e.status}</span></div><div class="mini-row"><span>Главная метрика</span><b>${e.primary}</b></div><div class="mini-row"><span>Уверенность</span><b>${e.confidence}</b></div><div class="mini-row"><span>Результат</span><b>${e.result}</b></div></div>`).join('');
  table('experimentsTable',['Эксперимент','Главная метрика','Ограничение','Сегмент','Уверенность','Снимок','Решение'],experiments.map(e=>[e.name,e.primary,e.guardrail,e.segment,e.confidence,e.result,e.status]));
+ syncControlsFromState();
  renderFilteredViews();
  renderCharts();
 }
 const tabs=document.querySelectorAll('.tab'),panels=document.querySelectorAll('.panel');
-tabs.forEach(t=>t.addEventListener('click',()=>{tabs.forEach(x=>x.classList.remove('active'));panels.forEach(x=>x.classList.remove('active'));t.classList.add('active');document.getElementById('tab-'+t.dataset.tab).classList.add('active');requestAnimationFrame(renderCharts)}));
-document.querySelectorAll('.chip').forEach(b=>b.addEventListener('click',()=>{document.querySelectorAll('.chip').forEach(x=>x.classList.remove('active'));b.classList.add('active');const w=Number(b.dataset.window||0);state.window=w>0?w:null;renderCharts()}));
-document.querySelectorAll('.filters select').forEach(sel=>{const label=sel.getAttribute('aria-label');sel.addEventListener('change',()=>{const v=sel.value;if(label==='Канал')state.channel=v;else if(label==='Сценарий')state.scenario=v;else if(label==='Роль')state.role=v;renderFilteredViews();renderCharts()})});
-document.getElementById('themeToggle').addEventListener('click',()=>{const root=document.documentElement;root.dataset.theme=root.dataset.theme==='dark'?'light':'dark';requestAnimationFrame(renderCharts)});
+tabs.forEach(t=>t.addEventListener('click',()=>{tabs.forEach(x=>x.classList.remove('active'));panels.forEach(x=>x.classList.remove('active'));t.classList.add('active');document.getElementById('tab-'+t.dataset.tab).classList.add('active');state.activeTab=t.dataset.tab;persistPreferences();requestAnimationFrame(renderCharts)}));
+document.querySelectorAll('.chip').forEach(b=>b.addEventListener('click',()=>{document.querySelectorAll('.chip').forEach(x=>x.classList.remove('active'));b.classList.add('active');const w=Number(b.dataset.window||0);state.window=w>0?w:null;persistPreferences();renderCharts()}));
+document.querySelectorAll('.filters select').forEach(sel=>{const label=sel.getAttribute('aria-label');sel.addEventListener('change',()=>{const v=sel.value;if(label==='Канал')state.channel=v;else if(label==='Сценарий')state.scenario=v;else if(label==='Роль')state.role=v;persistPreferences();renderFilteredViews();renderCharts()})});
+document.getElementById('themeToggle').addEventListener('click',()=>{const root=document.documentElement;root.dataset.theme=root.dataset.theme==='dark'?'light':'dark';persistPreferences();requestAnimationFrame(renderCharts)});
+document.getElementById('saveModelInputs').addEventListener('click',()=>{
+ modelInputs=normalizeModelInputs({
+ issuedToApprovalRate:Number(document.getElementById('inputIssuedRate').value)/100,
+ ltvFactor:Number(document.getElementById('inputLtvFactor').value),
+ annualDiscountRate:Number(document.getElementById('inputAnnualDiscount').value)/100,
+ targetRepeatShare:Number(document.getElementById('inputRepeatTarget').value)/100
+ });
+ recordAction(`Обновлены вводные модели: выдача ${pct(modelInputs.issuedToApprovalRate*100)}, LTV ${modelInputs.ltvFactor.toFixed(2)}x, NPV ${pct(modelInputs.annualDiscountRate*100)}`);
+ persistModelInputs();
+ init();
+});
 let resizeTimer;window.addEventListener('resize',()=>{clearTimeout(resizeTimer);resizeTimer=setTimeout(renderCharts,120)});
 const drawer=document.getElementById('drawer'),drawerContent=document.getElementById('drawerContent');document.addEventListener('click',e=>{const card=e.target.closest('[data-drill]');if(!card)return;drawerContent.innerHTML=`<h2>${escapeHtml(card.dataset.drill)}</h2><p class="muted">Детализация доступна до пользователя, сессии, заявки и события партнёра с учётом прав доступа. В демо показан агрегированный слой без чувствительных данных.</p><div class="mini-list"><div class="mini-row"><span>Источник</span><b>проверенная витрина</b></div><div class="mini-row"><span>Статус</span><b>сырой / проверенный / атрибутированный</b></div><div class="mini-row"><span>Идентификаторы</span><b>замаскированы / хэшированы</b></div></div>`;drawer.classList.add('open')});document.getElementById('drawerClose').addEventListener('click',()=>drawer.classList.remove('open'));
 init();
