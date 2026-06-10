@@ -491,20 +491,21 @@ const formulaCatalog=[
  {id:'formula-pnl',label:'Маркетинговый PnL = выручка - медиа - операционные расходы',status:'что делать: не масштабировать каналы с отрицательной экономикой',roles:['Руководитель','Операции']}
 ];
 const charts={};
-const state={window:null,period:'Сегодня',role:'Все роли',channel:'Все каналы',scenario:'Все сценарии',activeTab:'overview'};
+const state={role:'Все роли',channel:'Все каналы',scenario:'Все сценарии',activeTab:'overview'};
 const CHART_PANELS={chartOverview:'overview',chartInvestment:'overview',chartCacChannels:'overview',chartCostMix:'overview',chartProducts:'overview',chartTraffic:'traffic',chartEpc:'traffic',chartRetention:'retention',chartUnit:'unit'};
 let lastDrawerFocus=null;
 
 function activeRoleProfile(){return ROLE_PROFILES[state.role]||ROLE_PROFILES['Все роли']}
-function windowSize(length){const w=state.window;return w&&w<length?w:length}
-function sliceWindow(arr){const w=windowSize(arr.length);return arr.slice(arr.length-w)}
+// Период-фильтр убран: бизнес-план всегда показывается за весь горизонт (20 месяцев).
+function windowSize(length){return length}
+function sliceWindow(arr){return arr.slice()}
 function sumSeries(series){return (series[0]||[]).map((_,i)=>sum(series.map(arr=>arr[i]||0)))}
+// Динамика плана: сравниваем вторую половину горизонта с первой — стабильная и осмысленная мера роста.
 function comparePeriods(arr){
- const size=windowSize(arr.length);
- const current=sliceWindow(arr);
- const previous=arr.slice(Math.max(0,arr.length-size*2),arr.length-size);
+ const half=Math.floor(arr.length/2);
+ const previous=arr.slice(0,half), current=arr.slice(half);
  const currentSum=sum(current), previousSum=sum(previous);
- return {current:currentSum,previous:previousSum,delta:previousSum?(currentSum-previousSum)/previousSum:null,size};
+ return {current:currentSum,previous:previousSum,delta:previousSum?(currentSum-previousSum)/previousSum:null,size:current.length};
 }
 function formatDelta(delta){if(delta===null||!Number.isFinite(delta))return null;return {text:`${delta>=0?'+':''}${pct(delta*100)}`,tone:delta>=0?'good':'bad'}}
 function activeChartIds(){const panelId=document.querySelector('.panel.active')?.id||'tab-overview';const tab=panelId.replace('tab-','');return Object.entries(CHART_PANELS).filter(([,p])=>p===tab).map(([id])=>id)}
@@ -533,7 +534,6 @@ function currentDraftInputs(){return normalizeModelInputs({issuedToApprovalRate:
 function sameModelInputs(a,b){return ['issuedToApprovalRate','ltvFactor','annualDiscountRate','targetRepeatShare'].every(key=>Math.abs((a[key]||0)-(b[key]||0))<0.0001)}
 function syncControlsFromState(){
  document.documentElement.dataset.theme=(safeRead(STORAGE_KEYS.prefs,{theme:'light'}).theme)||'light';
- document.querySelectorAll('.chip').forEach(b=>b.classList.toggle('active',Number(b.dataset.window||0)===(state.window||0)));
  document.querySelectorAll('.filters select').forEach(sel=>{
   const label=sel.getAttribute('aria-label');
   if(label==='Канал')sel.value=state.channel;
@@ -544,7 +544,7 @@ function syncControlsFromState(){
  document.querySelectorAll('.tab').forEach(t=>t.classList.toggle('active',t.dataset.tab===tab));
  document.querySelectorAll('.panel').forEach(p=>p.classList.toggle('active',p.id==='tab-'+tab));
 }
-function persistPreferences(){safeWrite(STORAGE_KEYS.prefs,{window:state.window,role:state.role,channel:state.channel,scenario:state.scenario,activeTab:state.activeTab,theme:document.documentElement.dataset.theme||'light'})}
+function persistPreferences(){safeWrite(STORAGE_KEYS.prefs,{role:state.role,channel:state.channel,scenario:state.scenario,activeTab:state.activeTab,theme:document.documentElement.dataset.theme||'light'})}
 function persistModelInputs(){safeWrite(STORAGE_KEYS.model,modelInputs);safeWrite(STORAGE_KEYS.actions,recentActions)}
 function currentStamp(){return new Date().toLocaleString('ru-RU',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'})}
 function recordAction(text){recentActions=[{time:currentStamp(),text},...recentActions].slice(0,MAX_RECENT_ACTIONS);safeWrite(STORAGE_KEYS.actions,recentActions)}
@@ -564,8 +564,8 @@ function channelCac(){
 function buildInputData(ch){
  const comparison=comparePeriods(ch.rev);
  return [
-  {title:'Период и база модели',value:'Май 2026 — декабрь 2027',text:`${windowSize(months.length)} мес. в активном окне; роль ${activeRoleProfile().label.toLowerCase()}.`},
-  {title:'Инвестиции и капитал',value:mln(sum(sliceWindow(ch.cost))),text:`Пик потребности ${mln(Math.abs(Math.min(...cumulativeProfit)))}; предыдущий период ${comparison.previous?mln(comparison.previous):'—'}.`},
+  {title:'Период и база модели',value:'Май 2026 — декабрь 2027',text:`${months.length} мес. на горизонте плана; роль ${activeRoleProfile().label.toLowerCase()}.`},
+  {title:'Инвестиции и капитал',value:mln(sum(sliceWindow(ch.cost))),text:`Пик потребности ${mln(Math.abs(Math.min(...cumulativeProfit)))}; первая половина горизонта ${comparison.previous?mln(comparison.previous):'—'}.`},
   {title:'Драйверы математики',value:`${pct(modelInputs.issuedToApprovalRate*100)} → ${modelInputs.ltvFactor.toFixed(2)}x`,text:`NPV ${pct(modelInputs.annualDiscountRate*100)} годовых; цель repeat ${pct(modelInputs.targetRepeatShare*100)}.`}
  ];
 }
@@ -642,7 +642,7 @@ function buildMetricDrawer(id){
  const cac=ratio(sum(ch.cost),Math.max(1,issued));
  const repeatShare=ratio(REPEAT_REVENUE_TOTAL,totals.revenue);
  const metricMap={
-  'revenue':{title:'Выручка',summary:`Активный фокус: ${ch.label}.`,formula:'Выручка = сумма комиссионной и повторной выручки по активному срезу.',rows:[['Текущий срез',mln(sum(sliceWindow(ch.rev)))],['Предыдущий срез',mln(comparePeriods(ch.rev).previous||0)],['Источник',DATA_SOURCE.source]],actions:['Сравнить вклад каналов и сценариев','Не масштабировать каналы с падающим approval']},
+  'revenue':{title:'Выручка',summary:`Активный фокус: ${ch.label}.`,formula:'Выручка = сумма комиссионной и повторной выручки по активному срезу.',rows:[['Весь план',mln(sum(sliceWindow(ch.rev)))],['Первая половина горизонта',mln(comparePeriods(ch.rev).previous||0)],['Источник',DATA_SOURCE.source]],actions:['Сравнить вклад каналов и сценариев','Не масштабировать каналы с падающим approval']},
   'cac':{title:'CAC',summary:'Стоимость привлечения клиента в активном канале / роли.',formula:'CAC = расходы / первые выдачи.',rows:[['Текущий CAC',Math.round(cac).toLocaleString('ru-RU')+' ₽'],['Цель',Math.round((sum(ch.rev)/Math.max(1,issued))*0.33).toLocaleString('ru-RU')+' ₽'],['Что делать','резать дорогие группы и чинить approval gap']],actions:['Проверить вклад Директа и PR','Сопоставить с LTV и payback']},
   'ltv-cac':{title:'LTV / CAC',summary:'Главный запас прочности по unit-экономике.',formula:'LTV / CAC = (LTV на пользователя с повторами) / CAC.',rows:[['Текущее значение',(ratio(totals.revenue,totals.approvals)*modelInputs.ltvFactor/Math.max(cac,1)).toFixed(1)+'x'],['Порог', '3.0x'],['Комментарий','ниже порога — не масштабировать']],actions:['Добрать repeat-share','Снизить CAC в PR и Директе']},
   'repeat-share':{title:'Доля повторов',summary:'Показывает устойчивость LTV и силу CRM-цепочек.',formula:'Repeat-share = выручка CRM / общая выручка.',rows:[['Факт',pct(repeatShare*100)],['Цель',pct(modelInputs.targetRepeatShare*100)],['Разрыв',pct((repeatShare-modelInputs.targetRepeatShare)*100)]],actions:['Усилить D+14 и reactivation','Добавить персональные post-approval офферы']}
@@ -651,7 +651,7 @@ function buildMetricDrawer(id){
 }
 function buildDrawerPayload(kind,id){
  if(kind==='metric'||kind==='formula')return kind==='formula'?{title:'Формула',summary:id,formula:id,rows:[['Роль',state.role],['Источник',DATA_SOURCE.source]],actions:['Используйте формулу как единый reference в обсуждении KPI']} : buildMetricDrawer(id);
- if(kind==='priority'){const item=priorityCatalog.find(x=>x.id===id);if(item)return {title:item.title,summary:item.description,formula:'Источник приоритета: '+item.source,rows:[['Ответственный',item.owner],['Роль-фокус',state.role],['Канал',state.channel]],actions:['Оценить эффект в текущем окне','Открыть связанный сигнал или партнёра']};}
+ if(kind==='priority'){const item=priorityCatalog.find(x=>x.id===id);if(item)return {title:item.title,summary:item.description,formula:'Источник приоритета: '+item.source,rows:[['Ответственный',item.owner],['Роль-фокус',state.role],['Канал',state.channel]],actions:['Оценить эффект на горизонте плана','Открыть связанный сигнал или партнёра']};}
  if(kind==='scenario'){const item=scenarioCatalog.find(x=>x.id===id);if(item)return {title:item.name,summary:`Ответственный: ${item.owner}. Завершение ${pct(item.completion)} и approval ${pct(item.approval)}.`,formula:'Сценарий оценивается по completion, quality of match, approval и repeat.',rows:[['Пользователи',fmt(item.users)],['Выручка',mln(item.revenue)],['Лучший ответ',item.best]],actions:item.playbook};}
  if(kind==='partner'){const item=partnerCatalog.find(x=>x.id===id);if(item)return {title:item.name,summary:`${item.type}, статус ${item.status}, SLA ${item.sla}.`,formula:'Партнёр оценивается по SLA, approval, eCPA и жалобам.',rows:[['Выручка',mln(item.revenue)],['eCPA',item.ecpa+' ₽'],['Жалобы',pct(item.complaints)]],actions:item.plan};}
  if(kind==='alert'){const item=alertCatalog.find(x=>x.id===id);if(item)return {title:item.entity,summary:item.reason,formula:'Сигнал появляется, когда метрика уходит за контрольный порог.',rows:[['Серьёзность',item.severity==='red'?'критично':item.severity==='yellow'?'внимание':'норма'],['Роль',item.roles.join(', ')],['Действие',item.action]],actions:['Подтвердить сигнал на витрине','Назначить владельца и дедлайн']};}
@@ -698,10 +698,10 @@ function renderContextualViews(){
  const weakChannel=channelByRoi.slice().sort((a,b)=>a.roi-b.roi)[0];
  const yoy=revenue[0]?(revenue[revenue.length-1]/revenue[0]):0;
  document.getElementById('execGrid').innerHTML=[
-  {id:'revenue',tone:'good',tag:'итог',label:'Чистая прибыль в активном окне',value:mln(sum(sliceWindow(ch.rev))-sum(sliceWindow(ch.cost))),sub:'изменение '+(formatDelta(revCompare.delta)?.text||'—')},
+  {id:'revenue',tone:'good',tag:'итог',label:'Чистая прибыль за весь план',value:mln(sum(sliceWindow(ch.rev))-sum(sliceWindow(ch.cost))),sub:'рост 2-й половины к 1-й '+(formatDelta(revCompare.delta)?.text||'—')},
   {id:'revenue',tone:'good',tag:'безубыточность',label:'Первый прибыльный месяц',value:months[firstMonthlyProfitIndex]||'—',sub:'месячная маржа уже положительная'},
   {id:'revenue',tone:'good',tag:'окупаемость',label:'Возврат инвестиций',value:months[paybackIndex]||'—',sub:'когда покроется накопленный минус'},
-  {id:'cac',tone:'warn',tag:'cash burn',label:'Максимальный накопленный минус',value:mln(maxDrawdown),sub:'текущие расходы '+(formatDelta(costCompare.delta)?.text||'—')},
+  {id:'cac',tone:'warn',tag:'cash burn',label:'Максимальный накопленный минус',value:mln(maxDrawdown),sub:'расходы 2-й половины к 1-й '+(formatDelta(costCompare.delta)?.text||'—')},
   {id:'revenue',tone:'good',tag:'лидер',label:'Лучший канал по ROI',value:topChannel.n,sub:'ROAS '+topChannel.roas.toFixed(1)+'x · ROI '+pct(topChannel.roi*100)},
   {id:'cac',tone:'warn',tag:'слабое звено',label:'Канал с худшим ROI',value:weakChannel.n,sub:'ROAS '+weakChannel.roas.toFixed(1)+'x · ROI '+pct(weakChannel.roi*100)},
   {id:'ltv-cac',tone:'good',tag:'юнит',label:'LTV / CAC',value:(ltv/Math.max(cac,1)).toFixed(1)+'x',sub:'LTV '+Math.round(ltv)+' ₽ · CAC '+Math.round(cac)+' ₽'},
@@ -718,13 +718,13 @@ function renderContextualViews(){
   {id:'ltv-cac',label:'LTV / CAC',value:(ltv/Math.max(cac,1)).toFixed(1)+'x',sub:'LTV учитывает повторы и кросс-продажи',cls:'positive'},
   {id:'repeat-share',label:'Доля повторов',value:pct(repeatShare*100),sub:'цель '+pct(modelInputs.targetRepeatShare*100),delta:formatDelta(repeatCompare.delta)},
   {id:'revenue',label:'Валовая прибыль',value:mln(gross),sub:'выручка минус расходы',cls:'positive'},
-  {id:'revenue',label:'Маржинальность',value:pct(ratio(gross,Math.max(1,sum(sliceWindow(ch.rev))))*100),sub:'маржинальность по активному срезу',cls:'positive'},
+  {id:'revenue',label:'Маржинальность',value:pct(ratio(gross,Math.max(1,sum(sliceWindow(ch.rev))))*100),sub:'маржинальность за весь план',cls:'positive'},
   {id:'revenue',label:'PnL',value:mln(totals.profit),sub:'нарастающим итогом',cls:'positive'}
  ]);
  document.getElementById('paybackList').innerHTML=[['Первая месячная прибыль',months[firstMonthlyProfitIndex]||'—'],['Окупаемость накопленных инвестиций',months[paybackIndex]||'—'],['Максимальный накопленный минус',mln(Math.min(...cumulativeProfit))],['Финальный накопленный PnL',mln(totals.profit)]].map((r,i)=>`<div class="mini-row"><span><span class="status ${i===3?'green':i===2?'red':'yellow'}"></span> ${r[0]}</span><b>${r[1]}</b></div>`).join('');
  const priorities=filterContext(priorityCatalog);
  document.getElementById('actionsList').innerHTML=(priorities.length?priorities:priorityCatalog.slice(0,4)).map(item=>`<div class="mini-row" ${drillAttrs('priority',item.id)}><span><span class="status ${item.severity==='bad'?'red':item.severity==='warn'?'yellow':'green'}"></span> ${escapeHtml(item.title)}</span><b>${escapeHtml(item.description)}</b></div>`).join('');
- const pnlRows=[['Выручка — итого',...revenue.map(money),money(totals.revenue)],['  · SEO',...revenueSEO.map(money),money(totals.seoRevenue)],['  · Яндекс.Директ',...revenuePPC.map(money),money(totals.directRevenue)],['  · PR',...revenuePR.map(money),money(totals.prRevenue)],['  · Повторы / CRM',...revenueRepeat.map(money),money(REPEAT_REVENUE_TOTAL)],['Расходы — итого',...expenses.map(money),money(totals.expenses)],['  · Яндекс.Директ',...budgetDirect.map(money),money(sum(budgetDirect))],['  · SEO',...budgetSEO.map(money),money(sum(budgetSEO))],['  · PR',...budgetPR.map(money),money(sum(budgetPR))],['  · ФОТ команды',...expensesPayroll.map(money),money(sum(expensesPayroll))],['  · Инфраструктура и прочее',...expensesInfra.map(money),money(sum(expensesInfra))],['Прибыль',...profit.map(v=>money(v)),money(totals.profit)],['Визиты',...visits.map(fmt),fmt(totals.visits)],['Клики на офферы',...offerClicks.map(fmt),fmt(totals.clicks)],['Заявки',...applications.map(fmt),fmt(totals.applications)],['Апрувы',...approvals.map(fmt),fmt(totals.approvals)]];
+ const pnlRows=[['Выручка — итого',...revenue.map(money),money(totals.revenue)],['  · SEO',...revenueSEO.map(money),money(totals.seoRevenue)],['  · Яндекс.Директ',...revenuePPC.map(money),money(totals.directRevenue)],['  · PR',...revenuePR.map(money),money(totals.prRevenue)],['  · в т.ч. повторы / CRM',...revenueRepeat.map(money),money(REPEAT_REVENUE_TOTAL)],['Расходы — итого',...expenses.map(money),money(totals.expenses)],['  · Яндекс.Директ',...budgetDirect.map(money),money(sum(budgetDirect))],['  · SEO',...budgetSEO.map(money),money(sum(budgetSEO))],['  · PR',...budgetPR.map(money),money(sum(budgetPR))],['  · ФОТ команды',...expensesPayroll.map(money),money(sum(expensesPayroll))],['  · Инфраструктура и прочее',...expensesInfra.map(money),money(sum(expensesInfra))],['Прибыль',...profit.map(v=>money(v)),money(totals.profit)],['Визиты',...visits.map(fmt),fmt(totals.visits)],['Клики на офферы',...offerClicks.map(fmt),fmt(totals.clicks)],['Заявки',...applications.map(fmt),fmt(totals.applications)],['Апрувы',...approvals.map(fmt),fmt(totals.approvals)]];
  table('pnlTable',['Показатель',...months,'Итого'],pnlRows);
  const cacOrder=['SEO','Яндекс.Директ','PR','Повторный','Все каналы'];
  const cacKpiCls={'SEO':'positive','Яндекс.Директ':'negative','PR':'accent','Повторный':'positive','Все каналы':'accent'};
@@ -778,7 +778,6 @@ function init(){
  const persisted=safeRead(STORAGE_KEYS.prefs,{});
  modelInputs=normalizeModelInputs(safeRead(STORAGE_KEYS.model,DEFAULT_MODEL_INPUTS));
  recentActions=Array.isArray(safeRead(STORAGE_KEYS.actions,[]))?safeRead(STORAGE_KEYS.actions,[]):[];
- state.window=typeof persisted.window==='number'?persisted.window:null;
  state.role=persisted.role||state.role;
  state.channel=persisted.channel||state.channel;
  state.scenario=persisted.scenario||state.scenario;
@@ -789,7 +788,6 @@ function init(){
 }
 const tabs=document.querySelectorAll('.tab'),panels=document.querySelectorAll('.panel');
 tabs.forEach(t=>t.addEventListener('click',()=>{tabs.forEach(x=>x.classList.remove('active'));panels.forEach(x=>x.classList.remove('active'));t.classList.add('active');document.getElementById('tab-'+t.dataset.tab).classList.add('active');state.activeTab=t.dataset.tab;persistPreferences();requestAnimationFrame(renderCharts)}));
-document.querySelectorAll('.chip').forEach(b=>b.addEventListener('click',()=>{document.querySelectorAll('.chip').forEach(x=>x.classList.remove('active'));b.classList.add('active');const w=Number(b.dataset.window||0);state.window=w>0?w:null;persistPreferences();renderAll()}));
 document.querySelectorAll('.filters select').forEach(sel=>{const label=sel.getAttribute('aria-label');sel.addEventListener('change',()=>{const v=sel.value;if(label==='Канал')state.channel=v;else if(label==='Сценарий')state.scenario=v;else if(label==='Роль'){state.role=v;if(state.activeTab==='overview'&&ROLE_PROFILES[v]?.recommendedTab)state.activeTab=ROLE_PROFILES[v].recommendedTab};persistPreferences();renderAll()})});
 document.getElementById('themeToggle').addEventListener('click',()=>{const root=document.documentElement;root.dataset.theme=root.dataset.theme==='dark'?'light':'dark';persistPreferences();requestAnimationFrame(renderCharts)});
 document.querySelectorAll('#inputIssuedRate,#inputLtvFactor,#inputAnnualDiscount,#inputRepeatTarget').forEach(input=>input.addEventListener('input',renderModelDirtyState));
