@@ -765,7 +765,7 @@ function renderContextualViews(){
  const topChannel=channelByRoi.slice().sort((a,b)=>b.roi-a.roi)[0];
  const weakChannel=channelByRoi.slice().sort((a,b)=>a.roi-b.roi)[0];
  const yoy=revenue[0]?(revenue[revenue.length-1]/revenue[0]):0;
- const profitSeries=fRev.map((v,i)=>v-fCost[i]);
+ const profitSeries=ch.rev.map((v,i)=>v-ch.cost[i]);
  const profitCompare=comparePeriods(profitSeries);
  document.getElementById('execGrid').innerHTML=[
   {id:'revenue',tone:'good',tag:'итог',label:'Прибыль за весь план',value:mln(sum(sliceWindow(ch.rev))-sum(sliceWindow(ch.cost))),sub:'рост 2-й половины к 1-й '+(formatDelta(profitCompare.delta)?.text||'—')},
