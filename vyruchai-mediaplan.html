@@ -137,11 +137,11 @@ tbody tr.row-margin td:first-child{color:var(--violet);box-shadow:inset 3px 0 0 
 /* ---------- Charts ---------- */
 canvas{display:block;width:100%;max-width:100%;height:auto;cursor:crosshair}
 .chart-card{min-height:0}
-.chart-card .chart-box{position:relative;width:100%;height:282px}
-.cost-mix-card .chart-box{height:380px}
+.chart-card .chart-box{position:relative;width:100%;height:300px}
+.cost-mix-card .chart-box{height:400px}
 .chart-card canvas{height:100%!important}
-@media(max-width:980px){.chart-card .chart-box{height:250px}}
-@media(max-width:560px){.chart-card .chart-box{height:220px}}
+@media(max-width:980px){.chart-card .chart-box{height:264px}}
+@media(max-width:560px){.chart-card .chart-box{height:236px}}
 .chart-tooltip{position:absolute;pointer-events:none;background:color-mix(in srgb,var(--surface) 94%,transparent);backdrop-filter:saturate(180%) blur(16px);border:1px solid var(--line);border-radius:14px;padding:11px 13px;box-shadow:var(--shadow);font-size:12px;min-width:148px;opacity:0;transform:translate(-50%,calc(-100% - 12px));transition:opacity .15s var(--ease);z-index:5}
 .chart-tooltip.show{opacity:1}
 .chart-tooltip .tt-title{font-weight:700;letter-spacing:-.01em;margin-bottom:7px;color:var(--text)}
@@ -197,16 +197,78 @@ canvas{display:block;width:100%;max-width:100%;height:auto;cursor:crosshair}
 .action:hover{border-color:var(--blue);color:var(--blue);box-shadow:var(--shadow-soft)}
 
 /* ---------- Funnel ---------- */
-.flow{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:var(--gap)}
-.step{border:1px solid var(--line);border-radius:var(--radius-sm);padding:18px;background:var(--surface);box-shadow:var(--shadow-soft)}
-.step b{display:block;font-size:23px;letter-spacing:-.03em;font-variant-numeric:tabular-nums}
-.step span{color:var(--muted);font-size:12px}
+.flow{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:var(--gap)}
+.step{position:relative;border:1px solid var(--line);border-radius:var(--radius-sm);padding:18px;background:var(--surface);box-shadow:var(--shadow-soft);display:flex;flex-direction:column;gap:7px}
+.step b{display:block;font-size:23px;letter-spacing:-.03em;font-variant-numeric:tabular-nums;line-height:1.05}
+.step .step-name{color:var(--muted);font-size:12px;line-height:1.35;min-height:32px}
+.step .conv-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:auto}
+.step .conv-badge{font-size:11px;font-weight:700;font-variant-numeric:tabular-nums;border-radius:980px;padding:3px 9px;white-space:nowrap}
+.step .conv-step{background:color-mix(in srgb,var(--blue) 12%,transparent);color:var(--blue)}
+.step .conv-step.drop{background:color-mix(in srgb,var(--orange) 16%,transparent);color:var(--orange)}
+.step .conv-top{background:var(--surface-3);color:var(--muted)}
+.step .progress{margin-top:4px}
+
+/* Мини-воронки в сравнении сценариев (Обычная / AI / SOS) */
+.flow-funnel{display:grid;gap:7px;margin-top:4px}
+.flow-step{display:grid;grid-template-columns:1fr auto;gap:4px 10px;align-items:center}
+.flow-step .fs-name{color:var(--muted);font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.flow-step .fs-val{font-variant-numeric:tabular-nums;font-weight:600;font-size:12.5px;text-align:right}
+.flow-step .fs-track{grid-column:1/-1;height:7px;border-radius:980px;background:var(--surface-3);overflow:hidden}
+.flow-step .fs-track>span{display:block;height:100%;border-radius:980px;background:linear-gradient(90deg,var(--blue),color-mix(in srgb,var(--blue) 60%,var(--violet)))}
+.scenario-card.is-ai .flow-step .fs-track>span{background:linear-gradient(90deg,var(--green),color-mix(in srgb,var(--green) 55%,var(--blue)))}
+.scenario-card.is-sos .flow-step .fs-track>span{background:linear-gradient(90deg,var(--violet),color-mix(in srgb,var(--violet) 55%,var(--blue)))}
+.scenario-stats{display:grid;grid-template-columns:1fr 1fr;gap:8px 14px;margin-top:6px}
+.scenario-stats .st{display:flex;justify-content:space-between;gap:10px;font-size:12.5px}
+.scenario-stats .st span{color:var(--muted)}
+.scenario-stats .st b{font-variant-numeric:tabular-nums}
 
 /* Drag-to-scroll: горизонтальное перетаскивание зажатой левой кнопкой мыши (для широких таблиц вроде PNL). */
 .table-wrap.drag-scroll{cursor:grab;user-select:none;-webkit-user-select:none}
 .table-wrap.drag-scroll.is-dragging{cursor:grabbing;scroll-behavior:auto}
 .table-wrap.drag-scroll.is-dragging *{pointer-events:none}
 .divider-title{font-size:22px;letter-spacing:-.03em;margin:6px 0 -4px;font-weight:700}
+
+/* ---------- Routing / Cross-ID tab ---------- */
+.route-hero{background:linear-gradient(165deg,var(--surface),var(--surface-2))}
+.route-lead{margin:-6px 0 0;color:var(--muted);font-size:14px;max-width:920px;line-height:1.5}
+.route-goals{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-top:6px}
+.route-goal{border:1px solid var(--line);border-radius:var(--radius-xs);padding:14px 16px;background:var(--surface);display:flex;gap:12px;align-items:flex-start}
+.route-goal .rg-num{flex:0 0 auto;width:26px;height:26px;border-radius:50%;display:grid;place-items:center;font-weight:700;font-size:13px;color:#fff;background:linear-gradient(150deg,var(--blue),var(--violet))}
+.route-goal .rg-text{font-size:13px;line-height:1.42;color:var(--text)}
+.route-status-grid{grid-template-columns:repeat(3,minmax(0,1fr))}
+.status-card{border:1px solid var(--line);border-left-width:4px;border-radius:var(--radius-sm);padding:18px;background:var(--surface);box-shadow:var(--shadow-soft);display:flex;flex-direction:column;gap:9px}
+.status-card .sc-head{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.status-card code{font-family:"SF Mono",ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:12.5px;font-weight:700;letter-spacing:-.01em;background:var(--surface-3);border-radius:7px;padding:3px 8px}
+.status-card .sc-title{font-size:13.5px;font-weight:650}
+.status-card .sc-logic{font-size:13px;color:var(--muted);line-height:1.48}
+.status-card.s-target{border-left-color:var(--green)}
+.status-card.s-active{border-left-color:var(--blue)}
+.status-card.s-rejected{border-left-color:var(--red)}
+.status-card.s-noncore{border-left-color:var(--orange)}
+.status-card.s-notfound{border-left-color:var(--faint)}
+.route-flow{display:flex;flex-direction:column;gap:0}
+.route-flow .rf-tag{font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
+.route-step{position:relative;padding:0 0 18px 34px}
+.route-step:last-child{padding-bottom:0}
+.route-step::before{content:attr(data-n);position:absolute;left:0;top:0;width:24px;height:24px;border-radius:50%;background:linear-gradient(150deg,var(--blue),var(--violet));color:#fff;font-size:12px;font-weight:700;display:grid;place-items:center}
+.route-step::after{content:"";position:absolute;left:11px;top:26px;bottom:2px;width:2px;background:var(--line-strong)}
+.route-step:last-child::after{display:none}
+.route-step .rs-title{font-size:13.5px;font-weight:600}
+.route-step .rs-text{font-size:13px;color:var(--muted);line-height:1.48;margin-top:2px}
+.code-block{background:var(--surface-3);border:1px solid var(--line);border-radius:var(--radius-xs);padding:14px 16px;overflow:auto;margin:0}
+.code-block pre{margin:0;font-family:"SF Mono",ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:12px;line-height:1.55;color:var(--text);white-space:pre;tab-size:2}
+.code-block .c-method{color:var(--violet);font-weight:700}
+.code-block .c-key{color:var(--blue)}
+.code-block .c-str{color:var(--green)}
+.endpoint-card .ep-name{font-size:13px;color:var(--muted);margin:0 0 10px}
+.route-criteria{display:grid;gap:10px}
+#routeAnalyticsTable td{white-space:normal}
+#routeAnalyticsTable td:first-child{font-family:"SF Mono",ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-weight:600}
+.criterion{display:flex;gap:12px;align-items:flex-start;font-size:13.5px;line-height:1.45}
+.criterion .ck{flex:0 0 auto;width:22px;height:22px;border-radius:7px;display:grid;place-items:center;background:color-mix(in srgb,var(--green) 16%,transparent);color:var(--green);font-weight:800;font-size:13px}
+@media(max-width:980px){.route-goals{grid-template-columns:1fr 1fr}.route-status-grid{grid-template-columns:1fr}}
+@media(max-width:560px){.route-goals{grid-template-columns:1fr}}
+
 
 /* ---------- Drawer ---------- */
 .drawer{position:fixed;top:0;right:0;bottom:0;width:min(480px,100%);background:var(--surface);border-left:1px solid var(--line);box-shadow:var(--shadow);transform:translateX(105%);transition:transform .26s var(--ease);z-index:50;padding:26px;overflow:auto}
@@ -262,6 +324,7 @@ canvas{display:block;width:100%;max-width:100%;height:auto;cursor:crosshair}
       <button class="tab" data-tab="jtbd">JTBD</button>
       <button class="tab" data-tab="ai">AI/SOS</button>
       <button class="tab" data-tab="partners">Партнёры</button>
+      <button class="tab" data-tab="routing">Маршрутизация</button>
       <button class="tab" data-tab="retention">Повторные продажи</button>
       <button class="tab" data-tab="unit">Юнит-экономика</button>
       <button class="tab" data-tab="experiments">Эксперименты</button>
@@ -291,11 +354,11 @@ canvas{display:block;width:100%;max-width:100%;height:auto;cursor:crosshair}
       <h2 class="divider-title">Управляющие вводные</h2>
       <div class="grid two">
         <div class="card">
-          <div class="card-title"><div><h2>Допущения модели</h2><p>Параметры, из которых пересчитываются выдачи, LTV и дисконтированная окупаемость</p></div><div class="toolbar-inline"><span class="toolbar-note" id="modelDirtyState">Все изменения сохранены</span><button class="ghost-btn" id="resetModelInputs" type="button">Сбросить</button><button class="ghost-btn" id="saveModelInputs" type="button">Сохранить вводные</button></div></div>
+          <div class="card-title"><div><h2>Допущения модели</h2><p>Параметры, из которых пересчитываются выдачи, LTV и окупаемость по фикс-выплатам партнёров</p></div><div class="toolbar-inline"><span class="toolbar-note" id="modelDirtyState">Все изменения сохранены</span><button class="ghost-btn" id="resetModelInputs" type="button">Сбросить</button><button class="ghost-btn" id="saveModelInputs" type="button">Сохранить вводные</button></div></div>
           <div class="assumption-grid">
             <label class="field"><span>Одобрение → выдача, %</span><input id="inputIssuedRate" type="number" min="0" max="100" step="0.1" inputmode="decimal"></label>
             <label class="field"><span>Мультипликатор LTV</span><input id="inputLtvFactor" type="number" min="1" max="5" step="0.01" inputmode="decimal"></label>
-            <label class="field"><span>Ставка дисконтирования, % годовых</span><input id="inputAnnualDiscount" type="number" min="0" max="100" step="0.1" inputmode="decimal"></label>
+            <label class="field"><span>Средняя выплата партнёра за оформление, ₽</span><input id="inputPartnerPayout" type="number" min="0" max="1000000" step="50" inputmode="decimal"></label>
             <label class="field"><span>Цель по доле повторов, %</span><input id="inputRepeatTarget" type="number" min="0" max="100" step="0.1" inputmode="decimal"></label>
             <label class="field"><span>Размер базы Центрофинанса, млн профилей</span><input id="inputBaseSize" type="number" min="0" max="50" step="0.1" inputmode="decimal"></label>
             <label class="field"><span>Match-rate на интент-трафике, %</span><input id="inputMatchRate" type="number" min="0" max="100" step="0.1" inputmode="decimal"></label>
@@ -414,6 +477,33 @@ canvas{display:block;width:100%;max-width:100%;height:auto;cursor:crosshair}
         <div class="table-wrap"><table id="partnerMethodTable"></table></div>
         <p class="muted" style="margin-top:12px">Бенчмарки взяты из публичных источников: ЦБ РФ (статистика МФО и необеспеченного кредитования), Frank RG (банковский ритейл), отчёты CPA-сетей (Leads.su, Lead-R, Mixmarket) и ретро-данных Центрофинанса по PDL-сегменту. Все плановые показатели пересчитываются при обновлении входов модели на вкладке «Целевая модель».</p>
       </div>
+    </section>
+
+    <section id="tab-routing" class="panel">
+      <div class="card route-hero">
+        <div class="card-title"><div><span class="eyebrow">Epic · S2S-интеграция</span><h2>Маршрутизация и кросс-идентификация трафика</h2><p>Центрофинанс ⇄ Выручай.ру. Маркетплейс — агрегатор и прокси-витрина базы ЦФ: забираем лучших лидов в ЦФ, монетизируем отказной и непрофильный трафик через CPA, исключаем перекредитованность и гарантируем безопасность базы.</p></div></div>
+        <div class="route-goals" id="routeGoals"></div>
+      </div>
+
+      <h2 class="divider-title">1. Статусы пользователей (CF Client Statuses)</h2>
+      <p class="route-lead">API Центрофинанса возвращает один из статусов при проверке номера (или токена). От статуса зависит, как Offers Engine собирает витрину.</p>
+      <div class="grid route-status-grid" id="routeStatuses"></div>
+
+      <h2 class="divider-title">2. Пути взаимодействия (User Flows)</h2>
+      <div class="grid two" id="routeFlows"></div>
+
+      <h2 class="divider-title">3. Контракты S2S API</h2>
+      <div class="card"><div class="card-title"><div><h3>Безопасность и хеширование</h3><p>Базовые правила обмена с API ЦФ</p></div></div><ul class="rationale-list" id="routeSecurity"></ul></div>
+      <div class="grid two" id="routeEndpoints"></div>
+
+      <h2 class="divider-title">4. Аналитика и поля в БД</h2>
+      <div class="grid two">
+        <div class="card"><div class="card-title"><div><h3>Поля сессии/лида для сквозной unit-экономики</h3><p>Сохраняются при входе на маркетплейс</p></div></div><div class="table-wrap" style="border:0;box-shadow:none"><table id="routeAnalyticsTable"></table></div></div>
+        <div class="card"><div class="card-title"><div><h3>Логика CAC по базе ЦФ</h3><p>Маржа с CPA-сделок по базе ЦФ идёт в чистый PnL</p></div></div><ul class="rationale-list" id="routeCacNote"></ul></div>
+      </div>
+
+      <h2 class="divider-title">5. Критерии приёмки</h2>
+      <div class="card"><div class="route-criteria" id="routeCriteria"></div></div>
     </section>
 
     <section id="tab-retention" class="panel">
