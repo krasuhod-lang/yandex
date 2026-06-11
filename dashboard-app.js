@@ -985,11 +985,11 @@ const ROUTE_GOALS=[
  'Гарантировать безопасность базы ЦФ — никаких прямых сливов конкурентам.'
 ];
 const ROUTE_STATUSES=[
- {cls:'s-target',code:'CF_TARGET',title:'Подходит для ЦФ',desc:'Идеальный профиль, хорошая КИ.',logic:'Маршрутизация сделки в ЦФ. Оффер ЦФ на 1-м месте или «режим SOS» (эксклюзивная выдача в ЦФ). Остальные МФО скрыты.',out:'Оффер ЦФ №1 или SOS-режим (эксклюзив ЦФ)'},
- {cls:'s-active',code:'CF_ACTIVE',title:'Действующий клиент ЦФ',desc:'Уже есть активный заём / долг.',logic:'Запрет на конкуренцию: все МФО-конкуренты полностью скрыты. Показываем смежные продукты — РКО, карты, страхование, рефинансирование в банках.',out:'Конкуренты скрыты, смежные продукты (РКО, карты, рефинанс)'},
- {cls:'s-rejected',code:'CF_REJECTED',title:'Отказник ЦФ',desc:'ЦФ отклонил заявку по скорингу / КИ.',logic:'Полная свобода монетизации. Оффер ЦФ скрыт. Витрина из МФО-партнёров, готовых кредитовать с плохой КИ. Сделка уходит по CPA.',out:'CPA-витрина МФО, оффер ЦФ скрыт'},
- {cls:'s-noncore',code:'CF_NON_CORE',title:'Непрофильный для ЦФ',desc:'Ипотека, автокредит или сумма > лимита ЦФ.',logic:'Свободная монетизация по смежным вертикалям. Оффер ЦФ скрыт. Показываем целевые банковские продукты (ипотека, автокредит, залог).',out:'Банковские продукты: ипотека, автокредит, залог'},
- {cls:'s-notfound',code:'NOT_FOUND',title:'Новый (органический) трафик',desc:'В базе ЦФ не числится.',logic:'Стандартная витрина. ЦФ участвует на общих основаниях (priority-размещение), конкуренты также доступны.',out:'Стандартная витрина, ЦФ на общих основаниях'}
+ {cls:'s-target',code:'Целевой клиент',title:'Подходит для ЦФ',desc:'Идеальный профиль, хорошая КИ.',logic:'Маршрутизация сделки в ЦФ. Оффер ЦФ на 1-м месте или «режим SOS» (эксклюзивная выдача в ЦФ). Остальные МФО скрыты.',out:'Оффер ЦФ №1 или SOS-режим (эксклюзив ЦФ)'},
+ {cls:'s-active',code:'Действующий клиент',title:'Действующий клиент ЦФ',desc:'Уже есть активный заём / долг.',logic:'Запрет на конкуренцию: все МФО-конкуренты полностью скрыты. Показываем смежные продукты — РКО, карты, страхование, рефинансирование в банках.',out:'Конкуренты скрыты, смежные продукты (РКО, карты, рефинанс)'},
+ {cls:'s-rejected',code:'Отказ ЦФ',title:'Отказник ЦФ',desc:'ЦФ отклонил заявку по скорингу / КИ.',logic:'Полная свобода монетизации. Оффер ЦФ скрыт. Витрина из МФО-партнёров, готовых кредитовать с плохой КИ. Сделка уходит по CPA.',out:'CPA-витрина МФО, оффер ЦФ скрыт'},
+ {cls:'s-noncore',code:'Непрофильный',title:'Непрофильный для ЦФ',desc:'Продукт / сумма / срок вне профиля ЦФ.',logic:'Лид не подходит ЦФ — продаём его другим МФО. Оффер ЦФ скрыт, показываем CPA-витрину партнёрских МФО, готовых выдать заём. Сделка уходит по CPA.',out:'Продаём другим МФО — CPA-витрина партнёров'},
+ {cls:'s-notfound',code:'Новый клиент',title:'Новый (органический) трафик',desc:'В базе ЦФ не числится.',logic:'Стандартная витрина. ЦФ участвует на общих основаниях (priority-размещение), конкуренты также доступны.',out:'Стандартная витрина, ЦФ на общих основаниях'}
 ];
 const ROUTE_FLOWS=[
  {tag:'Flow A · «Тёплый» трафик (push от ЦФ)',lead:'Инициатор — сервер ЦФ. Клиент подал заявку на сайте/в офисе ЦФ и получил отказ.',steps:[
@@ -1078,8 +1078,8 @@ function renderRoutingDiagram(){
   box(370,272,460,64,'rd-hub','<span class="rd-t">S2S API Центрофинанса</span><span class="rd-s">POST check-hash / get-profile · только Server-to-Server</span>')
  ].join('');
  const diamond=`<polygon class="rd-diamond" points="600,354 720,410 600,466 480,410"/>`+
-  `<foreignObject x="486" y="358" width="228" height="104"><div xmlns="${NS}" class="rd-decision-label"><span class="rd-t">CF status?</span><span class="rd-s">Offers Engine применяет правила маршрутизации</span></div></foreignObject>`;
- const outputs=ROUTE_STATUSES.map((s,i)=>box(outCx[i]-106,540,212,104,`rd-out ${outCls[s.cls]||''}`,`<code>${escapeHtml(s.code)}</code><span class="rd-s">${escapeHtml(s.out)}</span>`)).join('');
+  `<foreignObject x="486" y="358" width="228" height="104"><div xmlns="${NS}" class="rd-decision-label"><span class="rd-t">Какой статус клиента?</span><span class="rd-s">Offers Engine применяет правила маршрутизации</span></div></foreignObject>`;
+ const outputs=ROUTE_STATUSES.map((s,i)=>box(outCx[i]-106,540,212,104,`rd-out ${outCls[s.cls]||''}`,`<span class="rd-tag">${escapeHtml(s.code)}</span><span class="rd-s">${escapeHtml(s.out)}</span>`)).join('');
  const edges=[
   edge('M300,100 V128 H540 V156'),
   edge('M900,100 V128 H660 V156'),
@@ -1102,7 +1102,7 @@ function renderRouting(){
  if(!goals)return;
  goals.innerHTML=ROUTE_GOALS.map((g,i)=>`<div class="route-goal"><span class="rg-num">${i+1}</span><span class="rg-text">${escapeHtml(g)}</span></div>`).join('');
  renderRoutingDiagram();
- document.getElementById('routeStatuses').innerHTML=ROUTE_STATUSES.map(s=>`<div class="status-card ${s.cls}"><div class="sc-head"><code>${escapeHtml(s.code)}</code><span class="sc-title">${escapeHtml(s.title)}</span></div><div class="metric-sub">${escapeHtml(s.desc)}</div><div class="sc-logic">${escapeHtml(s.logic)}</div></div>`).join('');
+ document.getElementById('routeStatuses').innerHTML=ROUTE_STATUSES.map(s=>`<div class="status-card ${s.cls}"><div class="sc-head"><span class="sc-tag">${escapeHtml(s.code)}</span><span class="sc-title">${escapeHtml(s.title)}</span></div><div class="metric-sub">${escapeHtml(s.desc)}</div><div class="sc-logic">${escapeHtml(s.logic)}</div></div>`).join('');
  document.getElementById('routeFlows').innerHTML=ROUTE_FLOWS.map(f=>`<div class="card"><div class="card-title"><div><span class="rf-tag">${escapeHtml(f.tag)}</span><p style="margin:6px 0 0;color:var(--muted);font-size:13px">${escapeHtml(f.lead)}</p></div></div><div class="route-flow">${f.steps.map((st,i)=>`<div class="route-step" data-n="${i+1}"><div class="rs-title">${escapeHtml(st[0])}</div><div class="rs-text">${escapeHtml(st[1])}</div></div>`).join('')}</div></div>`).join('');
  document.getElementById('routeSecurity').innerHTML=ROUTE_SECURITY.map(p=>`<li>${p}</li>`).join('');
  document.getElementById('routeEndpoints').innerHTML=ROUTE_ENDPOINTS.map(e=>`<div class="card endpoint-card"><div class="card-title"><div><h3>${escapeHtml(e.title)}</h3></div></div><p class="ep-name">${escapeHtml(e.name)}</p><div class="code-block"><pre>${e.code}</pre></div></div>`).join('');

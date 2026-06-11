@@ -238,14 +238,22 @@ canvas{display:block;width:100%;max-width:100%;height:auto;cursor:crosshair}
 .route-status-grid{grid-template-columns:repeat(3,minmax(0,1fr))}
 .status-card{border:1px solid var(--line);border-left-width:4px;border-radius:var(--radius-sm);padding:18px;background:var(--surface);box-shadow:var(--shadow-soft);display:flex;flex-direction:column;gap:9px}
 .status-card .sc-head{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
-.status-card code{font-family:"SF Mono",ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:12.5px;font-weight:700;letter-spacing:-.01em;background:var(--surface-3);border-radius:7px;padding:3px 8px}
+.status-card .sc-tag{font-size:12px;font-weight:700;letter-spacing:-.01em;border-radius:980px;padding:3px 11px;background:var(--surface-3);color:var(--ink);transition:transform .2s var(--ease)}
+.status-card:hover .sc-tag{transform:translateY(-1px)}
 .status-card .sc-title{font-size:13.5px;font-weight:650}
 .status-card .sc-logic{font-size:13px;color:var(--muted);line-height:1.48}
+.status-card{transition:transform .22s var(--ease),box-shadow .22s var(--ease),border-color .22s var(--ease)}
+.status-card:hover{transform:translateY(-3px);box-shadow:var(--shadow)}
 .status-card.s-target{border-left-color:var(--green)}
+.status-card.s-target .sc-tag{background:color-mix(in srgb,var(--green) 16%,transparent);color:var(--green)}
 .status-card.s-active{border-left-color:var(--blue)}
+.status-card.s-active .sc-tag{background:color-mix(in srgb,var(--blue) 16%,transparent);color:var(--blue)}
 .status-card.s-rejected{border-left-color:var(--red)}
+.status-card.s-rejected .sc-tag{background:color-mix(in srgb,var(--red) 16%,transparent);color:var(--red)}
 .status-card.s-noncore{border-left-color:var(--orange)}
+.status-card.s-noncore .sc-tag{background:color-mix(in srgb,var(--orange) 16%,transparent);color:var(--orange)}
 .status-card.s-notfound{border-left-color:var(--faint)}
+.status-card.s-notfound .sc-tag{background:color-mix(in srgb,var(--faint) 18%,transparent);color:var(--muted)}
 .route-flow{display:flex;flex-direction:column;gap:0}
 .route-flow .rf-tag{font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
 .route-step{position:relative;padding:0 0 18px 34px}
@@ -275,7 +283,10 @@ canvas{display:block;width:100%;max-width:100%;height:auto;cursor:crosshair}
 .route-diagram .rd-box{height:100%;box-sizing:border-box;border:1px solid var(--line-strong);border-radius:14px;background:var(--surface);box-shadow:var(--shadow-soft);padding:9px 13px;display:flex;flex-direction:column;justify-content:center;gap:3px;overflow:hidden}
 .route-diagram .rd-box .rd-t{font-size:13px;font-weight:650;letter-spacing:-.01em;line-height:1.2}
 .route-diagram .rd-box .rd-s{font-size:11px;color:var(--muted);line-height:1.32}
-.route-diagram .rd-box code{font-family:"SF Mono",ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:11px;font-weight:700;background:var(--surface-3);border-radius:6px;padding:2px 6px}
+.route-diagram .rd-box .rd-tag{align-self:flex-start;font-size:11.5px;font-weight:700;letter-spacing:-.01em;border-radius:980px;padding:2px 9px;background:var(--surface-3);color:var(--ink)}
+.route-diagram .rd-box{transition:transform .24s var(--ease),box-shadow .24s var(--ease),border-color .24s var(--ease)}
+.route-diagram .rd-box:hover{transform:translateY(-3px) scale(1.025);box-shadow:var(--shadow);border-color:var(--blue);z-index:2}
+.route-diagram .rd-box.rd-out:hover{transform:translateY(-4px) scale(1.035)}
 .route-diagram .rd-box.rd-entry{background:linear-gradient(165deg,var(--surface),var(--surface-2))}
 .route-diagram .rd-box.rd-hub{border-color:var(--blue);background:color-mix(in srgb,var(--blue) 7%,var(--surface))}
 .route-diagram .rd-box.rd-out{border-top-width:4px}
@@ -284,6 +295,33 @@ canvas{display:block;width:100%;max-width:100%;height:auto;cursor:crosshair}
 .route-diagram .rd-box.rd-out.c-rejected{border-top-color:var(--red)}
 .route-diagram .rd-box.rd-out.c-noncore{border-top-color:var(--orange)}
 .route-diagram .rd-box.rd-out.c-notfound{border-top-color:var(--faint)}
+.route-diagram .c-target .rd-tag{background:color-mix(in srgb,var(--green) 16%,transparent);color:var(--green)}
+.route-diagram .c-active .rd-tag{background:color-mix(in srgb,var(--blue) 16%,transparent);color:var(--blue)}
+.route-diagram .c-rejected .rd-tag{background:color-mix(in srgb,var(--red) 16%,transparent);color:var(--red)}
+.route-diagram .c-noncore .rd-tag{background:color-mix(in srgb,var(--orange) 16%,transparent);color:var(--orange)}
+.route-diagram .c-notfound .rd-tag{background:color-mix(in srgb,var(--faint) 18%,transparent);color:var(--muted)}
+/* animated «flowing» connectors */
+.route-diagram .rd-edge{stroke-dasharray:7 6;animation:rdFlow 1.15s linear infinite}
+@keyframes rdFlow{to{stroke-dashoffset:-26}}
+.route-diagram svg:hover .rd-edge{stroke:var(--blue);animation-duration:.7s}
+.route-diagram svg:hover .rd-arrow{fill:var(--blue)}
+/* pulsing decision node */
+.route-diagram .rd-diamond{animation:rdPulse 2.6s ease-in-out infinite}
+@keyframes rdPulse{0%,100%{filter:none}50%{filter:drop-shadow(0 0 7px color-mix(in srgb,var(--violet) 55%,transparent))}}
+/* staggered entrance for blocks */
+.route-diagram foreignObject{overflow:visible;animation:rdAppear .5s var(--ease) both}
+.route-diagram foreignObject:nth-of-type(2){animation-delay:.07s}
+.route-diagram foreignObject:nth-of-type(3){animation-delay:.14s}
+.route-diagram foreignObject:nth-of-type(4){animation-delay:.21s}
+.route-diagram foreignObject:nth-of-type(5){animation-delay:.28s}
+.route-diagram foreignObject:nth-of-type(6){animation-delay:.35s}
+.route-diagram foreignObject:nth-of-type(7){animation-delay:.42s}
+.route-diagram foreignObject:nth-of-type(n+8){animation-delay:.49s}
+@keyframes rdAppear{from{opacity:0}to{opacity:1}}
+@media(prefers-reduced-motion:reduce){
+  .route-diagram .rd-edge,.route-diagram .rd-diamond,.route-diagram foreignObject{animation:none}
+  .route-diagram .rd-box,.status-card,.status-card .sc-tag{transition:none}
+}
 .route-diagram .rd-diamond{fill:color-mix(in srgb,var(--violet) 10%,var(--surface));stroke:var(--violet);stroke-width:2}
 .route-diagram .rd-decision-label{height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;gap:2px}
 .route-diagram .rd-decision-label .rd-t{font-size:13px;font-weight:700}
