@@ -76,10 +76,10 @@ class Chart{
   const values=datasets.flatMap(ds=>(ds.data||[]).map(Number)).filter(Number.isFinite);
   const rawMin=Math.min(0,...values), rawMax=Math.max(1,...values);
   const {ticks,min,max}=niceTicks(rawMin,rawMax,5);
-  ctx.font='11px '+chartFont();
+  ctx.font='12px '+chartFont();
   const yLabelW=Math.max(...ticks.map(t=>ctx.measureText(shortNum(t)).width),28);
-  const padL=Math.ceil(yLabelW)+12;
-  const padR=16;
+  const padL=Math.ceil(yLabelW)+16;
+  const padR=20;
   ctx.font='12px '+chartFont();
   const legendItems=datasets.filter(ds=>ds.label).map(ds=>{
    const rawColor=ds.borderColor||(Array.isArray(ds.backgroundColor)?ds.backgroundColor[0]:ds.backgroundColor)||colors.blue;
@@ -99,7 +99,7 @@ class Chart{
    legendH=ly+rowH;
   }
   const rotateX=labels.some(label=>String(label).length>4)||labels.length>8;
-  const xLabelH=rotateX?42:24;
+  const xLabelH=rotateX?52:30;
   // Зазор между блоком легенды и областью графика, чтобы подписи рядов не наезжали на сам график.
   const legendGap=legendItems.length?12:0;
   const pad={l:padL,r:padR,t:8+legendH+legendGap,b:xLabelH};
@@ -114,14 +114,14 @@ class Chart{
   const y0=scale(0);
   const prog=Math.max(0,Math.min(1,this.progress));
   // gridlines + Y labels
-  ctx.font='11px '+chartFont();ctx.textBaseline='middle';
-  ticks.forEach(t=>{const y=scale(t);ctx.strokeStyle=t===0?colors.line:colors.line+'66';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(pad.l,y);ctx.lineTo(width-pad.r,y);ctx.stroke();ctx.fillStyle=colors.muted;ctx.textAlign='right';ctx.fillText(shortNum(t),pad.l-8,y)});
+  ctx.font='12px '+chartFont();ctx.textBaseline='middle';
+  ticks.forEach(t=>{const y=scale(t);ctx.strokeStyle=t===0?colors.line:colors.line+'66';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(pad.l,y);ctx.lineTo(width-pad.r,y);ctx.stroke();ctx.fillStyle=colors.muted;ctx.textAlign='right';ctx.fillText(shortNum(t),pad.l-10,y)});
   // X axis labels
-  ctx.textBaseline='alphabetic';ctx.textAlign='center';ctx.fillStyle=colors.muted;
+  ctx.font='12px '+chartFont();ctx.textBaseline='alphabetic';ctx.textAlign='center';ctx.fillStyle=colors.muted;
   const maxLabelWidth=Math.max(...labels.map(label=>ctx.measureText(String(label)).width),24);
-  const approxSpan=rotateX?22:maxLabelWidth+14;
+  const approxSpan=rotateX?24:maxLabelWidth+16;
   const step=Math.max(1,Math.ceil(labels.length*approxSpan/Math.max(plotW,1)));
-  labels.forEach((label,i)=>{if(i%step!==0&&i!==labels.length-1)return;const x=labels.length===1?pad.l+plotW/2:pad.l+(i/(labels.length-1))*plotW;const s=String(label);ctx.save();ctx.translate(x,height-(rotateX?8:6));if(rotateX){ctx.rotate(-Math.PI/6);ctx.textAlign='right';ctx.fillText(s,0,0)}else{ctx.fillText(s,0,0)}ctx.restore()});
+  labels.forEach((label,i)=>{if(i%step!==0&&i!==labels.length-1)return;const x=labels.length===1?pad.l+plotW/2:pad.l+(i/(labels.length-1))*plotW;const s=String(label);ctx.save();ctx.translate(x,height-(rotateX?10:9));if(rotateX){ctx.rotate(-Math.PI/6);ctx.textAlign='right';ctx.fillText(s,0,0)}else{ctx.fillText(s,0,0)}ctx.restore()});
   const barSets=datasets.filter(ds=>(ds.type||cfg.type)!=='line'), lineSets=datasets.filter(ds=>(ds.type||cfg.type)==='line');
   const stacked=!!cfg.stacked;
   const groupW=plotW/Math.max(labels.length,1);
@@ -317,7 +317,8 @@ const CHANNELS={
  'PR':{rev:revenuePR,cost:expensesPR,traffic:trafficPR,epc:channelEpc(revenuePR,trafficPR),label:'PR'},
  'Повторный':{rev:revenueRepeat,cost:expensesRepeat,traffic:repeat,epc:revenueRepeat.map((v,i)=>repeat[i]?v/repeat[i]:0),label:'CRM / повторные'}
 };
-// Дисконтирование денежных потоков: накопленная дисконтированная прибыль считается в функции cumulativeDiscounted() ниже в логике рендера.
+// Модель оплаты — CPA: партнёр платит фиксированную сумму за каждый оформленный продукт (заём/кредит/ипотека и др.).
+// Годовых ставок дисконтирования нет, поэтому окупаемость считаем по накопленным денежным потокам без NPV.
 
 // Декомпозиция расходов: общий expenses[] = бюджеты каналов + ФОТ + инфраструктура.
 // "Прочее" = expenses - (Директ + SEO + PR). Делим на ФОТ (≈70%) и Инфраструктура/прочее (≈30%).
@@ -349,9 +350,10 @@ const productTotals=Object.fromEntries(PRODUCT_MIX.map(p=>[p.key,totals.revenue*
 // Доля одобрений канала ≈ доля выручки канала; выдачи = одобрения × ISSUED_TO_APPROVAL_RATE.
 const STORAGE_VERSION='v2';
 const STORAGE_KEYS={prefs:`vyruchai-dashboard-prefs-${STORAGE_VERSION}`,model:`vyruchai-dashboard-model-${STORAGE_VERSION}`,actions:`vyruchai-dashboard-actions-${STORAGE_VERSION}`};
-// Базовые допущения demo-модели: 76% одобрений доходят до выдачи, LTV выше базовой выручки в 1.34x, NPV считаем от 20% годовых, цель repeat-share — 6%.
+// Базовые допущения demo-модели: 76% одобрений доходят до выдачи, LTV выше базовой выручки в 1.34x,
+// фиксированная выплата партнёра за оформление ≈ 2400 ₽ (годовых ставок в модели нет — оплата за факт сделки), цель repeat-share — 6%.
 // Размер базы Центрофинанса и match-rate — вводимые менеджером оценки (нет публичного бенчмарка).
-const DEFAULT_MODEL_INPUTS={issuedToApprovalRate:0.76,ltvFactor:1.34,annualDiscountRate:0.20,targetRepeatShare:0.06,centrofinansBaseSize:1.5,centrofinansMatchRate:0.42};
+const DEFAULT_MODEL_INPUTS={issuedToApprovalRate:0.76,ltvFactor:1.34,partnerPayout:2400,targetRepeatShare:0.06,centrofinansBaseSize:1.5,centrofinansMatchRate:0.42};
 // Храним 6 последних действий: этого хватает, чтобы показать недавние изменения без перегрузки control card.
 const MAX_RECENT_ACTIONS=6;
 let modelInputs={...DEFAULT_MODEL_INPUTS};
@@ -363,7 +365,7 @@ function normalizeModelInputs(raw){
  return {
   issuedToApprovalRate:clamp(Number(raw?.issuedToApprovalRate)||DEFAULT_MODEL_INPUTS.issuedToApprovalRate,0,1),
   ltvFactor:clamp(Number(raw?.ltvFactor)||DEFAULT_MODEL_INPUTS.ltvFactor,1,5),
-  annualDiscountRate:clamp(Number(raw?.annualDiscountRate)||DEFAULT_MODEL_INPUTS.annualDiscountRate,0,1),
+  partnerPayout:clamp(Number(raw?.partnerPayout)||DEFAULT_MODEL_INPUTS.partnerPayout,0,1000000),
   targetRepeatShare:clamp(Number(raw?.targetRepeatShare)||DEFAULT_MODEL_INPUTS.targetRepeatShare,0,1),
   centrofinansBaseSize:clamp(Number(raw?.centrofinansBaseSize)||DEFAULT_MODEL_INPUTS.centrofinansBaseSize,0,50),
   centrofinansMatchRate:clamp(Number(raw?.centrofinansMatchRate)||DEFAULT_MODEL_INPUTS.centrofinansMatchRate,0,1)
@@ -388,10 +390,17 @@ const partners=[
  {id:'p-05',name:'Страховой партнёр',type:'CPA',status:'активен',sla:'98.8%',response:'610 мс',approval:35,issue:25,revenue:3900000,epc:84,ecpa:430,complaints:0.6,reject:'Не подходит продукт',action:'закрепить'},
  {id:'p-06',name:'МФО-партнёр №3 (контроль риска)',type:'ручной',status:'риск',sla:'88.5%',response:'4.6 с',approval:16,issue:9,revenue:1700000,epc:42,ecpa:1510,complaints:5.4,reject:'Пустые ответы',action:'пауза'}
 ];
+// Канонические шаги «Основной воронки» (значения зафиксированы по факту среза, см. вкладку «Воронки»).
+// rate — конверсия шага относительно предыдущего; используется и для процентов в основной воронке,
+// и как база для трёх продуктовых воронок (Обычная / AI / SOS) с разными множителями.
+const FUNNEL_STAGES=['Сессии','Сценарий выбран','Диагностика завершена','Рекомендации сформированы','Клик по офферу','Заявки','Одобрения','Выданные сделки'];
+const MAIN_FUNNEL=[2007235,1565643,1224413,1083907,664445,213254,64813,16203];
+// Три воронки с разным функционалом. base — единая стартовая база сессий, conv — конверсия каждого
+// шага к предыдущему (Сессии = 1.0). Числа расходятся по шагам, показывая эффект функционала.
 const flows=[
- {name:'Обычный список',users:100000,offers:5.8,approval:24,issued:17,revenue:92,time:'9 мин',note:'Широкий каталог, ниже точность'},
- {name:'AI топ-3',users:100000,offers:3,approval:32,issued:23,revenue:118,time:'4 мин',note:'Рост одобрения и выручки на пользователя'},
- {name:'SOS',users:100000,offers:2.4,approval:38,issued:29,revenue:136,time:'2 мин',note:'Ограниченная подача, меньше риск для КИ'}
+ {name:'Обычная воронка',mod:'',users:1000000,offers:5.8,approval:24,issued:17,revenue:92,time:'9 мин',note:'Широкий каталог офферов, ниже точность подбора и одобрение.',conv:[1,0.76,0.76,0.88,0.56,0.30,0.24,0.71]},
+ {name:'AI-воронка (топ-3)',mod:'is-ai',users:1000000,offers:3,approval:32,issued:23,revenue:118,time:'4 мин',note:'AI-подбор топ-3: выше завершение диагностики, CTR и одобрение.',conv:[1,0.82,0.84,0.94,0.64,0.38,0.32,0.76]},
+ {name:'SOS-воронка',mod:'is-sos',users:1000000,offers:2.4,approval:38,issued:29,revenue:136,time:'2 мин',note:'Эксклюзивная подача в 2–3 партнёра: максимум одобрений и выдач, меньше риск для КИ.',conv:[1,0.85,0.88,0.96,0.70,0.44,0.38,0.82]}
 ];
 const aiRows=[
  ['rec-2026-001','До зарплаты','Центрофинанс API, МФО-партнёр №2, Эмитент карт','стабильный доход, быстрое решение',0.74,'одобрено',18.6,41,96],
@@ -499,10 +508,10 @@ const ROLE_PROFILES={
  'Операции':{label:'Операции',focusChannels:['SEO','Яндекс.Директ','PR'],summary:'SLA партнёров, причины отказов, узкие места и риски витрины',recommendedTab:'partners'}
 };
 const MODEL_PRESETS=[
- {id:'base',label:'База',values:{issuedToApprovalRate:0.76,ltvFactor:1.34,annualDiscountRate:0.20,targetRepeatShare:0.06},role:'Руководитель',channel:'Все каналы',scenario:'Все сценарии',note:'Базовая модель совета'},
- {id:'growth',label:'Рост',values:{issuedToApprovalRate:0.79,ltvFactor:1.41,annualDiscountRate:0.18,targetRepeatShare:0.06},role:'Рост',channel:'SEO',scenario:'До зарплаты',note:'Смещение в acquisition и SEO'},
- {id:'crm',label:'CRM',values:{issuedToApprovalRate:0.74,ltvFactor:1.52,annualDiscountRate:0.17,targetRepeatShare:0.08},role:'CRM',channel:'Повторный',scenario:'Есть долги',note:'Повышение repeat-share и LTV'},
- {id:'stress',label:'Стресс',values:{issuedToApprovalRate:0.69,ltvFactor:1.22,annualDiscountRate:0.24,targetRepeatShare:0.05},role:'Руководитель',channel:'Яндекс.Директ',scenario:'Перегруженный клиент',note:'Пессимистичный стресс-тест'}
+ {id:'base',label:'База',values:{issuedToApprovalRate:0.76,ltvFactor:1.34,partnerPayout:2400,targetRepeatShare:0.06},role:'Руководитель',channel:'Все каналы',scenario:'Все сценарии',note:'Базовая модель совета'},
+ {id:'growth',label:'Рост',values:{issuedToApprovalRate:0.79,ltvFactor:1.41,partnerPayout:2200,targetRepeatShare:0.06},role:'Рост',channel:'SEO',scenario:'До зарплаты',note:'Смещение в acquisition и SEO'},
+ {id:'crm',label:'CRM',values:{issuedToApprovalRate:0.74,ltvFactor:1.52,partnerPayout:2650,targetRepeatShare:0.08},role:'CRM',channel:'Повторный',scenario:'Есть долги',note:'Повышение repeat-share и LTV'},
+ {id:'stress',label:'Стресс',values:{issuedToApprovalRate:0.69,ltvFactor:1.22,partnerPayout:1900,targetRepeatShare:0.05},role:'Руководитель',channel:'Яндекс.Директ',scenario:'Перегруженный клиент',note:'Пессимистичный стресс-тест'}
 ];
 const channelClicksMap={
  'SEO':trafficSEO.map((_,i)=>offerClicks[i]*(trafficSEO[i]/totalChannelTraffic[i]||0)),
@@ -598,8 +607,8 @@ function matchesScenario(item){if(state.scenario==='Все сценарии')ret
 function matchesChannels(item){const keys=selectedChannelKeys();if(state.channel==='Все каналы')return !item.channels||item.channels.some(ch=>keys.includes(ch)||ch==='Все каналы');return !item.channels||item.channels.includes(state.channel)||item.channels.includes('Все каналы')}
 function filterContext(items){return filterByRole(items).filter(matchesScenario).filter(matchesChannels)}
 function channelRows(rows){const keys=selectedChannelKeys();return rows.filter(r=>state.channel==='Все каналы'?keys.includes(r.key):r.key===state.channel)}
-function currentDraftInputs(){return normalizeModelInputs({issuedToApprovalRate:Number(document.getElementById('inputIssuedRate')?.value||0)/100,ltvFactor:Number(document.getElementById('inputLtvFactor')?.value||0),annualDiscountRate:Number(document.getElementById('inputAnnualDiscount')?.value||0)/100,targetRepeatShare:Number(document.getElementById('inputRepeatTarget')?.value||0)/100,centrofinansBaseSize:Number(document.getElementById('inputBaseSize')?.value||0),centrofinansMatchRate:Number(document.getElementById('inputMatchRate')?.value||0)/100})}
-function sameModelInputs(a,b){return ['issuedToApprovalRate','ltvFactor','annualDiscountRate','targetRepeatShare','centrofinansBaseSize','centrofinansMatchRate'].every(key=>Math.abs((a[key]||0)-(b[key]||0))<0.0001)}
+function currentDraftInputs(){return normalizeModelInputs({issuedToApprovalRate:Number(document.getElementById('inputIssuedRate')?.value||0)/100,ltvFactor:Number(document.getElementById('inputLtvFactor')?.value||0),partnerPayout:Number(document.getElementById('inputPartnerPayout')?.value||0),targetRepeatShare:Number(document.getElementById('inputRepeatTarget')?.value||0)/100,centrofinansBaseSize:Number(document.getElementById('inputBaseSize')?.value||0),centrofinansMatchRate:Number(document.getElementById('inputMatchRate')?.value||0)/100})}
+function sameModelInputs(a,b){return ['issuedToApprovalRate','ltvFactor','partnerPayout','targetRepeatShare','centrofinansBaseSize','centrofinansMatchRate'].every(key=>Math.abs((a[key]||0)-(b[key]||0))<0.0001)}
 function syncControlsFromState(){
  document.documentElement.dataset.theme=(safeRead(STORAGE_KEYS.prefs,{theme:'light'}).theme)||'light';
  document.querySelectorAll('.filters select').forEach(sel=>{
@@ -616,8 +625,7 @@ function persistPreferences(){safeWrite(STORAGE_KEYS.prefs,{role:state.role,chan
 function persistModelInputs(){safeWrite(STORAGE_KEYS.model,modelInputs);safeWrite(STORAGE_KEYS.actions,recentActions)}
 function currentStamp(){return new Date().toLocaleString('ru-RU',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'})}
 function recordAction(text){recentActions=[{time:currentStamp(),text},...recentActions].slice(0,MAX_RECENT_ACTIONS);safeWrite(STORAGE_KEYS.actions,recentActions)}
-function monthlyDiscountRate(){return Math.pow(1+modelInputs.annualDiscountRate,1/12)-1}
-function cumulativeDiscounted(arr){const acc=[];let total=0;const rate=monthlyDiscountRate();arr.forEach((v,i)=>{total+=v/Math.pow(1+rate,i);acc.push(total)});return acc}
+function partnerPayoutValue(){return Number(modelInputs.partnerPayout)||0}
 function channelCac(){
  const totalIssued=totals.approvals*modelInputs.issuedToApprovalRate;
  const make=(rev,spend)=>{const issued=totalIssued*(rev/totals.revenue);return {rev,spend,issued,cac:issued?spend/issued:0}};
@@ -634,7 +642,7 @@ function buildInputData(ch){
  return [
   {title:'Период и база модели',value:'Июль 2026 — декабрь 2027',text:`${months.length} мес. на горизонте плана; роль ${activeRoleProfile().label.toLowerCase()}.`},
   {title:'Инвестиции и капитал',value:mln(totals.expenses),text:`Совокупно: медиа (${mln(totals.directSpend+totals.seoSpend+totals.prSpend)}) + ФОТ команды (${mln(sum(expensesPayroll))}) + инфраструктура (${mln(sum(expensesInfra))}). Пик потребности ${mln(Math.abs(Math.min(...cumulativeProfit)))}.`},
-  {title:'Драйверы математики',value:`${pct(modelInputs.issuedToApprovalRate*100)} → ${modelInputs.ltvFactor.toFixed(2)}x`,text:`NPV ${pct(modelInputs.annualDiscountRate*100)} годовых; цель repeat ${pct(modelInputs.targetRepeatShare*100)}.`}
+  {title:'Драйверы математики',value:`${pct(modelInputs.issuedToApprovalRate*100)} → ${modelInputs.ltvFactor.toFixed(2)}x`,text:`Выплата за оформление ${fmt(partnerPayoutValue())} ₽ (фикс, не годовые); цель repeat ${pct(modelInputs.targetRepeatShare*100)}.`}
  ];
 }
 function renderModelDirtyState(){
@@ -671,7 +679,7 @@ function renderCharts(){
  const labels=sliceWindow(shortMonths);
  const ch=resolveChannelSeries();
  const fRev=ch.rev, fCost=ch.cost, fProfit=fRev.map((v,i)=>v-fCost[i]);
- const fCumRev=cumulative(fRev), fCumCost=cumulative(fCost), fCumProfit=cumulative(fProfit), fNpvProfit=cumulativeDiscounted(fProfit);
+ const fCumRev=cumulative(fRev), fCumCost=cumulative(fCost), fCumProfit=cumulative(fProfit);
  const isAllChannels=state.channel==='Все каналы'&&selectedChannelKeys().length===4;
  const isRepeatOnly=selectedChannelKeys().length===1&&selectedChannelKeys()[0]==='Повторный';
  let retFirst,retRepeat;
@@ -680,7 +688,7 @@ function renderCharts(){
  else{retFirst=fRev.slice();retRepeat=fRev.map(()=>0)}
  const cfg={
   chartOverview:{type:'bar',data:{labels,datasets:[{label:'Выручка ('+ch.label+')',data:sliceWindow(fRev).map(v=>v/1000),backgroundColor:c.green+'cc'},{label:'Расходы',data:sliceWindow(fCost).map(v=>v/1000),backgroundColor:c.red+'99'},{label:'Прибыль',type:'line',data:sliceWindow(fProfit).map(v=>v/1000),borderColor:c.blue,borderWidth:2.5,pointRadius:3}]}},
-  chartInvestment:{type:'line',data:{labels,datasets:[{label:'Накопленная выручка',data:sliceWindow(fCumRev).map(v=>v/1000000),borderColor:c.green,borderWidth:2.5},{label:'Накопленные инвестиции',data:sliceWindow(fCumCost).map(v=>v/1000000),borderColor:c.red,borderWidth:2.5},{label:'Накопленная прибыль',data:sliceWindow(fCumProfit).map(v=>v/1000000),borderColor:c.blue,backgroundColor:c.blue+'22',fill:true,borderWidth:2.5},{label:'Дисконтированная накопленная прибыль (NPV)',data:sliceWindow(fNpvProfit).map(v=>v/1000000),borderColor:c.violet,borderWidth:2}]}},
+  chartInvestment:{type:'line',data:{labels,datasets:[{label:'Накопленная выручка',data:sliceWindow(fCumRev).map(v=>v/1000000),borderColor:c.green,borderWidth:2.5},{label:'Накопленные инвестиции',data:sliceWindow(fCumCost).map(v=>v/1000000),borderColor:c.red,borderWidth:2.5},{label:'Накопленная прибыль',data:sliceWindow(fCumProfit).map(v=>v/1000000),borderColor:c.blue,backgroundColor:c.blue+'22',fill:true,borderWidth:2.5}]}},
   chartTraffic:isAllChannels?{type:'bar',stacked:true,data:{labels,datasets:[{label:'SEO',data:sliceWindow(trafficSEO),backgroundColor:c.green+'cc'},{label:'Директ',data:sliceWindow(trafficPPC),backgroundColor:c.blue+'cc'},{label:'PR',data:sliceWindow(trafficPR),backgroundColor:c.violet+'cc'},{label:'Повторы',data:sliceWindow(repeat),backgroundColor:c.orange+'cc'}]}}:{type:'bar',data:{labels,datasets:[{label:'Трафик: '+ch.label,data:sliceWindow(ch.traffic),backgroundColor:c.blue+'cc'}]}},
   chartEpc:{type:'line',data:{labels,datasets:[{label:'EPC ('+ch.label+'), ₽',data:sliceWindow(ch.epc),borderColor:c.blue,backgroundColor:c.blue+'22',fill:true,borderWidth:2.5,pointRadius:3}]}},
   chartRetention:{type:'bar',stacked:true,data:{labels,datasets:[{label:'Выручка с первой сделки, тыс. ₽',data:sliceWindow(retFirst).map(v=>v/1000),backgroundColor:c.green+'cc'},{label:'Выручка с повторов / CRM, тыс. ₽',data:sliceWindow(retRepeat).map(v=>v/1000),backgroundColor:c.orange+'cc'},{label:'Повторные визиты',type:'line',data:sliceWindow(repeat),borderColor:c.violet,borderWidth:2}]}},
@@ -751,7 +759,8 @@ function renderContextualViews(){
  const maxDrawdown=Math.min(...cumulativeProfit);
  const revCompare=comparePeriods(ch.rev), costCompare=comparePeriods(ch.cost), repeatCompare=comparePeriods(repeat);
  document.getElementById('inputDataList').innerHTML=buildInputData(ch).map(x=>`<div class="card tight"><div class="metric-label">${escapeHtml(x.title)}</div><div class="metric-value">${escapeHtml(x.value)}</div><div class="metric-sub">${escapeHtml(x.text)}</div></div>`).join('');
- document.getElementById('assumptionSummary').innerHTML=[['Выдачи по модели',fmt(issued)],['LTV по модели',Math.round(ltv).toLocaleString('ru-RU')+' ₽'],['CAC по модели',Math.round(cac).toLocaleString('ru-RU')+' ₽'],['Цель по повторам',pct(modelInputs.targetRepeatShare*100)],['Ставка NPV',pct(modelInputs.annualDiscountRate*100)+' годовых']].map(r=>`<div class="mini-row"><span>${r[0]}</span><b>${r[1]}</b></div>`).join('');
+ const cacByApproval=ratio(sum(sliceWindow(ch.cost)),Math.max(1,totals.approvals));
+ document.getElementById('assumptionSummary').innerHTML=[['Выдачи по модели',fmt(issued)],['LTV по модели',Math.round(ltv).toLocaleString('ru-RU')+' ₽'],['CAC = инвестиции / одобрения',Math.round(cacByApproval).toLocaleString('ru-RU')+' ₽'],['Цель по повторам',pct(modelInputs.targetRepeatShare*100)],['Выплата за оформление (фикс)',fmt(partnerPayoutValue())+' ₽']].map(r=>`<div class="mini-row"><span>${r[0]}</span><b>${r[1]}</b></div>`).join('');
  document.getElementById('recentActions').innerHTML=recentActions.length?recentActions.map(item=>`<div class="mini-row"><span>${escapeHtml(item.text)}</span><b>${escapeHtml(item.time)}</b></div>`).join(''):'<div class="mini-row"><span>Изменений ещё не сохраняли</span><b>локально</b></div>';
  const committeeCards=[
   {id:'revenue',tone:'good',tag:'срез',label:'Фокус роли',value:activeRoleProfile().label,sub:activeRoleProfile().summary},
@@ -817,12 +826,31 @@ function renderContextualViews(){
  ACQUISITION_ROWS[3].row[1]=fmt(totals.repeat);ACQUISITION_ROWS[3].row[2]=fmt(totals.repeat*.76);ACQUISITION_ROWS[3].row[6]=mln(REPEAT_REVENUE_TOTAL);
  table('acquisitionTable',['Источник / канал','Сессии','Уникальные пользователи','Кликрейт оффера','Завершение заявки','Одобрение','Выручка','EPC','CAC','ROI / ROMI'],channelRows(filterByRole(ACQUISITION_ROWS)).map(r=>r.row));
  const filteredFlows=filterByRole([{...flows[0],roles:['Продукт','Рост','Руководитель']},{...flows[1],roles:['Продукт','Рост','Руководитель']},{...flows[2],roles:['Операции','CRM','Руководитель']}]);
- const funnel=[['Сессии',fmt(sum(sliceWindow(ch.traffic)))],['Сценарий выбран',fmt(totals.visits*.78)],['Диагностика завершена',fmt(totals.visits*.61)],['Рекомендации сформированы',fmt(totals.visits*.54)],['Клик по офферу',fmt(totals.clicks)],['Заявки',fmt(totals.applications)],['Одобрения',fmt(totals.approvals)],['Выданные сделки',fmt(issued)]];
- // Все 8 шагов воронки: от первичной сессии до выдачи. Ширина прогресс-бара — конверсия от исходного шага.
- const _digits=s=>parseFloat(String(s).replace(/[^\d.-]/g,''))||0;
- const funnelBaseline=Math.max(1,_digits(funnel[0][1]));
- document.getElementById('mainFunnel').innerHTML=funnel.map((x,i)=>{const num=_digits(x[1]);const width=Math.max(6,Math.min(100,num/funnelBaseline*100));return `<div class="step"><b>${x[1]}</b><span>${x[0]}</span><div class="progress" style="margin-top:12px"><div class="bar" style="width:${width.toFixed(1)}%"></div></div></div>`}).join('');
- document.getElementById('flowComparison').innerHTML=(filteredFlows.length?filteredFlows:flows).map(f=>`<div class="card scenario-card"><div class="scenario-head"><h3>${escapeHtml(f.name)}</h3><span class="pill">${escapeHtml(f.offers)} оффера</span></div><div class="mini-row"><span>Одобрение</span><b>${pct(f.approval)}</b></div><div class="mini-row"><span>Выдачи</span><b>${pct(f.issued)}</b></div><div class="mini-row"><span>Выручка / пользователь</span><b>${escapeHtml(f.revenue)} ₽</b></div><div class="mini-row"><span>Время решения</span><b>${escapeHtml(f.time)}</b></div><p class="muted">${escapeHtml(f.note)}</p></div>`).join('');
+ // Основная воронка: 8 канонических шагов. Для каждого показываем конверсию к предыдущему шагу
+ // и накопленную конверсию от сессий (ширина бара = доля от первого шага).
+ const funnelTop=MAIN_FUNNEL[0]||1;
+ document.getElementById('mainFunnel').innerHTML=MAIN_FUNNEL.map((val,i)=>{
+  const width=Math.max(4,Math.min(100,val/funnelTop*100));
+  const stepConv=i===0?100:val/(MAIN_FUNNEL[i-1]||1)*100;
+  const topConv=val/funnelTop*100;
+  const dropCls=(i>0&&stepConv<60)?' drop':'';
+  const stepBadge=i===0?'<span class="conv-badge conv-step">старт</span>':`<span class="conv-badge conv-step${dropCls}">↘ ${pct(stepConv)} к шагу</span>`;
+  const topBadge=`<span class="conv-badge conv-top">${pct(topConv)} от сессий</span>`;
+  return `<div class="step"><b>${fmt(val)}</b><span class="step-name">${escapeHtml(FUNNEL_STAGES[i])}</span><div class="conv-row">${stepBadge}${topBadge}</div><div class="progress"><div class="bar" style="width:${width.toFixed(1)}%"></div></div></div>`;
+ }).join('');
+ // Три воронки: одинаковая база сессий, разные конверсии по шагам → видно различие функционала.
+ document.getElementById('flowComparison').innerHTML=(filteredFlows.length?filteredFlows:flows).map(f=>{
+  let running=f.users;const vals=f.conv.map((c,i)=>{running=i===0?f.users:running*c;return Math.round(running)});
+  const maxVal=vals[0]||1;
+  const stepsHtml=vals.map((v,i)=>{
+   const w=Math.max(2,v/maxVal*100);
+   const conv=i===0?'100%':pct(v/(vals[i-1]||1)*100);
+   return `<div class="flow-step"><span class="fs-name">${escapeHtml(FUNNEL_STAGES[i])}</span><span class="fs-val">${fmt(v)} · ${conv}</span><span class="fs-track"><span style="width:${w.toFixed(1)}%"></span></span></div>`;
+  }).join('');
+  const sessToIssue=vals[vals.length-1]/(vals[0]||1)*100;
+  const stats=`<div class="scenario-stats"><div class="st"><span>Офферов на показ</span><b>${escapeHtml(String(f.offers))}</b></div><div class="st"><span>Одобрение (от заявок)</span><b>${pct(f.approval)}</b></div><div class="st"><span>Выдача (от одобрений)</span><b>${pct(f.issued)}</b></div><div class="st"><span>Сессия → выдача</span><b>${pct(sessToIssue)}</b></div><div class="st"><span>Выручка / пользователь</span><b>${escapeHtml(String(f.revenue))} ₽</b></div><div class="st"><span>Время решения</span><b>${escapeHtml(f.time)}</b></div></div>`;
+  return `<div class="card scenario-card ${f.mod||''}"><div class="scenario-head"><h3>${escapeHtml(f.name)}</h3><span class="pill">${escapeHtml(String(f.offers))} оффера</span></div><div class="flow-funnel">${stepsHtml}</div>${stats}<p class="muted">${escapeHtml(f.note)}</p></div>`;
+ }).join('');
  table('funnelTable',['Месяц','Визиты','Клики по офферам','Заявки','Одобрения','Доля одобрений','Выручка'],months.map((m,i)=>[m,fmt(visits[i]),fmt(offerClicks[i]),fmt(applications[i]),fmt(approvals[i]),pct(ratio(approvals[i],applications[i])*100),money(revenue[i])]));
  const filteredScenarios=filterContext(scenarioCatalog);
  document.getElementById('scenarioGrid').innerHTML=filteredScenarios.length?filteredScenarios.map(s=>`<div class="card scenario-card" ${drillAttrs('scenario',s.id)}><div class="scenario-head"><h3>${escapeHtml(s.name)}</h3><span class="pill">${fmt(s.users)} пользователей</span></div><div class="mini-row"><span>Завершение</span><b>${pct(s.completion)}</b></div><div class="mini-row"><span>Диагностика</span><b>${pct(s.diag)}</b></div><div class="mini-row"><span>Одобрение</span><b>${pct(s.approval)}</b></div><div class="mini-row"><span>Повтор</span><b>${pct(s.repeat)}</b></div><div class="mini-row"><span>Выручка</span><b>${mln(s.revenue)}</b></div><div class="progress"><div class="bar" style="width:${s.completion}%"></div></div><p class="muted">Застревание: диагностика и подтверждение данных. Лучший ответ: ${escapeHtml(s.best)}.</p></div>`).join(''):emptyCard('Нет сценариев под выбранный фильтр.');
@@ -849,7 +877,7 @@ function renderContextualViews(){
  renderDataStatusList();
  renderPriorityList();
 }
-function renderAll(){syncControlsFromState();renderModelDirtyState();renderPresetActions();renderContextualViews();renderTargetScenario();renderCentrofinans();renderCharts()}
+function renderAll(){syncControlsFromState();renderModelDirtyState();renderPresetActions();renderContextualViews();renderTargetScenario();renderCentrofinans();renderRouting();renderCharts()}
 // Целевой сценарий «40 млн ₽/мес к декабрю 2027»: строим помесячную траекторию выручки,
 // требуемые мультипликаторы по воронке и список точек роста. Базовый план в декабре 2027
 // (revenue последний элемент) недотягивает до цели, поэтому считаем равномерный коэффициент уплотнения.
@@ -948,6 +976,108 @@ function renderCentrofinans(){
  const legal=document.getElementById('centrofinansLegal');
  if(legal)legal.textContent='Принцип: «база Центрофинанса — наш ресурс, а не товар». Партнёрам передаётся только результат сопоставления (match-токен и score), исходные PII никогда не покидают периметр Выручай.ру. Любая интеграция начинается с DPA, оценки PIA и журналирования всех match-операций.';
 }
+// Вкладка «Маршрутизация»: схема статусов, флоу A/B, S2S-контракты, аналитика и критерии приёмки
+// для системы кросс-идентификации трафика Центрофинанс ⇄ Выручай.ру.
+const ROUTE_GOALS=[
+ 'Максимизировать выдачи для ЦФ — забирать себе лучших лидов.',
+ 'Монетизировать отказной и непрофильный трафик через CPA-партнёров (МФО / банки).',
+ 'Исключить перекредитованность действующих клиентов ЦФ у конкурентов.',
+ 'Гарантировать безопасность базы ЦФ — никаких прямых сливов конкурентам.'
+];
+const ROUTE_STATUSES=[
+ {cls:'s-target',code:'CF_TARGET',title:'Подходит для ЦФ',desc:'Идеальный профиль, хорошая КИ.',logic:'Маршрутизация сделки в ЦФ. Оффер ЦФ на 1-м месте или «режим SOS» (эксклюзивная выдача в ЦФ). Остальные МФО скрыты.'},
+ {cls:'s-active',code:'CF_ACTIVE',title:'Действующий клиент ЦФ',desc:'Уже есть активный заём / долг.',logic:'Запрет на конкуренцию: все МФО-конкуренты полностью скрыты. Показываем смежные продукты — РКО, карты, страхование, рефинансирование в банках.'},
+ {cls:'s-rejected',code:'CF_REJECTED',title:'Отказник ЦФ',desc:'ЦФ отклонил заявку по скорингу / КИ.',logic:'Полная свобода монетизации. Оффер ЦФ скрыт. Витрина из МФО-партнёров, готовых кредитовать с плохой КИ. Сделка уходит по CPA.'},
+ {cls:'s-noncore',code:'CF_NON_CORE',title:'Непрофильный для ЦФ',desc:'Ипотека, автокредит или сумма > лимита ЦФ.',logic:'Свободная монетизация по смежным вертикалям. Оффер ЦФ скрыт. Показываем целевые банковские продукты (ипотека, автокредит, залог).'},
+ {cls:'s-notfound',code:'NOT_FOUND',title:'Новый (органический) трафик',desc:'В базе ЦФ не числится.',logic:'Стандартная витрина. ЦФ участвует на общих основаниях (priority-размещение), конкуренты также доступны.'}
+];
+const ROUTE_FLOWS=[
+ {tag:'Flow A · «Тёплый» трафик (push от ЦФ)',lead:'Инициатор — сервер ЦФ. Клиент подал заявку на сайте/в офисе ЦФ и получил отказ.',steps:[
+  ['Trigger','В CRM ЦФ заявка получает статус CF_REJECTED или CF_NON_CORE.'],
+  ['Token Generation (ЦФ)','Бэкенд ЦФ генерирует зашифрованный одноразовый JWT-токен (TTL = 24 ч) с ID клиента.'],
+  ['Delivery','Клиент получает SMS: «Вам одобрен заём в 3-х других компаниях: vyruchai.ru/go?t=eyJhbG…».'],
+  ['Resolution (МП)','Бэкенд Выручай.ру перехватывает токен и запрашивает у ЦФ POST /api/v1/cf/get-profile. ЦФ отдаёт имя, телефон, сумму и статус.'],
+  ['Action','Пользователь бесшовно авторизуется. Система генерирует витрину CPA-офферов без участия ЦФ.']
+ ]},
+ {tag:'Flow B · «Холодный» трафик (органика)',lead:'Пользователь пришёл с Я.Директа или SEO. Мы не знаем, кто он.',steps:[
+  ['Auth (МП)','Клиент нажимает «Подобрать заём» и вводит номер телефона.'],
+  ['Hashing (МП)','Бэкенд приводит номер к формату 79990001122 и хеширует SHA-256.'],
+  ['Lookup (API Check)','МП отправляет POST /api/v1/cf/check-hash { phone_hash }.'],
+  ['Response (ЦФ)','ЦФ ищет хеш в базе и возвращает один из 4 статусов (или NOT_FOUND).'],
+  ['Action','Маркетплейс применяет правила маршрутизации и рендерит витрину.']
+ ]}
+];
+const ROUTE_SECURITY=[
+ '<b>Только хеши.</b> Запрещено передавать сырые номера (plaintext) в запросах Check — используется только SHA-256 от телефона в формате 7XXXXXXXXXX.',
+ '<b>Только S2S.</b> Запрещено выполнять запросы к ЦФ с фронтенда (из браузера). Все запросы строго Server-to-Server.',
+ '<b>Подписанные токены.</b> Токены редиректа (Flow A) подписаны секретным ключом, известным только ЦФ и Выручай.ру, и имеют срок действия (exp).'
+];
+const ROUTE_ENDPOINTS=[
+ {title:'Endpoint 1 · Проверка статуса',name:'Check Hash — от МП к ЦФ',code:
+`<span class="c-method">POST</span> /api/v1/cf/check-hash
+Content-Type: application/json
+Authorization: Bearer &lt;S2S_SECRET_TOKEN&gt;
+
+{
+  <span class="c-key">"phone_hash_sha256"</span>: <span class="c-str">"8d969eef…6c92"</span>
+}
+
+<span class="c-method">200</span> OK
+{
+  <span class="c-key">"found"</span>: <span class="c-str">true</span>,
+  <span class="c-key">"status"</span>: <span class="c-str">"CF_ACTIVE"</span>,
+  <span class="c-key">"cf_internal_id"</span>: <span class="c-str">"100500"</span>
+}`},
+ {title:'Endpoint 2 · Профиль по токену',name:'Warm Redirect — от МП к ЦФ',code:
+`<span class="c-method">POST</span> /api/v1/cf/get-profile
+Content-Type: application/json
+Authorization: Bearer &lt;S2S_SECRET_TOKEN&gt;
+
+{
+  <span class="c-key">"redirect_token"</span>: <span class="c-str">"eyJhbG…"</span>
+}
+
+<span class="c-method">200</span> OK
+{
+  <span class="c-key">"valid"</span>: <span class="c-str">true</span>,
+  <span class="c-key">"status"</span>: <span class="c-str">"CF_REJECTED"</span>,
+  <span class="c-key">"client_data"</span>: {
+    <span class="c-key">"phone"</span>: <span class="c-str">"79991234567"</span>,
+    <span class="c-key">"first_name"</span>: <span class="c-str">"Иван"</span>,
+    <span class="c-key">"requested_amount"</span>: <span class="c-str">15000</span>,
+    <span class="c-key">"consent_given"</span>: <span class="c-str">true</span>
+  }
+}`}
+];
+const ROUTE_ANALYTICS=[
+ ['is_cf_base','boolean','Принадлежит ли клиент базе ЦФ.'],
+ ['cf_status','string','Зафиксированный статус при входе (CF_ACTIVE, CF_REJECTED …).'],
+ ['cac_cost','decimal','Если is_cf_base = true — принудительно 0.00 (маржа CPA идёт в чистый PnL на 100%).']
+];
+const ROUTE_CRITERIA=[
+ 'Реализован алгоритм хеширования номера телефона на стороне МП.',
+ 'Написаны и протестированы S2S-коннекторы к API ЦФ (Check Hash & Get Profile).',
+ 'Offers Engine скрывает МФО-конкурентов при статусе CF_ACTIVE.',
+ 'Offers Engine скрывает оффер ЦФ при статусе CF_REJECTED или CF_NON_CORE.',
+ 'Переход по ссылке с ?token=… выполняет бесшовную авторизацию с подтягиванием данных.',
+ 'В БД сохраняются аналитические метки cf_status для расчёта unit-экономики.'
+];
+function renderRouting(){
+ const goals=document.getElementById('routeGoals');
+ if(!goals)return;
+ goals.innerHTML=ROUTE_GOALS.map((g,i)=>`<div class="route-goal"><span class="rg-num">${i+1}</span><span class="rg-text">${escapeHtml(g)}</span></div>`).join('');
+ document.getElementById('routeStatuses').innerHTML=ROUTE_STATUSES.map(s=>`<div class="status-card ${s.cls}"><div class="sc-head"><code>${escapeHtml(s.code)}</code><span class="sc-title">${escapeHtml(s.title)}</span></div><div class="metric-sub">${escapeHtml(s.desc)}</div><div class="sc-logic">${escapeHtml(s.logic)}</div></div>`).join('');
+ document.getElementById('routeFlows').innerHTML=ROUTE_FLOWS.map(f=>`<div class="card"><div class="card-title"><div><span class="rf-tag">${escapeHtml(f.tag)}</span><p style="margin:6px 0 0;color:var(--muted);font-size:13px">${escapeHtml(f.lead)}</p></div></div><div class="route-flow">${f.steps.map((st,i)=>`<div class="route-step" data-n="${i+1}"><div class="rs-title">${escapeHtml(st[0])}</div><div class="rs-text">${escapeHtml(st[1])}</div></div>`).join('')}</div></div>`).join('');
+ document.getElementById('routeSecurity').innerHTML=ROUTE_SECURITY.map(p=>`<li>${p}</li>`).join('');
+ document.getElementById('routeEndpoints').innerHTML=ROUTE_ENDPOINTS.map(e=>`<div class="card endpoint-card"><div class="card-title"><div><h3>${escapeHtml(e.title)}</h3></div></div><p class="ep-name">${escapeHtml(e.name)}</p><div class="code-block"><pre>${e.code}</pre></div></div>`).join('');
+ table('routeAnalyticsTable',['Поле','Тип','Назначение'],ROUTE_ANALYTICS);
+ document.getElementById('routeCacNote').innerHTML=[
+  '<b>CAC = инвестиции / одобрения у партнёра.</b> Стоимость привлечения считаем как вложения в трафик, делённые на число одобрений (выдач) у партнёра. Годовых ставок в модели нет — выплата фиксированная за оформленный продукт.',
+  '<b>База ЦФ — нулевой CAC.</b> Для клиентов с is_cf_base = true стоимость привлечения принудительно равна 0,00 ₽: лид уже наш, поэтому вся CPA-маржа по такой сделке идёт в чистый PnL на 100%.',
+  '<b>Сквозная атрибуция.</b> Метки is_cf_base и cf_status позволяют отделить органический CAC от «бесплатного» трафика базы ЦФ и корректно считать unit-экономику по когортам.'
+ ].map(p=>`<li>${p}</li>`).join('');
+ document.getElementById('routeCriteria').innerHTML=ROUTE_CRITERIA.map(c=>`<div class="criterion"><span class="ck">✓</span><span>${escapeHtml(c)}</span></div>`).join('');
+}
 // Drag-to-scroll для широкой PNL-таблицы: зажатая левая кнопка мыши тянет таблицу влево/вправо.
 function initDragScroll(){
  document.querySelectorAll('[data-drag-scroll]').forEach(el=>{
@@ -975,7 +1105,7 @@ function initDragScroll(){
   });
  });
 }
-function fillModelInputs(values){document.getElementById('inputIssuedRate').value=(values.issuedToApprovalRate*100).toFixed(1);document.getElementById('inputLtvFactor').value=values.ltvFactor.toFixed(2);document.getElementById('inputAnnualDiscount').value=(values.annualDiscountRate*100).toFixed(1);document.getElementById('inputRepeatTarget').value=(values.targetRepeatShare*100).toFixed(1);const baseEl=document.getElementById('inputBaseSize');if(baseEl)baseEl.value=Number(values.centrofinansBaseSize??DEFAULT_MODEL_INPUTS.centrofinansBaseSize).toFixed(1);const matchEl=document.getElementById('inputMatchRate');if(matchEl)matchEl.value=((values.centrofinansMatchRate??DEFAULT_MODEL_INPUTS.centrofinansMatchRate)*100).toFixed(1);renderModelDirtyState()}
+function fillModelInputs(values){document.getElementById('inputIssuedRate').value=(values.issuedToApprovalRate*100).toFixed(1);document.getElementById('inputLtvFactor').value=values.ltvFactor.toFixed(2);document.getElementById('inputPartnerPayout').value=Math.round(Number(values.partnerPayout??DEFAULT_MODEL_INPUTS.partnerPayout));document.getElementById('inputRepeatTarget').value=(values.targetRepeatShare*100).toFixed(1);const baseEl=document.getElementById('inputBaseSize');if(baseEl)baseEl.value=Number(values.centrofinansBaseSize??DEFAULT_MODEL_INPUTS.centrofinansBaseSize).toFixed(1);const matchEl=document.getElementById('inputMatchRate');if(matchEl)matchEl.value=((values.centrofinansMatchRate??DEFAULT_MODEL_INPUTS.centrofinansMatchRate)*100).toFixed(1);renderModelDirtyState()}
 function init(){
  const persisted=safeRead(STORAGE_KEYS.prefs,{});
  modelInputs=normalizeModelInputs(safeRead(STORAGE_KEYS.model,DEFAULT_MODEL_INPUTS));
@@ -993,8 +1123,8 @@ const tabs=document.querySelectorAll('.tab'),panels=document.querySelectorAll('.
 tabs.forEach(t=>t.addEventListener('click',()=>{tabs.forEach(x=>x.classList.remove('active'));panels.forEach(x=>x.classList.remove('active'));t.classList.add('active');document.getElementById('tab-'+t.dataset.tab).classList.add('active');state.activeTab=t.dataset.tab;persistPreferences();requestAnimationFrame(renderCharts)}));
 document.querySelectorAll('.filters select').forEach(sel=>{const label=sel.getAttribute('aria-label');sel.addEventListener('change',()=>{const v=sel.value;if(label==='Канал')state.channel=v;else if(label==='Сценарий')state.scenario=v;else if(label==='Роль'){state.role=v;if(state.activeTab==='overview'&&ROLE_PROFILES[v]?.recommendedTab)state.activeTab=ROLE_PROFILES[v].recommendedTab};persistPreferences();renderAll()})});
 document.getElementById('themeToggle').addEventListener('click',()=>{const root=document.documentElement;root.dataset.theme=root.dataset.theme==='dark'?'light':'dark';persistPreferences();requestAnimationFrame(renderCharts)});
-document.querySelectorAll('#inputIssuedRate,#inputLtvFactor,#inputAnnualDiscount,#inputRepeatTarget,#inputBaseSize,#inputMatchRate').forEach(input=>input.addEventListener('input',renderModelDirtyState));
-document.getElementById('saveModelInputs').addEventListener('click',()=>{modelInputs=currentDraftInputs();recordAction(`Обновлены вводные модели: выдача ${pct(modelInputs.issuedToApprovalRate*100)}, LTV ${modelInputs.ltvFactor.toFixed(2)}x, NPV ${pct(modelInputs.annualDiscountRate*100)}, база ${Number(modelInputs.centrofinansBaseSize).toFixed(1)} млн`);persistModelInputs();renderAll()});
+document.querySelectorAll('#inputIssuedRate,#inputLtvFactor,#inputPartnerPayout,#inputRepeatTarget,#inputBaseSize,#inputMatchRate').forEach(input=>input.addEventListener('input',renderModelDirtyState));
+document.getElementById('saveModelInputs').addEventListener('click',()=>{modelInputs=currentDraftInputs();recordAction(`Обновлены вводные модели: выдача ${pct(modelInputs.issuedToApprovalRate*100)}, LTV ${modelInputs.ltvFactor.toFixed(2)}x, выплата ${fmt(partnerPayoutValue())} ₽, база ${Number(modelInputs.centrofinansBaseSize).toFixed(1)} млн`);persistModelInputs();renderAll()});
 document.getElementById('resetModelInputs').addEventListener('click',()=>{fillModelInputs(DEFAULT_MODEL_INPUTS);recordAction('Поля модели сброшены к базовому пресету');renderModelDirtyState()});
 document.addEventListener('click',e=>{const preset=e.target.closest('[data-preset-id]');if(preset){const cfg=MODEL_PRESETS.find(x=>x.id===preset.dataset.presetId);if(cfg){fillModelInputs(cfg.values);state.role=cfg.role;state.channel=cfg.channel;state.scenario=cfg.scenario;state.activeTab=ROLE_PROFILES[cfg.role]?.recommendedTab||state.activeTab;persistPreferences();recordAction(`Выбран пресет ${cfg.label}: ${cfg.note}`);renderAll();}return;}const drill=e.target.closest('[data-drill-kind]');if(drill){openDrawer(drill.dataset.drillKind,drill.dataset.drillId);return;}});
 document.addEventListener('keydown',e=>{const drill=e.target.closest?.('[data-drill-kind]');const nativeTag=['BUTTON','A','INPUT','SELECT','TEXTAREA'].includes(e.target?.tagName);if(drill&&(e.key==='Enter'||(e.key===' '&&!nativeTag))){e.preventDefault();openDrawer(drill.dataset.drillKind,drill.dataset.drillId);}if(e.key==='Escape')closeDrawer()});
