@@ -301,7 +301,7 @@ canvas{display:block;width:100%;max-width:100%;height:auto;cursor:crosshair}
 .route-diagram .c-noncore .rd-tag{background:color-mix(in srgb,var(--orange) 16%,transparent);color:var(--orange)}
 .route-diagram .c-notfound .rd-tag{background:color-mix(in srgb,var(--faint) 18%,transparent);color:var(--muted)}
 /* animated «flowing» connectors */
-.route-diagram .rd-edge{stroke-dasharray:7 6;animation:rdFlow 1.15s linear infinite}
+.route-diagram .rd-edge{stroke-dasharray:7 6;will-change:stroke-dashoffset;animation:rdFlow 1.15s linear infinite}
 @keyframes rdFlow{to{stroke-dashoffset:-26}}
 .route-diagram svg:hover .rd-edge{stroke:var(--blue);animation-duration:.7s}
 .route-diagram svg:hover .rd-arrow{fill:var(--blue)}
