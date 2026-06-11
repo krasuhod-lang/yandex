@@ -99,7 +99,13 @@ class Chart{
    legendH=ly+rowH;
   }
   const rotateX=labels.some(label=>String(label).length>4)||labels.length>8;
-  const xLabelH=rotateX?52:30;
+  ctx.font='12px '+chartFont();
+  const maxLabelWidth=Math.max(...labels.map(label=>ctx.measureText(String(label)).width),24);
+  // При повороте на -30° подпись «спускается» вниз на sin(30°)·ширина = ширина/2.
+  // Поэтому отступ снизу должен учитывать эту проекцию плюс высоту строки и зазоры,
+  // иначе подписи либо обрезаются у нижнего края канваса, либо налезают на сам график.
+  const SIN30=0.5, COS30=0.8660254;
+  const xLabelH=rotateX?Math.ceil(maxLabelWidth*SIN30+12*COS30+14):30;
   // Зазор между блоком легенды и областью графика, чтобы подписи рядов не наезжали на сам график.
   const legendGap=legendItems.length?12:0;
   const pad={l:padL,r:padR,t:8+legendH+legendGap,b:xLabelH};
@@ -118,10 +124,15 @@ class Chart{
   ticks.forEach(t=>{const y=scale(t);ctx.strokeStyle=t===0?colors.line:colors.line+'66';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(pad.l,y);ctx.lineTo(width-pad.r,y);ctx.stroke();ctx.fillStyle=colors.muted;ctx.textAlign='right';ctx.fillText(shortNum(t),pad.l-10,y)});
   // X axis labels
   ctx.font='12px '+chartFont();ctx.textBaseline='alphabetic';ctx.textAlign='center';ctx.fillStyle=colors.muted;
-  const maxLabelWidth=Math.max(...labels.map(label=>ctx.measureText(String(label)).width),24);
   const approxSpan=rotateX?24:maxLabelWidth+16;
   const step=Math.max(1,Math.ceil(labels.length*approxSpan/Math.max(plotW,1)));
-  labels.forEach((label,i)=>{if(i%step!==0&&i!==labels.length-1)return;const x=labels.length===1?pad.l+plotW/2:pad.l+(i/(labels.length-1))*plotW;const s=String(label);ctx.save();ctx.translate(x,height-(rotateX?10:9));if(rotateX){ctx.rotate(-Math.PI/6);ctx.textAlign='right';ctx.fillText(s,0,0)}else{ctx.fillText(s,0,0)}ctx.restore()});
+  // Якорь подписи держим непосредственно под областью графика. При повороте на -30°
+  // правая часть строки совпадает с якорем, а левая «уезжает» вниз на ширина·sin(30°),
+  // поэтому позицию выбираем так, чтобы крайняя нижняя точка подписи не выходила за канвас.
+  const xAxisTop=pad.t+plotH+8;
+  const xAxisBottomMax=height-4;
+  const rotatedAnchorY=Math.min(xAxisTop+12, xAxisBottomMax-maxLabelWidth*SIN30);
+  labels.forEach((label,i)=>{if(i%step!==0&&i!==labels.length-1)return;const x=labels.length===1?pad.l+plotW/2:pad.l+(i/(labels.length-1))*plotW;const s=String(label);ctx.save();if(rotateX){ctx.translate(x,rotatedAnchorY);ctx.rotate(-Math.PI/6);ctx.textAlign='right';ctx.fillText(s,0,0)}else{ctx.translate(x,height-9);ctx.fillText(s,0,0)}ctx.restore()});
   const barSets=datasets.filter(ds=>(ds.type||cfg.type)!=='line'), lineSets=datasets.filter(ds=>(ds.type||cfg.type)==='line');
   const stacked=!!cfg.stacked;
   const groupW=plotW/Math.max(labels.length,1);
@@ -871,7 +882,8 @@ function renderContextualViews(){
  const filteredAlerts=filterContext(alertCatalog);
  document.getElementById('alertsGrid').innerHTML=(filteredAlerts.length?filteredAlerts:alertCatalog).map(a=>`<div class="card alert-card" ${drillAttrs('alert',a.id)}><div class="alert-head"><h3>${escapeHtml(a.entity)}</h3><span class="delta ${a.severity==='red'?'bad':a.severity==='yellow'?'warn':'good'}">${a.severity==='red'?'критично':a.severity==='yellow'?'внимание':'норма'}</span></div><div class="mini-row"><span>Первое обнаружение</span><b>${DATA_SOURCE.updatedAt}</b></div><p class="muted">${escapeHtml(a.reason)}</p><div class="actions"><button class="action" type="button" ${drillAttrs('alert',a.id)}>Разобрать сигнал</button></div></div>`).join('');
  const filteredExperiments=filterContext(experimentCatalog);
- document.getElementById('experimentsGrid').innerHTML=(filteredExperiments.length?filteredExperiments:experimentCatalog).slice(0,3).map(e=>`<div class="card" ${drillAttrs('experiment',e.id)}><div class="card-title"><div><h3>${escapeHtml(e.name)}</h3><p>${escapeHtml(e.id)}</p></div><span class="pill">${escapeHtml(e.status)}</span></div><div class="mini-row"><span>Главная метрика</span><b>${escapeHtml(e.primary)}</b></div><div class="mini-row"><span>Уверенность</span><b>${escapeHtml(e.confidence)}</b></div><div class="mini-row"><span>Результат</span><b>${escapeHtml(e.result)}</b></div></div>`).join('');
+ const experimentsGridEl=document.getElementById('experimentsGrid');
+ if(experimentsGridEl)experimentsGridEl.innerHTML=(filteredExperiments.length?filteredExperiments:experimentCatalog).slice(0,3).map(e=>`<div class="card" ${drillAttrs('experiment',e.id)}><div class="card-title"><div><h3>${escapeHtml(e.name)}</h3><p>${escapeHtml(e.id)}</p></div><span class="pill">${escapeHtml(e.status)}</span></div><div class="mini-row"><span>Главная метрика</span><b>${escapeHtml(e.primary)}</b></div><div class="mini-row"><span>Уверенность</span><b>${escapeHtml(e.confidence)}</b></div><div class="mini-row"><span>Результат</span><b>${escapeHtml(e.result)}</b></div></div>`).join('');
  table('experimentsTable',['Эксперимент','Главная метрика','Ограничение','Сегмент','Уверенность','Снимок','Решение'],(filteredExperiments.length?filteredExperiments:experimentCatalog).map(e=>[e.name,e.primary,e.guardrail,e.segment,e.confidence,e.result,e.status]));
  table('unitTable',['Канал','Микс интеграций','Выручка','Расходы','Валовая прибыль','EPC','CAC одобрения','LTV/CAC','Окупаемость','Маркетинговый PnL'],channelRows(filterByRole(UNIT_ROWS)).map(r=>r.build(totals)));
  renderDataStatusList();
@@ -1151,6 +1163,8 @@ function init(){
  state.channel=persisted.channel||state.channel;
  state.scenario=persisted.scenario||state.scenario;
  state.activeTab=persisted.activeTab||state.activeTab;
+ // Если сохранённая вкладка была удалена из меню (например, experiments/partners), возвращаемся к обзору.
+ if(!document.querySelector(`.tab[data-tab="${state.activeTab}"]`))state.activeTab='overview';
  document.documentElement.dataset.theme=persisted.theme||document.documentElement.dataset.theme||'light';
  fillModelInputs(modelInputs);
  renderAll();

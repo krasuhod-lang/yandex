@@ -372,7 +372,6 @@ canvas{display:block;width:100%;max-width:100%;height:auto;cursor:crosshair}
         <div><div class="brand-title">Выручай.ру</div><div class="brand-sub">Операционный дашборд роста, продукта и руководителя</div></div>
       </div>
       <div class="filters" aria-label="Фильтры верхнего уровня">
-        <select aria-label="Роль"><option>Все роли</option><option>Руководитель</option><option>Продукт</option><option>Рост</option><option>CRM</option><option>Операции</option></select>
         <select aria-label="Канал"><option>Все каналы</option><option>SEO</option><option>Яндекс.Директ</option><option>PR</option><option>Повторный</option></select>
         <select aria-label="Сценарий"><option>Все сценарии</option><option>До зарплаты</option><option>Есть долги</option><option>Хочу машину</option><option>Накопления</option><option>Страхование</option></select>
         <button class="theme" id="themeToggle" aria-label="Сменить тему">Тема</button>
@@ -384,11 +383,9 @@ canvas{display:block;width:100%;max-width:100%;height:auto;cursor:crosshair}
       <button class="tab" data-tab="funnels">Воронки</button>
       <button class="tab" data-tab="jtbd">JTBD</button>
       <button class="tab" data-tab="ai">AI/SOS</button>
-      <button class="tab" data-tab="partners">Партнёры</button>
       <button class="tab" data-tab="routing">Маршрутизация</button>
       <button class="tab" data-tab="retention">Повторные продажи</button>
       <button class="tab" data-tab="unit">Юнит-экономика</button>
-      <button class="tab" data-tab="experiments">Эксперименты</button>
     </nav>
   </header>
 
@@ -591,11 +588,6 @@ canvas{display:block;width:100%;max-width:100%;height:auto;cursor:crosshair}
 
     <section id="tab-alerts" class="panel" hidden style="display:none"><div id="alertsGrid"></div></section>
 
-    <section id="tab-experiments" class="panel">
-      <div class="grid three" id="experimentsGrid"></div>
-      <h2 class="divider-title">Реестр экспериментов</h2>
-      <div class="table-wrap"><table id="experimentsTable"></table></div>
-    </section>
   </main>
 
   <aside class="drawer" id="drawer" role="dialog" aria-modal="true" aria-labelledby="drawerTitle" tabindex="-1"><button class="drawer-close" id="drawerClose" aria-label="Закрыть панель детализации">Закрыть</button><div id="drawerContent"></div></aside>
