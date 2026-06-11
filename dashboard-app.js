@@ -335,9 +335,9 @@ const COST_ITEMS=[
 // Продуктовая разбивка выручки. Проценты получены из микса партнёров (МФО, банк, карта, страхование, повторы)
 // и применяются к месячной выручке, сохраняя итог равным totals.revenue.
 const PRODUCT_MIX=[
- {key:'mfo',label:'Микрозаймы (МФО)',share:0.55,partners:'Центрофинанс, МФО Север, МФО Риск'},
- {key:'loan',label:'Кредиты и рефинансирование',share:0.14,partners:'Банк Город'},
- {key:'card',label:'Кредитные карты',share:0.12,partners:'Карта Плюс'},
+ {key:'mfo',label:'Микрозаймы (МФО)',share:0.55,partners:'Центрофинанс, МФО-партнёр №2 (PDL), МФО-партнёр №3 (контроль риска)'},
+ {key:'loan',label:'Кредиты и рефинансирование',share:0.14,partners:'Банк-партнёр (необеспеченные кредиты)'},
+ {key:'card',label:'Кредитные карты',share:0.12,partners:'Эмитент карт (партнёр)'},
  {key:'insurance',label:'Страхование',share:0.06,partners:'Страховой партнёр'},
  {key:'repeat',label:'Повторы и кросс-продажи',share:0.08,partners:'CRM, SMS D+14'},
  {key:'other',label:'CPA-комиссии и прочее',share:0.05,partners:'Партнёрская сеть'}
@@ -350,7 +350,8 @@ const productTotals=Object.fromEntries(PRODUCT_MIX.map(p=>[p.key,totals.revenue*
 const STORAGE_VERSION='v2';
 const STORAGE_KEYS={prefs:`vyruchai-dashboard-prefs-${STORAGE_VERSION}`,model:`vyruchai-dashboard-model-${STORAGE_VERSION}`,actions:`vyruchai-dashboard-actions-${STORAGE_VERSION}`};
 // Базовые допущения demo-модели: 76% одобрений доходят до выдачи, LTV выше базовой выручки в 1.34x, NPV считаем от 20% годовых, цель repeat-share — 6%.
-const DEFAULT_MODEL_INPUTS={issuedToApprovalRate:0.76,ltvFactor:1.34,annualDiscountRate:0.20,targetRepeatShare:0.06};
+// Размер базы Центрофинанса и match-rate — вводимые менеджером оценки (нет публичного бенчмарка).
+const DEFAULT_MODEL_INPUTS={issuedToApprovalRate:0.76,ltvFactor:1.34,annualDiscountRate:0.20,targetRepeatShare:0.06,centrofinansBaseSize:1.5,centrofinansMatchRate:0.42};
 // Храним 6 последних действий: этого хватает, чтобы показать недавние изменения без перегрузки control card.
 const MAX_RECENT_ACTIONS=6;
 let modelInputs={...DEFAULT_MODEL_INPUTS};
@@ -363,7 +364,9 @@ function normalizeModelInputs(raw){
   issuedToApprovalRate:clamp(Number(raw?.issuedToApprovalRate)||DEFAULT_MODEL_INPUTS.issuedToApprovalRate,0,1),
   ltvFactor:clamp(Number(raw?.ltvFactor)||DEFAULT_MODEL_INPUTS.ltvFactor,1,5),
   annualDiscountRate:clamp(Number(raw?.annualDiscountRate)||DEFAULT_MODEL_INPUTS.annualDiscountRate,0,1),
-  targetRepeatShare:clamp(Number(raw?.targetRepeatShare)||DEFAULT_MODEL_INPUTS.targetRepeatShare,0,1)
+  targetRepeatShare:clamp(Number(raw?.targetRepeatShare)||DEFAULT_MODEL_INPUTS.targetRepeatShare,0,1),
+  centrofinansBaseSize:clamp(Number(raw?.centrofinansBaseSize)||DEFAULT_MODEL_INPUTS.centrofinansBaseSize,0,50),
+  centrofinansMatchRate:clamp(Number(raw?.centrofinansMatchRate)||DEFAULT_MODEL_INPUTS.centrofinansMatchRate,0,1)
  };
 }
 const scenarios=[
@@ -379,11 +382,11 @@ const scenarios=[
 ];
 const partners=[
  {id:'p-01',name:'Центрофинанс API',type:'прямой API',status:'активен',sla:'99.4%',response:'420 мс',approval:38,issue:29,revenue:18200000,epc:128,ecpa:940,complaints:0.8,reject:'ПДН, просрочки',action:'масштабировать'},
- {id:'p-02',name:'МФО Север',type:'CPA',status:'активен',sla:'97.1%',response:'1.2 с',approval:31,issue:22,revenue:11700000,epc:116,ecpa:810,complaints:1.7,reject:'Возраст, регион',action:'закрепить'},
- {id:'p-03',name:'Банк Город',type:'прямой API',status:'наблюдение',sla:'93.0%',response:'2.8 с',approval:22,issue:15,revenue:9300000,epc:104,ecpa:1190,complaints:2.9,reject:'КИ, доход',action:'понизить'},
- {id:'p-04',name:'Карта Плюс',type:'CPA',status:'активен',sla:'98.0%',response:'780 мс',approval:27,issue:18,revenue:6400000,epc:91,ecpa:670,complaints:1.1,reject:'Скоринг банка',action:'кросс-продажа'},
+ {id:'p-02',name:'МФО-партнёр №2 (PDL)',type:'CPA',status:'активен',sla:'97.1%',response:'1.2 с',approval:31,issue:22,revenue:11700000,epc:116,ecpa:810,complaints:1.7,reject:'Возраст, регион',action:'закрепить'},
+ {id:'p-03',name:'Банк-партнёр (необеспеченные кредиты)',type:'прямой API',status:'наблюдение',sla:'93.0%',response:'2.8 с',approval:22,issue:15,revenue:9300000,epc:104,ecpa:1190,complaints:2.9,reject:'КИ, доход',action:'понизить'},
+ {id:'p-04',name:'Эмитент карт (партнёр)',type:'CPA',status:'активен',sla:'98.0%',response:'780 мс',approval:27,issue:18,revenue:6400000,epc:91,ecpa:670,complaints:1.1,reject:'Скоринг банка',action:'кросс-продажа'},
  {id:'p-05',name:'Страховой партнёр',type:'CPA',status:'активен',sla:'98.8%',response:'610 мс',approval:35,issue:25,revenue:3900000,epc:84,ecpa:430,complaints:0.6,reject:'Не подходит продукт',action:'закрепить'},
- {id:'p-06',name:'МФО Риск',type:'ручной',status:'риск',sla:'88.5%',response:'4.6 с',approval:16,issue:9,revenue:1700000,epc:42,ecpa:1510,complaints:5.4,reject:'Пустые ответы',action:'пауза'}
+ {id:'p-06',name:'МФО-партнёр №3 (контроль риска)',type:'ручной',status:'риск',sla:'88.5%',response:'4.6 с',approval:16,issue:9,revenue:1700000,epc:42,ecpa:1510,complaints:5.4,reject:'Пустые ответы',action:'пауза'}
 ];
 const flows=[
  {name:'Обычный список',users:100000,offers:5.8,approval:24,issued:17,revenue:92,time:'9 мин',note:'Широкий каталог, ниже точность'},
@@ -391,10 +394,10 @@ const flows=[
  {name:'SOS',users:100000,offers:2.4,approval:38,issued:29,revenue:136,time:'2 мин',note:'Ограниченная подача, меньше риск для КИ'}
 ];
 const aiRows=[
- ['rec-2026-001','До зарплаты','Центрофинанс API, МФО Север, Карта Плюс','стабильный доход, быстрое решение',0.74,'одобрено',18.6,41,96],
- ['rec-2026-002','Есть долги','Банк Город, МФО Север, Центрофинанс API','низкий ПДН, подходит рефинансирование',0.52,'отказ',9.4,24,91],
- ['rec-2026-003','Перегруженный клиент','Центрофинанс API, МФО Риск','подходит SOS, ограниченная отправка',0.61,'одобрено',14.1,33,88],
- ['rec-2026-004','Страхование','Страховой партнёр, Карта Плюс','подходит кросс-продажа, активный полис',0.68,'одобрено',12.8,35,94]
+ ['rec-2026-001','До зарплаты','Центрофинанс API, МФО-партнёр №2, Эмитент карт','стабильный доход, быстрое решение',0.74,'одобрено',18.6,41,96],
+ ['rec-2026-002','Есть долги','Банк-партнёр, МФО-партнёр №2, Центрофинанс API','низкий ПДН, подходит рефинансирование',0.52,'отказ',9.4,24,91],
+ ['rec-2026-003','Перегруженный клиент','Центрофинанс API, МФО-партнёр №3','подходит SOS, ограниченная отправка',0.61,'одобрено',14.1,33,88],
+ ['rec-2026-004','Страхование','Страховой партнёр, Эмитент карт','подходит кросс-продажа, активный полис',0.68,'одобрено',12.8,35,94]
 ];
 const sosRows=[['Доля входа в SOS','18.4%'],['Доля подходящих клиентов','61.0%'],['Среднее число отправок','2.4'],['Доля одобрений SOS','38.0%'],['Доля выдач SOS','29.0%'],['Выручка на SOS-пользователя','136 ₽'],['Среднее время до решения','2 мин 10 сек'],['Резервные сценарии','Рефинансирование, кредитный доктор, карта']];
 const retentionEvents=[['Первая сделка','65 105','100%'],['Отправлено SMS-напоминание','54 420','83.6%'],['Открыто напоминание','27 910','51.3%'],['Повторный визит','165 382','254.0% к сделкам'],['Вторая заявка','18 940','29.1%'],['Второе одобрение','6 790','10.4%'],['Успешная кросс-продажа','4 560','7.0%']];
@@ -405,12 +408,23 @@ const experiments=[
  {id:'exp-reason-copy',name:'Текст причины рекомендации',primary:'CTR оффера',guardrail:'Время до клика',segment:'AI-воронка',confidence:'94%',result:'+11% CTR',status:'раскатка'}
 ];
 const alerts=[
- {severity:'red',entity:'МФО Риск',reason:'SLA ниже 90%, время ответа 4.6 с',action:'Поставить партнёра на паузу и вывести из SOS'},
- {severity:'yellow',entity:'Банк Город',reason:'Прогноз одобрения 33%, факт 22%',action:'Понизить в ранжировании и проверить скоринг'},
+ {severity:'red',entity:'МФО-партнёр №3 (контроль риска)',reason:'SLA ниже 90%, время ответа 4.6 с',action:'Поставить партнёра на паузу и вывести из SOS'},
+ {severity:'yellow',entity:'Банк-партнёр (необеспеченные кредиты)',reason:'Прогноз одобрения 33%, факт 22%',action:'Понизить в ранжировании и проверить скоринг'},
  {severity:'yellow',entity:'Яндекс.Директ',reason:'CAC выше SEO на 28%',action:'Оставить только прибыльные группы объявлений'},
  {severity:'green',entity:'SEO long-tail',reason:'ROI 75%, EPC стабильно выше CPC',action:'Масштабировать страницы и ссылочную массу'},
  {severity:'yellow',entity:'Доля повторов',reason:'5.1% против цели 6%',action:'Усилить SMS D+14 и кросс-продажи'},
  {severity:'red',entity:'Пустые рекомендации',reason:'2.7% сессий без топ-3',action:'Включить резервный список и логировать отсутствующие ответы партнёров'}
+];
+// Методика расчётов по партнёрам — что задано константой, а что пересчитывается из трафика.
+const partnerMethodRows=[
+ ['Доля одобрений (approval %)','Целевой бенчмарк сегмента','PDL 30–40%, банк 15–25%, карты 20–30% — ЦБ РФ + ретро Центрофинанса','Фиксируется на квартал; пересчёт при смене партнёра или скоринг-модели'],
+ ['Доля выдач (issue %)','Производная','approval × доводимость на оформлении (65–75%)','Автоматически от approval и UX-метрик формы'],
+ ['SLA, время ответа','Целевой operational KPI','Договор с партнёром, мониторинг API','Факт собирается из логов API; цель — пересмотр раз в квартал'],
+ ['EPC (₽/клик)','Бенчмарк CPA-сетей','Leads.su / Lead-R / Mixmarket по сегменту','Пересчитывается при смене ставок партнёра или mix трафика'],
+ ['eCPA (₽/заявка)','Производная','расходы на канал / заявки партнёра','Автоматически от плана трафика и approval'],
+ ['Жалобы (%)','Целевой порог риска','Внутренний регламент: ≤ 1.5% — норма, > 3% — стоп','Факт из тикет-системы; превышение → alert'],
+ ['Выручка партнёра, ₽','Производная','трафик × CTR оффера × approval × issue × средний чек комиссии','Пересчитывается при изменении входов на вкладке «Целевая модель»'],
+ ['Доля продукта в выручке (share)','Целевой mix','Структура рынка по ЦБ РФ + позиционирование Выручай.ру','Фиксируется на год, ребалансировка по итогам квартала']
 ];
 
 function sum(a){return a.reduce((x,y)=>x+(Number.isFinite(Number(y))?Number(y):0),0)}
@@ -532,8 +546,8 @@ const alertCatalog=alerts.map((a,i)=>({
 }));
 const priorityCatalog=[
  {id:'scale-seo',title:'Масштабировать SEO',description:'SEO остаётся лидером по ROI и лучше всего конвертирует intent-трафик.',severity:'good',roles:['Рост','Руководитель'],channels:['SEO','Все каналы'],scenarios:['Все сценарии','До зарплаты'],owner:'Рост',source:'ROI и EPC по acquisition'},
- {id:'repair-bank',title:'Починить Банк Город',description:'Факт одобрения отстаёт от прогноза — нужен аудит скоринга и rank-модели.',severity:'warn',roles:['Операции','Продукт','Руководитель'],channels:['PR','Яндекс.Директ','Все каналы'],scenarios:['Есть долги','Все сценарии'],owner:'Операции',source:'партнёрский SLA и approval gap'},
- {id:'pause-risk',title:'Убрать МФО Риск из SOS',description:'Низкий SLA и жалобы создают репутационный и conversion-риск.',severity:'bad',roles:['Операции','Руководитель'],channels:['PR','Все каналы'],scenarios:['Перегруженный клиент','Все сценарии'],owner:'Операции',source:'alerts + partner card'},
+ {id:'repair-bank',title:'Починить Банк-партнёр',description:'Факт одобрения отстаёт от прогноза — нужен аудит скоринга и rank-модели.',severity:'warn',roles:['Операции','Продукт','Руководитель'],channels:['PR','Яндекс.Директ','Все каналы'],scenarios:['Есть долги','Все сценарии'],owner:'Операции',source:'партнёрский SLA и approval gap'},
+ {id:'pause-risk',title:'Убрать МФО-партнёр №3 из SOS',description:'Низкий SLA и жалобы создают репутационный и conversion-риск.',severity:'bad',roles:['Операции','Руководитель'],channels:['PR','Все каналы'],scenarios:['Перегруженный клиент','Все сценарии'],owner:'Операции',source:'alerts + partner card'},
  {id:'grow-repeat',title:'Дорастить repeat-share',description:'Повторы ниже целевого уровня, поэтому CRM должен добрать LTV через D+14 и кросс.',severity:'warn',roles:['CRM','Руководитель'],channels:['Повторный','Все каналы'],scenarios:['Есть долги','Страхование','Все сценарии'],owner:'CRM',source:'retention + repeat-share'},
  {id:'explain-ai',title:'Поднять explainability AI',description:'Нужно закрыть пустые рекомендации и довести покрытие объяснениями до полного.',severity:'warn',roles:['Продукт','Операции'],channels:['SEO','PR','Все каналы'],scenarios:['Перегруженный клиент','Все сценарии'],owner:'Продукт',source:'AI/SOS quality'}
 ];
@@ -584,8 +598,8 @@ function matchesScenario(item){if(state.scenario==='Все сценарии')ret
 function matchesChannels(item){const keys=selectedChannelKeys();if(state.channel==='Все каналы')return !item.channels||item.channels.some(ch=>keys.includes(ch)||ch==='Все каналы');return !item.channels||item.channels.includes(state.channel)||item.channels.includes('Все каналы')}
 function filterContext(items){return filterByRole(items).filter(matchesScenario).filter(matchesChannels)}
 function channelRows(rows){const keys=selectedChannelKeys();return rows.filter(r=>state.channel==='Все каналы'?keys.includes(r.key):r.key===state.channel)}
-function currentDraftInputs(){return normalizeModelInputs({issuedToApprovalRate:Number(document.getElementById('inputIssuedRate')?.value||0)/100,ltvFactor:Number(document.getElementById('inputLtvFactor')?.value||0),annualDiscountRate:Number(document.getElementById('inputAnnualDiscount')?.value||0)/100,targetRepeatShare:Number(document.getElementById('inputRepeatTarget')?.value||0)/100})}
-function sameModelInputs(a,b){return ['issuedToApprovalRate','ltvFactor','annualDiscountRate','targetRepeatShare'].every(key=>Math.abs((a[key]||0)-(b[key]||0))<0.0001)}
+function currentDraftInputs(){return normalizeModelInputs({issuedToApprovalRate:Number(document.getElementById('inputIssuedRate')?.value||0)/100,ltvFactor:Number(document.getElementById('inputLtvFactor')?.value||0),annualDiscountRate:Number(document.getElementById('inputAnnualDiscount')?.value||0)/100,targetRepeatShare:Number(document.getElementById('inputRepeatTarget')?.value||0)/100,centrofinansBaseSize:Number(document.getElementById('inputBaseSize')?.value||0),centrofinansMatchRate:Number(document.getElementById('inputMatchRate')?.value||0)/100})}
+function sameModelInputs(a,b){return ['issuedToApprovalRate','ltvFactor','annualDiscountRate','targetRepeatShare','centrofinansBaseSize','centrofinansMatchRate'].every(key=>Math.abs((a[key]||0)-(b[key]||0))<0.0001)}
 function syncControlsFromState(){
  document.documentElement.dataset.theme=(safeRead(STORAGE_KEYS.prefs,{theme:'light'}).theme)||'light';
  document.querySelectorAll('.filters select').forEach(sel=>{
@@ -645,7 +659,6 @@ function renderDataStatusList(){
   ['Ошибки',DATA_SOURCE.errorState]
  ];
  document.getElementById('dataStatusList').innerHTML=items.map(r=>`<div class="mini-row"><span>${escapeHtml(r[0])}</span><b>${escapeHtml(r[1])}</b></div>`).join('');
- document.getElementById('focusBanner').textContent=`${activeRoleProfile().label}: ${activeRoleProfile().summary}. Источник: ${DATA_SOURCE.modeLabel.toLowerCase()}, обновление ${DATA_SOURCE.updatedAt}.`;
 }
 function renderPriorityList(){
  const filtered=filterContext(priorityCatalog);
@@ -752,14 +765,16 @@ function renderContextualViews(){
  const topChannel=channelByRoi.slice().sort((a,b)=>b.roi-a.roi)[0];
  const weakChannel=channelByRoi.slice().sort((a,b)=>a.roi-b.roi)[0];
  const yoy=revenue[0]?(revenue[revenue.length-1]/revenue[0]):0;
+ const profitSeries=fRev.map((v,i)=>v-fCost[i]);
+ const profitCompare=comparePeriods(profitSeries);
  document.getElementById('execGrid').innerHTML=[
-  {id:'revenue',tone:'good',tag:'итог',label:'Чистая прибыль за весь план',value:mln(sum(sliceWindow(ch.rev))-sum(sliceWindow(ch.cost))),sub:'рост 2-й половины к 1-й '+(formatDelta(revCompare.delta)?.text||'—')},
+  {id:'revenue',tone:'good',tag:'итог',label:'Прибыль за весь план',value:mln(sum(sliceWindow(ch.rev))-sum(sliceWindow(ch.cost))),sub:'рост 2-й половины к 1-й '+(formatDelta(profitCompare.delta)?.text||'—')},
   {id:'revenue',tone:'good',tag:'безубыточность',label:'Первый прибыльный месяц',value:months[firstMonthlyProfitIndex]||'—',sub:'месячная маржа уже положительная'},
   {id:'revenue',tone:'good',tag:'окупаемость',label:'Возврат инвестиций',value:months[paybackIndex]||'—',sub:'когда покроется накопленный минус'},
-  {id:'cac',tone:'warn',tag:'cash burn',label:'Максимальный накопленный минус',value:mln(maxDrawdown),sub:'расходы 2-й половины к 1-й '+(formatDelta(costCompare.delta)?.text||'—')},
+  {id:'cac',tone:'warn',tag:'cash burn',label:'Максимальный накопленный минус',value:mln(maxDrawdown),sub:'пиковая нагрузка на капитал до выхода в плюс'},
   {id:'revenue',tone:'good',tag:'лидер',label:'Лучший канал по ROI',value:topChannel.n,sub:'ROAS '+topChannel.roas.toFixed(1)+'x · ROI '+pct(topChannel.roi*100)},
   {id:'cac',tone:'warn',tag:'слабое звено',label:'Канал с худшим ROI',value:weakChannel.n,sub:'ROAS '+weakChannel.roas.toFixed(1)+'x · ROI '+pct(weakChannel.roi*100)},
-  {id:'ltv-cac',tone:'good',tag:'юнит',label:'LTV / CAC',value:(ltv/Math.max(cac,1)).toFixed(1)+'x',sub:'LTV '+Math.round(ltv)+' ₽ · CAC '+Math.round(cac)+' ₽'},
+  {id:'ltv-cac',tone:'good',tag:'юнит',label:'LTV / CAC',value:(ltv/Math.max(cac,1)).toFixed(1)+'x',sub:'LTV '+Math.round(ltv).toLocaleString('ru-RU')+' ₽ · CAC '+Math.round(cac).toLocaleString('ru-RU')+' ₽'},
   {id:'revenue',tone:'good',tag:'рост',label:'Темп роста выручки',value:'×'+yoy.toFixed(1),sub:'декабрь 2027 к июлю 2026'}
  ].map(x=>`<div class="exec-card ${x.tone}" ${drillAttrs('metric',x.id)}><span class="tag">${escapeHtml(x.tag)}</span><div class="metric-label">${escapeHtml(x.label)}</div><div class="metric-value">${escapeHtml(x.value)}</div><div class="metric-sub">${escapeHtml(x.sub)}</div></div>`).join('');
  kpi('kpiGrid',[
@@ -819,6 +834,7 @@ function renderContextualViews(){
  const filteredPartners=filterContext(partnerCatalog);
  document.getElementById('partnerCards').innerHTML=(filteredPartners.length?filteredPartners:partnerCatalog).slice(0,3).map(p=>`<div class="card partner-card" ${drillAttrs('partner',p.id)}><div class="partner-head"><h3>${escapeHtml(p.name)}</h3><span class="pill">${escapeHtml(p.type)}</span></div><div class="mini-row"><span>SLA</span><b>${escapeHtml(p.sla)}</b></div><div class="mini-row"><span>Одобрение</span><b>${pct(p.approval)}</b></div><div class="mini-row"><span>EPC</span><b>${escapeHtml(p.epc)} ₽</b></div><div class="actions"><button class="action" type="button" ${drillAttrs('partner',p.id)}>План действий</button></div></div>`).join('');
  table('partnerTable',['Партнёр','Интеграция','Статус','SLA','Ответ','Доля одобрений','Доля выдач','Выручка','EPC','eCPA','Жалобы','Главная причина отказа','Действие'],(filteredPartners.length?filteredPartners:partnerCatalog).map(p=>[p.name,p.type,p.status,p.sla,p.response,pct(p.approval),pct(p.issue),mln(p.revenue),p.epc+' ₽',p.ecpa+' ₽',pct(p.complaints),p.reject,p.action]));
+ table('partnerMethodTable',['Метрика','Тип значения','Источник / бенчмарк','Как пересчитывается'],partnerMethodRows);
  kpi('retentionKpis',filterByRole([{id:'repeat-share',roles:['CRM','Руководитель'],label:'Доля повторов',value:'5.1%',sub:'цель 6%'},{id:'repeat-share',roles:['CRM'],label:'Дней до повтора',value:'21',sub:'медиана дней'},{id:'repeat-share',roles:['CRM','Руководитель'],label:'Реактивация SMS',value:'12.8%',sub:'лучший канал',cls:'positive'},{id:'repeat-share',roles:['CRM','Руководитель'],label:'Выручка после сделки',value:mln(9860000),sub:'повторы + кросс-продажи',cls:'positive'}]));
  table('retentionTable',['Событие','Пользователи / события','Конверсия'],retentionEvents);
  const unitLtv=ratio(totals.revenue,totals.approvals)*modelInputs.ltvFactor;
@@ -890,11 +906,10 @@ function renderTargetScenario(){
  table('targetFunnelTable',['Показатель','База, дек 2027','Цель, дек 2027','Множитель'],funnelRows);
  // Точки роста: где брать недостающие 27 млн ₽ месячной выручки.
  const levers=[
-  `<b>SEO-масштаб (вклад ≈40% разрыва).</b> Удвоить парк лендингов под intent-запросы, поднять покрытие long-tail и нарастить ссылочную массу. Цель: визиты SEO ×${trafficGrowth.toFixed(2)}, EPC удержать ≥ 110 ₽.`,
-  `<b>Платный трафик с положительным ROI (≈25%).</b> Открыть Яндекс.Директ и performance-сети только в группах с ROAS&nbsp;≥&nbsp;1.6x; CAC выдачи держать ниже LTV/3. Бюджет: до ${mln(gap*0.10)} в месяц к концу 2027.`,
-  `<b>Качество одобрения и выдачи (≈15%).</b> AI top-3 + резервный список + чистка пустых рекомендаций — поднять долю одобрений с ${pct(ratio(totals.approvals,totals.applications)*100)} до 38–40%, а выдачу с ${pct(modelInputs.issuedToApprovalRate*100)} до 82%.`,
-  `<b>Repeat-share и CRM (≈12%).</b> SMS D+14, реактивация D+45, кросс-продажи карты и страхования. Цель: доля повторов с ${pct(ratio(REPEAT_REVENUE_TOTAL,totals.revenue)*100)} → 10% к декабрю 2027.`,
-  `<b>Партнёрский микс и SLA (≈8%).</b> Заменить «МФО Риск» на двух стабильных партнёров; перевести «Банк Город» в наблюдение до починки скоринга; нарастить долю прямых API в выдаче — это снижает eCPA на 12–18%.`
+  `<b>SEO-масштаб (вклад ≈45% разрыва).</b> Удвоить парк лендингов под intent-запросы, поднять покрытие long-tail и нарастить ссылочную массу. Цель: визиты SEO ×${trafficGrowth.toFixed(2)}, EPC удержать ≥ 110 ₽.`,
+  `<b>Платный трафик с положительным ROI (≈30%).</b> Открыть Яндекс.Директ и performance-сети только в группах с ROAS&nbsp;≥&nbsp;1.6x; CAC выдачи держать ниже LTV/3. Бюджет: до ${mln(gap*0.10)} в месяц к концу 2027.`,
+  `<b>Repeat-share и CRM (≈15%).</b> SMS D+14, реактивация D+45, кросс-продажи карты и страхования. Цель: доля повторов с ${pct(ratio(REPEAT_REVENUE_TOTAL,totals.revenue)*100)} → 10% к декабрю 2027.`,
+  `<b>Партнёрский микс и SLA (≈10%).</b> Заменить «МФО-партнёр №3 (контроль риска)» на двух стабильных партнёров; перевести «Банк-партнёр» в наблюдение до починки скоринга; нарастить долю прямых API в выдаче — это снижает eCPA на 12–18%.`
  ];
  const leversHost=document.getElementById('targetGrowthLevers');
  if(leversHost)leversHost.innerHTML=levers.map(l=>`<li>${l}</li>`).join('');
@@ -904,10 +919,10 @@ function renderTargetScenario(){
 function renderCentrofinans(){
  const host=document.getElementById('centrofinansKpis');
  if(!host)return;
- const baseSize=12_400_000; // оценка: ~12,4 млн профилей в исторической базе Центрофинанса
- const matchRate=0.42; // ожидаемая доля совпадений с интент-трафиком Выручай.ру
+ const baseSize=(Number(modelInputs.centrofinansBaseSize)||0)*1_000_000; // млн профилей → шт.
+ const matchRate=Number(modelInputs.centrofinansMatchRate)||0;
  kpi('centrofinansKpis',[
-  {label:'Размер базы',value:fmt(baseSize),sub:'профили (хеши e-mail/phone/passport)'},
+  {label:'Размер базы',value:baseSize?fmt(baseSize):'вводится менеджером',sub:'оценка профилей (хеши e-mail/phone/passport)'},
   {label:'Ожидаемый match-rate',value:pct(matchRate*100),sub:'на горячем интент-трафике',cls:'positive'},
   {label:'Прирост одобрений',value:'+9–14 п.п.',sub:'для матчёванных пользователей',cls:'positive'},
   {label:'PII наружу',value:'0 полей',sub:'партнёру уходит токен и score',cls:'positive'}
@@ -960,7 +975,7 @@ function initDragScroll(){
   });
  });
 }
-function fillModelInputs(values){document.getElementById('inputIssuedRate').value=(values.issuedToApprovalRate*100).toFixed(1);document.getElementById('inputLtvFactor').value=values.ltvFactor.toFixed(2);document.getElementById('inputAnnualDiscount').value=(values.annualDiscountRate*100).toFixed(1);document.getElementById('inputRepeatTarget').value=(values.targetRepeatShare*100).toFixed(1);renderModelDirtyState()}
+function fillModelInputs(values){document.getElementById('inputIssuedRate').value=(values.issuedToApprovalRate*100).toFixed(1);document.getElementById('inputLtvFactor').value=values.ltvFactor.toFixed(2);document.getElementById('inputAnnualDiscount').value=(values.annualDiscountRate*100).toFixed(1);document.getElementById('inputRepeatTarget').value=(values.targetRepeatShare*100).toFixed(1);const baseEl=document.getElementById('inputBaseSize');if(baseEl)baseEl.value=Number(values.centrofinansBaseSize??DEFAULT_MODEL_INPUTS.centrofinansBaseSize).toFixed(1);const matchEl=document.getElementById('inputMatchRate');if(matchEl)matchEl.value=((values.centrofinansMatchRate??DEFAULT_MODEL_INPUTS.centrofinansMatchRate)*100).toFixed(1);renderModelDirtyState()}
 function init(){
  const persisted=safeRead(STORAGE_KEYS.prefs,{});
  modelInputs=normalizeModelInputs(safeRead(STORAGE_KEYS.model,DEFAULT_MODEL_INPUTS));
@@ -978,8 +993,8 @@ const tabs=document.querySelectorAll('.tab'),panels=document.querySelectorAll('.
 tabs.forEach(t=>t.addEventListener('click',()=>{tabs.forEach(x=>x.classList.remove('active'));panels.forEach(x=>x.classList.remove('active'));t.classList.add('active');document.getElementById('tab-'+t.dataset.tab).classList.add('active');state.activeTab=t.dataset.tab;persistPreferences();requestAnimationFrame(renderCharts)}));
 document.querySelectorAll('.filters select').forEach(sel=>{const label=sel.getAttribute('aria-label');sel.addEventListener('change',()=>{const v=sel.value;if(label==='Канал')state.channel=v;else if(label==='Сценарий')state.scenario=v;else if(label==='Роль'){state.role=v;if(state.activeTab==='overview'&&ROLE_PROFILES[v]?.recommendedTab)state.activeTab=ROLE_PROFILES[v].recommendedTab};persistPreferences();renderAll()})});
 document.getElementById('themeToggle').addEventListener('click',()=>{const root=document.documentElement;root.dataset.theme=root.dataset.theme==='dark'?'light':'dark';persistPreferences();requestAnimationFrame(renderCharts)});
-document.querySelectorAll('#inputIssuedRate,#inputLtvFactor,#inputAnnualDiscount,#inputRepeatTarget').forEach(input=>input.addEventListener('input',renderModelDirtyState));
-document.getElementById('saveModelInputs').addEventListener('click',()=>{modelInputs=currentDraftInputs();recordAction(`Обновлены вводные модели: выдача ${pct(modelInputs.issuedToApprovalRate*100)}, LTV ${modelInputs.ltvFactor.toFixed(2)}x, NPV ${pct(modelInputs.annualDiscountRate*100)}`);persistModelInputs();renderAll()});
+document.querySelectorAll('#inputIssuedRate,#inputLtvFactor,#inputAnnualDiscount,#inputRepeatTarget,#inputBaseSize,#inputMatchRate').forEach(input=>input.addEventListener('input',renderModelDirtyState));
+document.getElementById('saveModelInputs').addEventListener('click',()=>{modelInputs=currentDraftInputs();recordAction(`Обновлены вводные модели: выдача ${pct(modelInputs.issuedToApprovalRate*100)}, LTV ${modelInputs.ltvFactor.toFixed(2)}x, NPV ${pct(modelInputs.annualDiscountRate*100)}, база ${Number(modelInputs.centrofinansBaseSize).toFixed(1)} млн`);persistModelInputs();renderAll()});
 document.getElementById('resetModelInputs').addEventListener('click',()=>{fillModelInputs(DEFAULT_MODEL_INPUTS);recordAction('Поля модели сброшены к базовому пресету');renderModelDirtyState()});
 document.addEventListener('click',e=>{const preset=e.target.closest('[data-preset-id]');if(preset){const cfg=MODEL_PRESETS.find(x=>x.id===preset.dataset.presetId);if(cfg){fillModelInputs(cfg.values);state.role=cfg.role;state.channel=cfg.channel;state.scenario=cfg.scenario;state.activeTab=ROLE_PROFILES[cfg.role]?.recommendedTab||state.activeTab;persistPreferences();recordAction(`Выбран пресет ${cfg.label}: ${cfg.note}`);renderAll();}return;}const drill=e.target.closest('[data-drill-kind]');if(drill){openDrawer(drill.dataset.drillKind,drill.dataset.drillId);return;}});
 document.addEventListener('keydown',e=>{const drill=e.target.closest?.('[data-drill-kind]');const nativeTag=['BUTTON','A','INPUT','SELECT','TEXTAREA'].includes(e.target?.tagName);if(drill&&(e.key==='Enter'||(e.key===' '&&!nativeTag))){e.preventDefault();openDrawer(drill.dataset.drillKind,drill.dataset.drillId);}if(e.key==='Escape')closeDrawer()});
