@@ -588,7 +588,7 @@ function matchesChannels(item){const keys=selectedChannelKeys();if(state.channel
 function filterContext(items){return filterByRole(items).filter(matchesScenario).filter(matchesChannels)}
 function channelRows(rows){const keys=selectedChannelKeys();return rows.filter(r=>state.channel==='Все каналы'?keys.includes(r.key):r.key===state.channel)}
 function currentDraftInputs(){return normalizeModelInputs({issuedToApprovalRate:Number(document.getElementById('inputIssuedRate')?.value||0)/100,ltvFactor:Number(document.getElementById('inputLtvFactor')?.value||0),annualDiscountRate:Number(document.getElementById('inputAnnualDiscount')?.value||0)/100,targetRepeatShare:Number(document.getElementById('inputRepeatTarget')?.value||0)/100,centrofinansBaseSize:Number(document.getElementById('inputBaseSize')?.value||0),centrofinansMatchRate:Number(document.getElementById('inputMatchRate')?.value||0)/100})}
-function sameModelInputs(a,b){return ['issuedToApprovalRate','ltvFactor','annualDiscountRate','targetRepeatShare'].every(key=>Math.abs((a[key]||0)-(b[key]||0))<0.0001)}
+function sameModelInputs(a,b){return ['issuedToApprovalRate','ltvFactor','annualDiscountRate','targetRepeatShare','centrofinansBaseSize','centrofinansMatchRate'].every(key=>Math.abs((a[key]||0)-(b[key]||0))<0.0001)}
 function syncControlsFromState(){
  document.documentElement.dataset.theme=(safeRead(STORAGE_KEYS.prefs,{theme:'light'}).theme)||'light';
  document.querySelectorAll('.filters select').forEach(sel=>{
