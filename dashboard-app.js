@@ -317,7 +317,7 @@ const CHANNELS={
  'PR':{rev:revenuePR,cost:expensesPR,traffic:trafficPR,epc:channelEpc(revenuePR,trafficPR),label:'PR'},
  'Повторный':{rev:revenueRepeat,cost:expensesRepeat,traffic:repeat,epc:revenueRepeat.map((v,i)=>repeat[i]?v/repeat[i]:0),label:'CRM / повторные'}
 };
-// Модель оплаты — CPA: партнёр платит фиксированную сумму за каждый оформленный продукт (заём/кредит/ипотека и др.).
+// Модель оплаты — CPA: партнёр платит маркетплейсу фиксированную сумму за каждый оформленный продукт (заём/кредит/ипотека и др.).
 // Годовых ставок дисконтирования нет, поэтому окупаемость считаем по накопленным денежным потокам без NPV.
 
 // Декомпозиция расходов: общий expenses[] = бюджеты каналов + ФОТ + инфраструктура.
@@ -1072,7 +1072,7 @@ function renderRouting(){
  document.getElementById('routeEndpoints').innerHTML=ROUTE_ENDPOINTS.map(e=>`<div class="card endpoint-card"><div class="card-title"><div><h3>${escapeHtml(e.title)}</h3></div></div><p class="ep-name">${escapeHtml(e.name)}</p><div class="code-block"><pre>${e.code}</pre></div></div>`).join('');
  table('routeAnalyticsTable',['Поле','Тип','Назначение'],ROUTE_ANALYTICS);
  document.getElementById('routeCacNote').innerHTML=[
-  '<b>CAC = инвестиции / одобрения у партнёра.</b> Стоимость привлечения считаем как вложения в трафик, делённые на число одобрений (выдач) у партнёра. Годовых ставок в модели нет — выплата фиксированная за оформленный продукт.',
+  '<b>CAC = инвестиции / одобрения у партнёра.</b> Стоимость привлечения считаем как вложения в трафик, делённые на число одобрений у партнёра. Годовых ставок в модели нет — выплата фиксированная за оформленный продукт.',
   '<b>База ЦФ — нулевой CAC.</b> Для клиентов с is_cf_base = true стоимость привлечения принудительно равна 0,00 ₽: лид уже наш, поэтому вся CPA-маржа по такой сделке идёт в чистый PnL на 100%.',
   '<b>Сквозная атрибуция.</b> Метки is_cf_base и cf_status позволяют отделить органический CAC от «бесплатного» трафика базы ЦФ и корректно считать unit-экономику по когортам.'
  ].map(p=>`<li>${p}</li>`).join('');
