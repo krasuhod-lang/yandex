@@ -402,9 +402,18 @@ canvas{display:block;width:100%;max-width:100%;height:auto;cursor:crosshair}
     </section>
 
     <section id="tab-partners" class="panel">
+      <div class="card" style="border-left:3px solid var(--blue)">
+        <div class="card-title"><div><h2>Как читать этот раздел</h2><p>Показатели партнёров — целевая модель на 2026 г. на основе ретро-данных Центрофинанса и рыночных бенчмарков (PDL, банковский CPA, карточные эмитенты). Это плановые KPI, а не текущая фактура. Имена партнёров (кроме Центрофинанса) обезличены до ролей: реальные контрагенты согласовываются на этапе LOI/договора. Источник методики — блок «Методика расчётов» ниже.</p></div></div>
+      </div>
       <div class="grid three" id="partnerCards"></div>
       <h2 class="divider-title">Каталог партнёров и офферов</h2>
       <div class="table-wrap"><table id="partnerTable"></table></div>
+      <h2 class="divider-title">Методика расчётов</h2>
+      <div class="card">
+        <div class="card-title"><div><h2>Откуда берутся цифры по партнёрам</h2><p>Каждая метрика — это либо рыночный бенчмарк, либо производная от плана трафика. При изменении входных параметров (объём трафика, доля прямых API, mix продуктов) пересчёт идёт по правилам ниже.</p></div></div>
+        <div class="table-wrap"><table id="partnerMethodTable"></table></div>
+        <p class="muted" style="margin-top:12px">Бенчмарки взяты из публичных источников: ЦБ РФ (статистика МФО и необеспеченного кредитования), Frank RG (банковский ритейл), отчёты CPA-сетей (Leads.su, Lead-R, Mixmarket) и ретро-данных Центрофинанса по PDL-сегменту. Все плановые показатели пересчитываются при обновлении входов модели на вкладке «Целевая модель».</p>
+      </div>
     </section>
 
     <section id="tab-retention" class="panel">

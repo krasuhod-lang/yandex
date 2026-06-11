@@ -335,9 +335,9 @@ const COST_ITEMS=[
 // Продуктовая разбивка выручки. Проценты получены из микса партнёров (МФО, банк, карта, страхование, повторы)
 // и применяются к месячной выручке, сохраняя итог равным totals.revenue.
 const PRODUCT_MIX=[
- {key:'mfo',label:'Микрозаймы (МФО)',share:0.55,partners:'Центрофинанс, МФО Север, МФО Риск'},
- {key:'loan',label:'Кредиты и рефинансирование',share:0.14,partners:'Банк Город'},
- {key:'card',label:'Кредитные карты',share:0.12,partners:'Карта Плюс'},
+ {key:'mfo',label:'Микрозаймы (МФО)',share:0.55,partners:'Центрофинанс, МФО-партнёр №2 (PDL), МФО-партнёр №3 (контроль риска)'},
+ {key:'loan',label:'Кредиты и рефинансирование',share:0.14,partners:'Банк-партнёр (необеспеченные кредиты)'},
+ {key:'card',label:'Кредитные карты',share:0.12,partners:'Эмитент карт (партнёр)'},
  {key:'insurance',label:'Страхование',share:0.06,partners:'Страховой партнёр'},
  {key:'repeat',label:'Повторы и кросс-продажи',share:0.08,partners:'CRM, SMS D+14'},
  {key:'other',label:'CPA-комиссии и прочее',share:0.05,partners:'Партнёрская сеть'}
@@ -382,11 +382,11 @@ const scenarios=[
 ];
 const partners=[
  {id:'p-01',name:'Центрофинанс API',type:'прямой API',status:'активен',sla:'99.4%',response:'420 мс',approval:38,issue:29,revenue:18200000,epc:128,ecpa:940,complaints:0.8,reject:'ПДН, просрочки',action:'масштабировать'},
- {id:'p-02',name:'МФО Север',type:'CPA',status:'активен',sla:'97.1%',response:'1.2 с',approval:31,issue:22,revenue:11700000,epc:116,ecpa:810,complaints:1.7,reject:'Возраст, регион',action:'закрепить'},
- {id:'p-03',name:'Банк Город',type:'прямой API',status:'наблюдение',sla:'93.0%',response:'2.8 с',approval:22,issue:15,revenue:9300000,epc:104,ecpa:1190,complaints:2.9,reject:'КИ, доход',action:'понизить'},
- {id:'p-04',name:'Карта Плюс',type:'CPA',status:'активен',sla:'98.0%',response:'780 мс',approval:27,issue:18,revenue:6400000,epc:91,ecpa:670,complaints:1.1,reject:'Скоринг банка',action:'кросс-продажа'},
+ {id:'p-02',name:'МФО-партнёр №2 (PDL)',type:'CPA',status:'активен',sla:'97.1%',response:'1.2 с',approval:31,issue:22,revenue:11700000,epc:116,ecpa:810,complaints:1.7,reject:'Возраст, регион',action:'закрепить'},
+ {id:'p-03',name:'Банк-партнёр (необеспеченные кредиты)',type:'прямой API',status:'наблюдение',sla:'93.0%',response:'2.8 с',approval:22,issue:15,revenue:9300000,epc:104,ecpa:1190,complaints:2.9,reject:'КИ, доход',action:'понизить'},
+ {id:'p-04',name:'Эмитент карт (партнёр)',type:'CPA',status:'активен',sla:'98.0%',response:'780 мс',approval:27,issue:18,revenue:6400000,epc:91,ecpa:670,complaints:1.1,reject:'Скоринг банка',action:'кросс-продажа'},
  {id:'p-05',name:'Страховой партнёр',type:'CPA',status:'активен',sla:'98.8%',response:'610 мс',approval:35,issue:25,revenue:3900000,epc:84,ecpa:430,complaints:0.6,reject:'Не подходит продукт',action:'закрепить'},
- {id:'p-06',name:'МФО Риск',type:'ручной',status:'риск',sla:'88.5%',response:'4.6 с',approval:16,issue:9,revenue:1700000,epc:42,ecpa:1510,complaints:5.4,reject:'Пустые ответы',action:'пауза'}
+ {id:'p-06',name:'МФО-партнёр №3 (контроль риска)',type:'ручной',status:'риск',sla:'88.5%',response:'4.6 с',approval:16,issue:9,revenue:1700000,epc:42,ecpa:1510,complaints:5.4,reject:'Пустые ответы',action:'пауза'}
 ];
 const flows=[
  {name:'Обычный список',users:100000,offers:5.8,approval:24,issued:17,revenue:92,time:'9 мин',note:'Широкий каталог, ниже точность'},
@@ -394,10 +394,10 @@ const flows=[
  {name:'SOS',users:100000,offers:2.4,approval:38,issued:29,revenue:136,time:'2 мин',note:'Ограниченная подача, меньше риск для КИ'}
 ];
 const aiRows=[
- ['rec-2026-001','До зарплаты','Центрофинанс API, МФО Север, Карта Плюс','стабильный доход, быстрое решение',0.74,'одобрено',18.6,41,96],
- ['rec-2026-002','Есть долги','Банк Город, МФО Север, Центрофинанс API','низкий ПДН, подходит рефинансирование',0.52,'отказ',9.4,24,91],
- ['rec-2026-003','Перегруженный клиент','Центрофинанс API, МФО Риск','подходит SOS, ограниченная отправка',0.61,'одобрено',14.1,33,88],
- ['rec-2026-004','Страхование','Страховой партнёр, Карта Плюс','подходит кросс-продажа, активный полис',0.68,'одобрено',12.8,35,94]
+ ['rec-2026-001','До зарплаты','Центрофинанс API, МФО-партнёр №2, Эмитент карт','стабильный доход, быстрое решение',0.74,'одобрено',18.6,41,96],
+ ['rec-2026-002','Есть долги','Банк-партнёр, МФО-партнёр №2, Центрофинанс API','низкий ПДН, подходит рефинансирование',0.52,'отказ',9.4,24,91],
+ ['rec-2026-003','Перегруженный клиент','Центрофинанс API, МФО-партнёр №3','подходит SOS, ограниченная отправка',0.61,'одобрено',14.1,33,88],
+ ['rec-2026-004','Страхование','Страховой партнёр, Эмитент карт','подходит кросс-продажа, активный полис',0.68,'одобрено',12.8,35,94]
 ];
 const sosRows=[['Доля входа в SOS','18.4%'],['Доля подходящих клиентов','61.0%'],['Среднее число отправок','2.4'],['Доля одобрений SOS','38.0%'],['Доля выдач SOS','29.0%'],['Выручка на SOS-пользователя','136 ₽'],['Среднее время до решения','2 мин 10 сек'],['Резервные сценарии','Рефинансирование, кредитный доктор, карта']];
 const retentionEvents=[['Первая сделка','65 105','100%'],['Отправлено SMS-напоминание','54 420','83.6%'],['Открыто напоминание','27 910','51.3%'],['Повторный визит','165 382','254.0% к сделкам'],['Вторая заявка','18 940','29.1%'],['Второе одобрение','6 790','10.4%'],['Успешная кросс-продажа','4 560','7.0%']];
@@ -408,12 +408,23 @@ const experiments=[
  {id:'exp-reason-copy',name:'Текст причины рекомендации',primary:'CTR оффера',guardrail:'Время до клика',segment:'AI-воронка',confidence:'94%',result:'+11% CTR',status:'раскатка'}
 ];
 const alerts=[
- {severity:'red',entity:'МФО Риск',reason:'SLA ниже 90%, время ответа 4.6 с',action:'Поставить партнёра на паузу и вывести из SOS'},
- {severity:'yellow',entity:'Банк Город',reason:'Прогноз одобрения 33%, факт 22%',action:'Понизить в ранжировании и проверить скоринг'},
+ {severity:'red',entity:'МФО-партнёр №3 (контроль риска)',reason:'SLA ниже 90%, время ответа 4.6 с',action:'Поставить партнёра на паузу и вывести из SOS'},
+ {severity:'yellow',entity:'Банк-партнёр (необеспеченные кредиты)',reason:'Прогноз одобрения 33%, факт 22%',action:'Понизить в ранжировании и проверить скоринг'},
  {severity:'yellow',entity:'Яндекс.Директ',reason:'CAC выше SEO на 28%',action:'Оставить только прибыльные группы объявлений'},
  {severity:'green',entity:'SEO long-tail',reason:'ROI 75%, EPC стабильно выше CPC',action:'Масштабировать страницы и ссылочную массу'},
  {severity:'yellow',entity:'Доля повторов',reason:'5.1% против цели 6%',action:'Усилить SMS D+14 и кросс-продажи'},
  {severity:'red',entity:'Пустые рекомендации',reason:'2.7% сессий без топ-3',action:'Включить резервный список и логировать отсутствующие ответы партнёров'}
+];
+// Методика расчётов по партнёрам — что задано константой, а что пересчитывается из трафика.
+const partnerMethodRows=[
+ ['Доля одобрений (approval %)','Целевой бенчмарк сегмента','PDL 30–40%, банк 15–25%, карты 20–30% — ЦБ РФ + ретро Центрофинанса','Фиксируется на квартал; пересчёт при смене партнёра или скоринг-модели'],
+ ['Доля выдач (issue %)','Производная','approval × доводимость на оформлении (65–75%)','Автоматически от approval и UX-метрик формы'],
+ ['SLA, время ответа','Целевой operational KPI','Договор с партнёром, мониторинг API','Факт собирается из логов API; цель — пересмотр раз в квартал'],
+ ['EPC (₽/клик)','Бенчмарк CPA-сетей','Leads.su / Lead-R / Mixmarket по сегменту','Пересчитывается при смене ставок партнёра или mix трафика'],
+ ['eCPA (₽/заявка)','Производная','расходы на канал / заявки партнёра','Автоматически от плана трафика и approval'],
+ ['Жалобы (%)','Целевой порог риска','Внутренний регламент: ≤ 1.5% — норма, > 3% — стоп','Факт из тикет-системы; превышение → alert'],
+ ['Выручка партнёра, ₽','Производная','трафик × CTR оффера × approval × issue × средний чек комиссии','Пересчитывается при изменении входов на вкладке «Целевая модель»'],
+ ['Доля продукта в выручке (share)','Целевой mix','Структура рынка по ЦБ РФ + позиционирование Выручай.ру','Фиксируется на год, ребалансировка по итогам квартала']
 ];
 
 function sum(a){return a.reduce((x,y)=>x+(Number.isFinite(Number(y))?Number(y):0),0)}
@@ -535,8 +546,8 @@ const alertCatalog=alerts.map((a,i)=>({
 }));
 const priorityCatalog=[
  {id:'scale-seo',title:'Масштабировать SEO',description:'SEO остаётся лидером по ROI и лучше всего конвертирует intent-трафик.',severity:'good',roles:['Рост','Руководитель'],channels:['SEO','Все каналы'],scenarios:['Все сценарии','До зарплаты'],owner:'Рост',source:'ROI и EPC по acquisition'},
- {id:'repair-bank',title:'Починить Банк Город',description:'Факт одобрения отстаёт от прогноза — нужен аудит скоринга и rank-модели.',severity:'warn',roles:['Операции','Продукт','Руководитель'],channels:['PR','Яндекс.Директ','Все каналы'],scenarios:['Есть долги','Все сценарии'],owner:'Операции',source:'партнёрский SLA и approval gap'},
- {id:'pause-risk',title:'Убрать МФО Риск из SOS',description:'Низкий SLA и жалобы создают репутационный и conversion-риск.',severity:'bad',roles:['Операции','Руководитель'],channels:['PR','Все каналы'],scenarios:['Перегруженный клиент','Все сценарии'],owner:'Операции',source:'alerts + partner card'},
+ {id:'repair-bank',title:'Починить Банк-партнёр',description:'Факт одобрения отстаёт от прогноза — нужен аудит скоринга и rank-модели.',severity:'warn',roles:['Операции','Продукт','Руководитель'],channels:['PR','Яндекс.Директ','Все каналы'],scenarios:['Есть долги','Все сценарии'],owner:'Операции',source:'партнёрский SLA и approval gap'},
+ {id:'pause-risk',title:'Убрать МФО-партнёр №3 из SOS',description:'Низкий SLA и жалобы создают репутационный и conversion-риск.',severity:'bad',roles:['Операции','Руководитель'],channels:['PR','Все каналы'],scenarios:['Перегруженный клиент','Все сценарии'],owner:'Операции',source:'alerts + partner card'},
  {id:'grow-repeat',title:'Дорастить repeat-share',description:'Повторы ниже целевого уровня, поэтому CRM должен добрать LTV через D+14 и кросс.',severity:'warn',roles:['CRM','Руководитель'],channels:['Повторный','Все каналы'],scenarios:['Есть долги','Страхование','Все сценарии'],owner:'CRM',source:'retention + repeat-share'},
  {id:'explain-ai',title:'Поднять explainability AI',description:'Нужно закрыть пустые рекомендации и довести покрытие объяснениями до полного.',severity:'warn',roles:['Продукт','Операции'],channels:['SEO','PR','Все каналы'],scenarios:['Перегруженный клиент','Все сценарии'],owner:'Продукт',source:'AI/SOS quality'}
 ];
@@ -823,6 +834,7 @@ function renderContextualViews(){
  const filteredPartners=filterContext(partnerCatalog);
  document.getElementById('partnerCards').innerHTML=(filteredPartners.length?filteredPartners:partnerCatalog).slice(0,3).map(p=>`<div class="card partner-card" ${drillAttrs('partner',p.id)}><div class="partner-head"><h3>${escapeHtml(p.name)}</h3><span class="pill">${escapeHtml(p.type)}</span></div><div class="mini-row"><span>SLA</span><b>${escapeHtml(p.sla)}</b></div><div class="mini-row"><span>Одобрение</span><b>${pct(p.approval)}</b></div><div class="mini-row"><span>EPC</span><b>${escapeHtml(p.epc)} ₽</b></div><div class="actions"><button class="action" type="button" ${drillAttrs('partner',p.id)}>План действий</button></div></div>`).join('');
  table('partnerTable',['Партнёр','Интеграция','Статус','SLA','Ответ','Доля одобрений','Доля выдач','Выручка','EPC','eCPA','Жалобы','Главная причина отказа','Действие'],(filteredPartners.length?filteredPartners:partnerCatalog).map(p=>[p.name,p.type,p.status,p.sla,p.response,pct(p.approval),pct(p.issue),mln(p.revenue),p.epc+' ₽',p.ecpa+' ₽',pct(p.complaints),p.reject,p.action]));
+ table('partnerMethodTable',['Метрика','Тип значения','Источник / бенчмарк','Как пересчитывается'],partnerMethodRows);
  kpi('retentionKpis',filterByRole([{id:'repeat-share',roles:['CRM','Руководитель'],label:'Доля повторов',value:'5.1%',sub:'цель 6%'},{id:'repeat-share',roles:['CRM'],label:'Дней до повтора',value:'21',sub:'медиана дней'},{id:'repeat-share',roles:['CRM','Руководитель'],label:'Реактивация SMS',value:'12.8%',sub:'лучший канал',cls:'positive'},{id:'repeat-share',roles:['CRM','Руководитель'],label:'Выручка после сделки',value:mln(9860000),sub:'повторы + кросс-продажи',cls:'positive'}]));
  table('retentionTable',['Событие','Пользователи / события','Конверсия'],retentionEvents);
  const unitLtv=ratio(totals.revenue,totals.approvals)*modelInputs.ltvFactor;
@@ -897,7 +909,7 @@ function renderTargetScenario(){
   `<b>SEO-масштаб (вклад ≈45% разрыва).</b> Удвоить парк лендингов под intent-запросы, поднять покрытие long-tail и нарастить ссылочную массу. Цель: визиты SEO ×${trafficGrowth.toFixed(2)}, EPC удержать ≥ 110 ₽.`,
   `<b>Платный трафик с положительным ROI (≈30%).</b> Открыть Яндекс.Директ и performance-сети только в группах с ROAS&nbsp;≥&nbsp;1.6x; CAC выдачи держать ниже LTV/3. Бюджет: до ${mln(gap*0.10)} в месяц к концу 2027.`,
   `<b>Repeat-share и CRM (≈15%).</b> SMS D+14, реактивация D+45, кросс-продажи карты и страхования. Цель: доля повторов с ${pct(ratio(REPEAT_REVENUE_TOTAL,totals.revenue)*100)} → 10% к декабрю 2027.`,
-  `<b>Партнёрский микс и SLA (≈10%).</b> Заменить «МФО Риск» на двух стабильных партнёров; перевести «Банк Город» в наблюдение до починки скоринга; нарастить долю прямых API в выдаче — это снижает eCPA на 12–18%.`
+  `<b>Партнёрский микс и SLA (≈10%).</b> Заменить «МФО-партнёр №3 (контроль риска)» на двух стабильных партнёров; перевести «Банк-партнёр» в наблюдение до починки скоринга; нарастить долю прямых API в выдаче — это снижает eCPA на 12–18%.`
  ];
  const leversHost=document.getElementById('targetGrowthLevers');
  if(leversHost)leversHost.innerHTML=levers.map(l=>`<li>${l}</li>`).join('');
