@@ -266,6 +266,29 @@ canvas{display:block;width:100%;max-width:100%;height:auto;cursor:crosshair}
 #routeAnalyticsTable td:first-child{font-family:"SF Mono",ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-weight:600}
 .criterion{display:flex;gap:12px;align-items:flex-start;font-size:13.5px;line-height:1.45}
 .criterion .ck{flex:0 0 auto;width:22px;height:22px;border-radius:7px;display:grid;place-items:center;background:color-mix(in srgb,var(--green) 16%,transparent);color:var(--green);font-weight:800;font-size:13px}
+/* ---------- Block-flow diagram (Miro-style) ---------- */
+.route-diagram-wrap{overflow-x:auto;padding:6px 2px 2px}
+.route-diagram svg{width:100%;min-width:880px;height:auto;display:block}
+.route-diagram .rd-edge{fill:none;stroke:var(--line-strong);stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.route-diagram .rd-arrow{fill:var(--line-strong)}
+.route-diagram .rd-elabel{fill:var(--muted);font-family:var(--font);font-size:11px;font-weight:700}
+.route-diagram .rd-box{height:100%;box-sizing:border-box;border:1px solid var(--line-strong);border-radius:14px;background:var(--surface);box-shadow:var(--shadow-soft);padding:9px 13px;display:flex;flex-direction:column;justify-content:center;gap:3px;overflow:hidden}
+.route-diagram .rd-box .rd-t{font-size:13px;font-weight:650;letter-spacing:-.01em;line-height:1.2}
+.route-diagram .rd-box .rd-s{font-size:11px;color:var(--muted);line-height:1.32}
+.route-diagram .rd-box code{font-family:"SF Mono",ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:11px;font-weight:700;background:var(--surface-3);border-radius:6px;padding:2px 6px}
+.route-diagram .rd-box.rd-entry{background:linear-gradient(165deg,var(--surface),var(--surface-2))}
+.route-diagram .rd-box.rd-hub{border-color:var(--blue);background:color-mix(in srgb,var(--blue) 7%,var(--surface))}
+.route-diagram .rd-box.rd-out{border-top-width:4px}
+.route-diagram .rd-box.rd-out.c-target{border-top-color:var(--green)}
+.route-diagram .rd-box.rd-out.c-active{border-top-color:var(--blue)}
+.route-diagram .rd-box.rd-out.c-rejected{border-top-color:var(--red)}
+.route-diagram .rd-box.rd-out.c-noncore{border-top-color:var(--orange)}
+.route-diagram .rd-box.rd-out.c-notfound{border-top-color:var(--faint)}
+.route-diagram .rd-diamond{fill:color-mix(in srgb,var(--violet) 10%,var(--surface));stroke:var(--violet);stroke-width:2}
+.route-diagram .rd-decision-label{height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;gap:2px}
+.route-diagram .rd-decision-label .rd-t{font-size:13px;font-weight:700}
+.route-diagram .rd-decision-label .rd-s{font-size:10.5px;color:var(--muted);line-height:1.25}
+.route-diagram .rd-caption{margin:10px 2px 0;font-size:12px;color:var(--muted);line-height:1.45}
 @media(max-width:980px){.route-goals{grid-template-columns:1fr 1fr}.route-status-grid{grid-template-columns:1fr}}
 @media(max-width:560px){.route-goals{grid-template-columns:1fr}}
 
@@ -484,6 +507,10 @@ canvas{display:block;width:100%;max-width:100%;height:auto;cursor:crosshair}
         <div class="card-title"><div><span class="eyebrow">Epic · S2S-интеграция</span><h2>Маршрутизация и кросс-идентификация трафика</h2><p>Центрофинанс ⇄ Выручай.ру. Маркетплейс — агрегатор и прокси-витрина базы ЦФ: забираем лучших лидов в ЦФ, монетизируем отказной и непрофильный трафик через CPA, исключаем перекредитованность и гарантируем безопасность базы.</p></div></div>
         <div class="route-goals" id="routeGoals"></div>
       </div>
+
+      <h2 class="divider-title">Блок-схема маршрутизации</h2>
+      <p class="route-lead">Сквозной путь трафика от точки входа до витрины офферов: два входных потока сходятся в идентификацию, проходят через S2S API Центрофинанса и расходятся по витринам в зависимости от статуса клиента. Рисуется как блок-схема со стрелками между блоками (как в Miro).</p>
+      <div class="card"><div class="route-diagram-wrap"><div id="routeDiagram" class="route-diagram"></div></div><p class="rd-caption">Цвет верхней кромки выходного блока соответствует статусу клиента из раздела ниже. Диаграмма масштабируется по ширине; на узких экранах доступна горизонтальная прокрутка.</p></div>
 
       <h2 class="divider-title">1. Статусы пользователей (CF Client Statuses)</h2>
       <p class="route-lead">API Центрофинанса возвращает один из статусов при проверке номера (или токена). От статуса зависит, как Offers Engine собирает витрину.</p>
