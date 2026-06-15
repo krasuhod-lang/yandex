@@ -1067,6 +1067,10 @@ Authorization: Bearer &lt;S2S_SECRET_TOKEN&gt;
 }`}
 ];
 const ROUTE_ANALYTICS=[
+ ['event_name','enum','smart_router_triggered — отправляется в DWH/Amplitude при каждом срабатывании Offers Engine.'],
+ ['user_segment','enum','CF_REJECTED | CF_ACTIVE | CF_TARGET | CF_NON_CORE — статус, по которому собрана витрина.'],
+ ['shown_offers_count','integer','Сколько офферов реально показано пользователю после применения правил.'],
+ ['is_external_monetization','boolean','True для A (CF_REJECTED), B (CF_ACTIVE), D (CF_NON_CORE) — внешний CPA-доход. False для C (CF_TARGET) — внутренняя синергия с ЦФ.'],
  ['is_cf_base','boolean','Принадлежит ли клиент базе ЦФ.'],
  ['cf_status','string','Зафиксированный статус при входе (CF_ACTIVE, CF_REJECTED …).'],
  ['cac_cost','decimal','Если is_cf_base = true — принудительно 0.00 (маржа CPA идёт в чистый PnL на 100%).'],
@@ -1087,8 +1091,115 @@ const ROUTE_CRITERIA=[
  'Unit-тест: при моке API ЦФ со статусом CF_ACTIVE роутер возвращает пустой список МФО и отдаёт только банковские/HR-офферы.',
  'Unit-тест: при моке статуса CF_REJECTED роутер не содержит в выдаче оффер ЦФ, но содержит ТОП-3 CPA МФО.',
  'Soft Reject Flow: при получении отказа экран без перезагрузки страницы (SPA) перестраивается в новую витрину за 2-3 секунды с лоадером «Анализируем резервные фонды…».',
- 'В DWH улетают события safe_router_redirect и счётчик спасённого EPC по сегменту отказников.'
+ 'В DWH улетают события safe_router_redirect и счётчик спасённого EPC по сегменту отказников.',
+ 'При каждом срабатывании Offers Engine в DWH/Amplitude улетает событие smart_router_triggered с полями user_segment, shown_offers_count и is_external_monetization (true для CF_REJECTED / CF_ACTIVE / CF_NON_CORE, false для CF_TARGET) — для подсчёта реального заработка маркетплейса.',
+ 'В админ-панели (раздел Analytics) реализован виджет «Калькулятор емкости сегментов»: 3 поля ввода и блок выручки, который пересчитывается без перезагрузки страницы по формуле Σ × 0.08 × 1 500 ₽.'
 ];
+const VOLUME_CALC_CR=0.08;
+const VOLUME_CALC_CPA=1500;
+const ROUTE_SEGMENTS=[
+ {cls:'s-rejected',code:'CF_REJECTED',title:'Ветка A · Отказники',
+  path:'Вводит номер → ЦФ отказывает (или хеш числится в отказниках) → SPA-экран без перезагрузки перестраивается в ТОП-3 проверенных МФО.',
+  pain:'Срочно нужны деньги, отказ вызывает стресс, не хочет заново заполнять длинные анкеты на других сайтах.',
+  whyUs:'Бережём нервы и время: даём 100% гарантию подбора компании, готовой кредитовать с текущей КИ. Не уходит к конкурентам — остаётся у нас.',
+  scheme:'Сторонние МФО-партнёры платят маркетплейсу комиссию за выданный заём (~1 500–2 500 ₽). Чистая внешняя прибыль маркетплейса.',
+  monLabel:'Внешний доход',isExternal:true,
+  rule:'exclude_partners=["Centrofinance"], include_categories=["PDL"], sort=EPC_desc',
+  capacity:'≈ 18 000 чел./мес',defaultVol:18000,payoutHint:'1 500 ₽ avg'},
+ {cls:'s-active',code:'CF_ACTIVE',title:'Ветка B · Действующие клиенты',
+  path:'Вводит номер → есть активный заём в ЦФ → скрываем все кредитные предложения → показываем дебетовые карты, кэшбэк-сервисы, вакансии (HR), страхование.',
+  pain:'Долговая яма. Очередной микрозаем усугубит ситуацию. Нужны дополнительные доходы и инструменты выгодных покупок.',
+  whyUs:'Проявляем заботу: помогаем стабилизировать финансовое положение и не даём уйти к конкурентам и закредитоваться.',
+  scheme:'Крупные банки платят CPA за выпуск дебетовых карт, HR-платформы — за отклики. Параллельно защищаем ЦФ от потери клиента и риска дефолта.',
+  monLabel:'Внешний доход + защита',isExternal:true,
+  rule:'exclude_categories=["PDL","Installment"], include_categories=["DebitCards","HR","Insurance"]',
+  capacity:'≈ 24 000 чел./мес',defaultVol:24000,payoutHint:'1 200 ₽ avg'},
+ {cls:'s-target',code:'CF_TARGET',title:'Ветка C · Целевые / идеальный профиль',
+  path:'Вводит номер → система видит идеального заёмщика → блокирует всех конкурентов → показывает только Центрофинанс.',
+  pain:'Нужна проверенная компания, лучшая ставка, отсутствие скрытых страховок и инфошума.',
+  whyUs:'Избавляем от инфошума: сразу даём лучший премиум-оффер от генерального партнёра (ЦФ).',
+  scheme:'ЦФ получает идеального лида из бесплатной органики маркетплейса, экономя бюджет на Яндекс.Директ. Внешнего дохода нет — внутренняя синергия группы.',
+  monLabel:'Внутренняя синергия',isExternal:false,
+  rule:'exclude_all_except=["Centrofinance"]',
+  capacity:'не учитывается в калькуляторе внешнего дохода',defaultVol:0,payoutHint:'—'},
+ {cls:'s-noncore',code:'CF_NON_CORE',title:'Ветка D · Непрофильные',
+  path:'Ищет крупную сумму (≈ 1 млн ₽) → скрываем микрозаймы → переводим в ТОП-банки (потреб, авто, залог, ипотека).',
+  pain:'МФО не дают такие суммы. Нужно найти банк с высокой вероятностью одобрения крупного кредита.',
+  whyUs:'Сразу маршрутизируем в целевые банки, экономя время на скоринге и подаче заявок в десяти местах.',
+  scheme:'Топовые банки платят высокую комиссию за выданный потребкредит (до 10 000 ₽). Независимый канал заработка маркетплейса.',
+  monLabel:'Внешний доход',isExternal:true,
+  rule:'include_categories=["CreditCards","CashLoans","Auto","Mortgage"]',
+  capacity:'≈ 6 000 чел./мес',defaultVol:6000,payoutHint:'до 10 000 ₽'}
+];
+function renderRouteSegments(){
+ const host=document.getElementById('routeSegments');
+ if(!host)return;
+ host.innerHTML=ROUTE_SEGMENTS.map(s=>{
+  const monCls=s.isExternal?'':' is-internal';
+  const flag=`<span class="sg-mon-flag">is_external_monetization: <b>${s.isExternal?'true':'false'}</b></span>`;
+  return `<article class="seg-card ${s.cls}" data-segment="${escapeHtml(s.code)}">
+   <div class="sg-head"><span class="sg-code">${escapeHtml(s.code)}</span><span class="sg-title">${escapeHtml(s.title)}</span></div>
+   <div class="sg-row"><span class="sg-label">Путь пользователя</span><span class="sg-text">${escapeHtml(s.path)}</span></div>
+   <div class="sg-row"><span class="sg-label">Боль клиента</span><span class="sg-text muted">${escapeHtml(s.pain)}</span></div>
+   <div class="sg-row"><span class="sg-label">Почему Выручай.ру</span><span class="sg-text">${escapeHtml(s.whyUs)}</span></div>
+   <div class="sg-row"><span class="sg-label">Схема монетизации</span><span class="sg-text muted">${escapeHtml(s.scheme)}</span></div>
+   <div class="sg-mon"><span class="sg-mon-tag${monCls}">${escapeHtml(s.monLabel)}</span>${flag}</div>
+   <div class="sg-row"><span class="sg-label">Техническое правило (Offers Engine)</span><code class="sg-rule">${escapeHtml(s.rule)}</code></div>
+   <div class="sg-cap"><span>Емкость: <b>${escapeHtml(s.capacity)}</b></span><span>CPA: <b>${escapeHtml(s.payoutHint)}</b></span></div>
+  </article>`;
+ }).join('');
+}
+function calculateExternalRevenue(rejectedVol,activeVol,noncoreVol){
+ const r=Math.max(0,Number(rejectedVol)||0);
+ const a=Math.max(0,Number(activeVol)||0);
+ const n=Math.max(0,Number(noncoreVol)||0);
+ const total=r+a+n;
+ return {total,revenue:total*VOLUME_CALC_CR*VOLUME_CALC_CPA,parts:{rejected:r,active:a,noncore:n}};
+}
+function formatRub(v){const n=Math.round(Number(v)||0);return n.toLocaleString('ru-RU')+' ₽'}
+function formatPpl(v){return (Math.round(Number(v)||0)).toLocaleString('ru-RU')+' чел.'}
+function updateVolumeCalculator(opts){
+ const ri=document.getElementById('calcRejected');
+ const ai=document.getElementById('calcActive');
+ const ni=document.getElementById('calcNoncore');
+ if(!ri||!ai||!ni)return;
+ [ri,ai,ni].forEach(el=>{
+  const v=Number(el.value);
+  el.classList.toggle('is-invalid',el.value!==''&&(!Number.isFinite(v)||v<0));
+ });
+ const res=calculateExternalRevenue(ri.value,ai.value,ni.value);
+ const sumEl=document.getElementById('calcSum');
+ const revEl=document.getElementById('calcRevenue');
+ const subEl=document.getElementById('calcRevenueSub');
+ const bdEl=document.getElementById('calcBreakdown');
+ if(sumEl)sumEl.textContent=formatPpl(res.total);
+ if(revEl){
+  revEl.textContent=formatRub(res.revenue);
+  if(opts&&opts.bump){revEl.classList.add('is-bump');setTimeout(()=>revEl.classList.remove('is-bump'),320)}
+ }
+ if(subEl){
+  if(res.total===0)subEl.textContent='Введите объёмы трафика — пересчёт идёт без перезагрузки страницы.';
+  else subEl.textContent=`${formatPpl(res.total)} × ${(VOLUME_CALC_CR*100).toFixed(0)}% × ${VOLUME_CALC_CPA.toLocaleString('ru-RU')} ₽ = ${formatRub(res.revenue)} в месяц.`;
+ }
+ if(bdEl){
+  const part=(label,vol)=>`<div>${escapeHtml(label)}<b>${formatRub(vol*VOLUME_CALC_CR*VOLUME_CALC_CPA)}</b></div>`;
+  bdEl.innerHTML=part('Отказники',res.parts.rejected)+part('Действующие',res.parts.active)+part('Непрофильные',res.parts.noncore);
+ }
+}
+function initVolumeCalculator(){
+ const ids=['calcRejected','calcActive','calcNoncore'];
+ const inputs=ids.map(id=>document.getElementById(id)).filter(Boolean);
+ if(inputs.length!==3)return;
+ if(inputs[0].dataset.calcInit==='1'){updateVolumeCalculator();return}
+ const defaults={calcRejected:18000,calcActive:24000,calcNoncore:6000};
+ inputs.forEach(el=>{
+  el.dataset.calcInit='1';
+  if(el.value==='')el.value=String(defaults[el.id]??0);
+  el.addEventListener('input',()=>updateVolumeCalculator({bump:true}));
+  el.addEventListener('change',()=>updateVolumeCalculator({bump:true}));
+ });
+ updateVolumeCalculator();
+}
 function renderRoutingDiagram(){
  const host=document.getElementById('routeDiagram');
  if(!host)return;
@@ -1156,6 +1267,8 @@ function renderRouting(){
  if(!goals)return;
  goals.innerHTML=ROUTE_GOALS.map((g,i)=>`<div class="route-goal"><span class="rg-num">${i+1}</span><span class="rg-text">${escapeHtml(g)}</span></div>`).join('');
  renderRoutingDiagram();
+ renderRouteSegments();
+ initVolumeCalculator();
  renderRoutingDecisionTree();
  renderRoutingSoftReject();
  document.getElementById('routeStatuses').innerHTML=ROUTE_STATUSES.map(s=>`<div class="status-card ${s.cls}"><div class="sc-head"><span class="sc-tag">${escapeHtml(s.code)}</span><span class="sc-title">${escapeHtml(s.title)}</span></div><div class="metric-sub">${escapeHtml(s.desc)}</div><div class="sc-logic">${escapeHtml(s.logic)}</div></div>`).join('');
