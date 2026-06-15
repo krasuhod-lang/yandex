@@ -997,11 +997,16 @@ const ROUTE_GOALS=[
  'Гарантировать безопасность базы ЦФ — никаких прямых сливов конкурентам.'
 ];
 const ROUTE_STATUSES=[
- {cls:'s-target',code:'Целевой клиент',title:'Подходит для ЦФ',desc:'Идеальный профиль, хорошая КИ.',logic:'Маршрутизация сделки в ЦФ. Оффер ЦФ на 1-м месте или «режим SOS» (эксклюзивная выдача в ЦФ). Остальные МФО скрыты.',out:'Оффер ЦФ №1 или SOS-режим (эксклюзив ЦФ)'},
- {cls:'s-active',code:'Действующий клиент',title:'Действующий клиент ЦФ',desc:'Уже есть активный заём / долг.',logic:'Запрет на конкуренцию: все МФО-конкуренты (займы) полностью скрыты. Первым показываем Кредитную линию (продукт ЦФ), далее — иные предложения, кроме займов: РКО, карты, страхование, рефинансирование в банках.',out:'Кредитная линия ЦФ №1, далее иные продукты (кроме займов)'},
- {cls:'s-rejected',code:'Отказ ЦФ',title:'Отказник ЦФ',desc:'ЦФ отклонил заявку по скорингу / КИ.',logic:'Полная свобода монетизации. Оффер ЦФ скрыт. Витрина из МФО-партнёров, готовых кредитовать с плохой КИ. Сделка уходит по CPA.',out:'CPA-витрина МФО, оффер ЦФ скрыт'},
- {cls:'s-noncore',code:'Непрофильный',title:'Непрофильный для ЦФ',desc:'Продукт / сумма / срок вне профиля ЦФ.',logic:'Лид не подходит ЦФ — продаём его другим МФО. Оффер ЦФ скрыт, показываем CPA-витрину партнёрских МФО, готовых выдать заём. Сделка уходит по CPA.',out:'Продаём другим МФО — CPA-витрина партнёров'},
- {cls:'s-notfound',code:'Новый клиент',title:'Новый (органический) трафик',desc:'В базе ЦФ не числится.',logic:'Стандартная витрина. ЦФ участвует на общих основаниях (priority-размещение), конкуренты также доступны.',out:'Стандартная витрина, ЦФ на общих основаниях'}
+ {cls:'s-target',code:'CF_TARGET',title:'Подходит для ЦФ',desc:'Идеальный профиль, хорошая КИ.',logic:'Маршрутизация сделки в ЦФ. Оффер ЦФ на 1-м месте или «режим SOS» (эксклюзивная выдача в ЦФ). Остальные МФО скрыты.',out:'Оффер ЦФ №1 или SOS-режим (эксклюзив ЦФ)',
+  ui:'Иван, для вашего профиля 100% одобрение в Центрофинансе',allow:['Оффер ЦФ №1','Бейдж «100% одобрение»','SOS-режим'],block:['Сторонние МФО (на время SOS)']},
+ {cls:'s-active',code:'CF_ACTIVE',title:'Действующий клиент ЦФ',desc:'Уже есть активный заём / долг.',logic:'Запрет на конкуренцию: все МФО-конкуренты (займы) полностью скрыты. Первым показываем Кредитную линию (продукт ЦФ), далее — иные предложения, кроме займов: РКО, карты, страхование, рефинансирование в банках.',out:'Кредитная линия ЦФ №1, далее иные продукты (кроме займов)',
+  ui:'Специальные предложения для клиентов Центрофинанса',allow:['Кредитная линия ЦФ','Дебетовые карты','РКО','HR-офферы','Страхование'],block:['МФО-конкуренты','Любые сторонние займы']},
+ {cls:'s-rejected',code:'CF_REJECTED',title:'Отказник ЦФ · киллер-сегмент',desc:'ЦФ отклонил заявку по скорингу / КИ.',logic:'Полная свобода монетизации. Оффер ЦФ скрыт. Витрина из МФО-партнёров, готовых кредитовать с плохой КИ. Сделка уходит по CPA. Активируется Soft Reject Flow — экран без перезагрузки перестраивается в новую витрину.',out:'CPA-витрина ТОП-3 МФО, оффер ЦФ скрыт',
+  ui:'У нас есть 3 компании, готовые выдать вам деньги прямо сейчас',allow:['ТОП-3 МФО (CPA)','Сорт. по EPC × Approval Rate','Soft Reject Flow'],block:['Оффер ЦФ']},
+ {cls:'s-noncore',code:'CF_NON_CORE',title:'Непрофильный для ЦФ',desc:'Продукт / сумма / срок вне профиля ЦФ (ипотека, авто, крупная сумма).',logic:'Лид не подходит ЦФ — продаём его другим игрокам рынка. Оффер ЦФ скрыт, показываем витрину крупных банков и залоговых продуктов.',out:'Витрина банков и залоговых продуктов',
+  ui:'Подобрали для вас банковские продукты под вашу задачу',allow:['Потребкредиты банков','Автокредиты','Займы под залог','Ипотека'],block:['МФО (PDL)','Оффер ЦФ']},
+ {cls:'s-notfound',code:'NOT_FOUND',title:'Новый (органический) трафик',desc:'В базе ЦФ не числится.',logic:'Смешанная витрина. ЦФ на 1-м месте + 2-3 партнёрских МФО для сравнения, конкуренты также доступны.',out:'Смешанная витрина: ЦФ №1 + 2-3 МФО',
+  ui:'Подобрали лучшие предложения под ваш запрос',allow:['ЦФ №1','2-3 партнёрских МФО','Сравнение условий'],block:[]}
 ];
 const ROUTE_FLOWS=[
  {tag:'Flow A · «Тёплый» трафик (push от ЦФ)',lead:'Инициатор — сервер ЦФ. Клиент подал заявку на сайте/в офисе ЦФ и получил отказ.',steps:[
@@ -1064,7 +1069,11 @@ Authorization: Bearer &lt;S2S_SECRET_TOKEN&gt;
 const ROUTE_ANALYTICS=[
  ['is_cf_base','boolean','Принадлежит ли клиент базе ЦФ.'],
  ['cf_status','string','Зафиксированный статус при входе (CF_ACTIVE, CF_REJECTED …).'],
- ['cac_cost','decimal','Если is_cf_base = true — принудительно 0.00 (маржа CPA идёт в чистый PnL на 100%).']
+ ['cac_cost','decimal','Если is_cf_base = true — принудительно 0.00 (маржа CPA идёт в чистый PnL на 100%).'],
+ ['event_type','enum','safe_router_redirect — фиксируется при перехвате отказа и перестроении витрины.'],
+ ['original_status','string','Статус клиента до редиректа Smart Safe Router (например, CF_REJECTED).'],
+ ['monetized_cpa','boolean','Заработали ли мы на отказнике: true, если был клик по CPA-офферу запасной витрины.'],
+ ['saved_epc_rub','decimal','Спасённый EPC в рублях по сегменту отказников — счётчик для дашборда.']
 ];
 const ROUTE_CRITERIA=[
  'Реализован алгоритм хеширования номера телефона на стороне МП.',
@@ -1073,26 +1082,40 @@ const ROUTE_CRITERIA=[
  'При статусе CF_ACTIVE Offers Engine ставит Кредитную линию ЦФ на 1-е место, далее — иные продукты, кроме займов.',
  'Offers Engine скрывает оффер ЦФ при статусе CF_REJECTED или CF_NON_CORE.',
  'Переход по ссылке с ?token=… выполняет бесшовную авторизацию с подтягиванием данных.',
- 'В БД сохраняются аналитические метки cf_status для расчёта unit-экономики.'
+ 'В БД сохраняются аналитические метки cf_status для расчёта unit-экономики.',
+ 'В БД создана схема маппинга «Статус ЦФ → Разрешённые категории офферов» (см. таблицу Decision Tree).',
+ 'Unit-тест: при моке API ЦФ со статусом CF_ACTIVE роутер возвращает пустой список МФО и отдаёт только банковские/HR-офферы.',
+ 'Unit-тест: при моке статуса CF_REJECTED роутер не содержит в выдаче оффер ЦФ, но содержит ТОП-3 CPA МФО.',
+ 'Soft Reject Flow: при получении отказа экран без перезагрузки страницы (SPA) перестраивается в новую витрину за 2-3 секунды с лоадером «Анализируем резервные фонды…».',
+ 'В DWH улетают события safe_router_redirect и счётчик спасённого EPC по сегменту отказников.'
 ];
 function renderRoutingDiagram(){
  const host=document.getElementById('routeDiagram');
  if(!host)return;
  const NS='http://www.w3.org/1999/xhtml';
  const box=(x,y,w,h,cls,inner)=>`<foreignObject x="${x}" y="${y}" width="${w}" height="${h}"><div xmlns="${NS}" class="rd-box ${cls}">${inner}</div></foreignObject>`;
- const edge=d=>`<path class="rd-edge" d="${d}" marker-end="url(#rdArrow)"/>`;
- const elabel=(x,y,t)=>`<text class="rd-elabel" x="${x}" y="${y}" text-anchor="middle">${escapeHtml(t)}</text>`;
+ const edge=(d,extra='')=>`<path class="rd-edge${extra?' '+extra:''}" d="${d}" marker-end="url(#rdArrow)"/>`;
+ const elabel=(x,y,t,extra='')=>`<text class="rd-elabel${extra?' '+extra:''}" x="${x}" y="${y}" text-anchor="middle">${escapeHtml(t)}</text>`;
  const outCls={'s-target':'c-target','s-active':'c-active','s-rejected':'c-rejected','s-noncore':'c-noncore','s-notfound':'c-notfound'};
  const outCx=[128,364,600,836,1072];
+ const chips=(arr,cls)=>arr.length?`<div class="rd-chips">${arr.map(c=>`<span class="rd-chip ${cls}">${escapeHtml(c)}</span>`).join('')}</div>`:'';
  const nodes=[
   box(110,24,380,76,'rd-entry','<span class="rd-t">Flow A · Тёплый трафик</span><span class="rd-s">Push от ЦФ: SMS со ссылкой и подписанный одноразовый JWT-токен</span>'),
   box(710,24,380,76,'rd-entry','<span class="rd-t">Flow B · Холодный трафик</span><span class="rd-s">Органика (Я.Директ / SEO): пользователь вводит номер телефона</span>'),
   box(370,156,460,64,'rd-hub','<span class="rd-t">Идентификация</span><span class="rd-s">Резолв токена (Flow A) или SHA-256 хеш телефона (Flow B)</span>'),
-  box(370,272,460,64,'rd-hub','<span class="rd-t">S2S API Центрофинанса</span><span class="rd-s">POST check-hash / get-profile · только Server-to-Server</span>')
+  box(370,272,460,64,'rd-hub rd-killer','<span class="rd-killer-badge">★ Smart Safe Router · Анти-Отказный Сейф</span><span class="rd-t">S2S API Центрофинанса · Decision Engine</span><span class="rd-s">POST check-hash / get-profile · 100% отказного трафика — в деньги</span>')
  ].join('');
  const diamond=`<polygon class="rd-diamond" points="600,354 720,410 600,466 480,410"/>`+
   `<foreignObject x="486" y="358" width="228" height="104"><div xmlns="${NS}" class="rd-decision-label"><span class="rd-t">Какой статус клиента?</span><span class="rd-s">Offers Engine применяет правила маршрутизации</span></div></foreignObject>`;
- const outputs=ROUTE_STATUSES.map((s,i)=>box(outCx[i]-106,540,212,104,`rd-out ${outCls[s.cls]||''}`,`<span class="rd-tag">${escapeHtml(s.code)}</span><span class="rd-s">${escapeHtml(s.out)}</span>`)).join('');
+ const outputs=ROUTE_STATUSES.map((s,i)=>{
+  const inner=`<span class="rd-tag">${escapeHtml(s.code)}</span>`+
+   `<span class="rd-s">${escapeHtml(s.out)}</span>`+
+   chips(s.allow,'rd-chip-allow')+
+   (s.block&&s.block.length?chips(s.block,'rd-chip-block'):'');
+  return box(outCx[i]-110,540,220,178,`rd-out ${outCls[s.cls]||''}`,inner);
+ }).join('');
+ // Soft Reject sub-flow attached to s-rejected output (i=2, center x=600)
+ const softReject=box(442,752,316,72,'rd-soft','<span class="rd-soft-pill">Soft Reject Flow · UI</span><span class="rd-s">Без перезагрузки SPA: лоадер «Анализируем резервные фонды…» (2-3 с) → перестроение витрины → клик по CPA → событие <b>safe_router_redirect</b></span>');
  const edges=[
   edge('M300,100 V128 H540 V156'),
   edge('M900,100 V128 H660 V156'),
@@ -1103,18 +1126,38 @@ function renderRoutingDiagram(){
   edge('M600,498 H364 V540'),
   edge('M600,498 V540'),
   edge('M600,498 H836 V540'),
-  edge('M600,498 H1072 V540')
+  edge('M600,498 H1072 V540'),
+  edge('M600,718 V752','rd-edge-killer')
  ].join('');
- const labels=elabel(420,118,'JWT-токен')+elabel(780,118,'SHA-256 хеш');
- host.innerHTML=`<svg viewBox="0 0 1200 660" role="img" aria-label="Блок-схема маршрутизации трафика: два входных потока, идентификация, S2S API Центрофинанса, ветвление по статусу клиента и витрины офферов">`+
+ const labels=elabel(420,118,'JWT-токен')+elabel(780,118,'SHA-256 хеш')+elabel(600,742,'KILLER-фича · перехват отказа','rd-elabel-killer');
+ host.innerHTML=`<svg viewBox="0 0 1200 840" role="img" aria-label="Блок-схема Smart Safe Router: два входных потока, идентификация, S2S API Центрофинанса, ветвление по статусу клиента, витрины офферов с разрешёнными и заблокированными категориями, под-поток Soft Reject для отказников">`+
   `<defs><marker id="rdArrow" markerWidth="9" markerHeight="9" refX="7" refY="4.5" orient="auto" markerUnits="userSpaceOnUse"><path class="rd-arrow" d="M0,0 L9,4.5 L0,9 Z"/></marker></defs>`+
-  edges+labels+nodes+diamond+outputs+`</svg>`;
+  edges+labels+nodes+diamond+outputs+softReject+`</svg>`;
+}
+function renderRoutingDecisionTree(){
+ const host=document.getElementById('routeDecisionTree');
+ if(!host)return;
+ host.innerHTML=ROUTE_STATUSES.map(s=>{
+  const allow=s.allow.map(c=>`<span class="dt-chip dt-allow">${escapeHtml(c)}</span>`).join('');
+  const block=s.block&&s.block.length?s.block.map(c=>`<span class="dt-chip dt-block">${escapeHtml(c)}</span>`).join(''):`<span class="dt-chip dt-none">— нет —</span>`;
+  return `<div class="dt-row ${s.cls}"><div class="dt-status"><span class="dt-code">${escapeHtml(s.code)}</span><span class="dt-title">${escapeHtml(s.title)}</span><span class="dt-ui">UI: «${escapeHtml(s.ui)}»</span></div><div class="dt-cell dt-cell-allow"><div class="dt-cell-h">✓ Разрешено</div><div class="dt-cell-chips">${allow}</div></div><div class="dt-cell dt-cell-block"><div class="dt-cell-h">✕ Заблокировано</div><div class="dt-cell-chips">${block}</div></div></div>`;
+ }).join('');
+}
+function renderRoutingSoftReject(){
+ const host=document.getElementById('routeSoftReject');
+ if(!host)return;
+ host.innerHTML=`
+  <div class="sr-stage" data-step="1"><div class="sr-step-num">1</div><div class="sr-phone"><div class="sr-screen sr-screen-form"><div class="sr-bar"></div><div class="sr-h">Заявка в Центрофинанс</div><div class="sr-input">+7 999 ··· 12 34</div><div class="sr-input">15 000 ₽ · 21 день</div><div class="sr-cta sr-cta-blue">Получить деньги</div></div></div><div class="sr-cap"><b>Иван оформляет заявку.</b> Стандартный путь — клиент вводит телефон и сумму, отправляет заявку в ЦФ.</div></div>
+  <div class="sr-stage" data-step="2"><div class="sr-step-num">2</div><div class="sr-phone sr-phone-pulse"><div class="sr-screen sr-screen-load"><div class="sr-spinner"></div><div class="sr-h">Обновляем данные…</div><div class="sr-sub">Анализируем резервные фонды</div><div class="sr-progress"><span></span></div><div class="sr-tip">Smart Safe Router · 2-3 сек</div></div></div><div class="sr-cap"><b>API ЦФ возвращает <code>CF_REJECTED</code>.</b> Вместо красного крестика — лоадер. Без перезагрузки страницы (SPA) собираем запасную витрину из ТОП-3 МФО.</div></div>
+  <div class="sr-stage" data-step="3"><div class="sr-step-num">3</div><div class="sr-phone"><div class="sr-screen sr-screen-shop"><div class="sr-h sr-h-win">Иван, мы нашли 3 запасных варианта</div><div class="sr-sub">100% одобрение по вашему профилю</div><div class="sr-offer"><div class="sr-logo">М1</div><div class="sr-meta"><div class="sr-name">МФО «Деньги Сразу»</div><div class="sr-rate">до 30 000 ₽ · одобрение 78%</div></div><div class="sr-go">→</div></div><div class="sr-offer"><div class="sr-logo sr-logo-2">М2</div><div class="sr-meta"><div class="sr-name">МФО «Веб-займ»</div><div class="sr-rate">до 15 000 ₽ · одобрение 71%</div></div><div class="sr-go">→</div></div><div class="sr-offer"><div class="sr-logo sr-logo-3">М3</div><div class="sr-meta"><div class="sr-name">МФО «Кредит-7»</div><div class="sr-rate">до 20 000 ₽ · одобрение 69%</div></div><div class="sr-go">→</div></div><div class="sr-evt">event: <b>safe_router_redirect</b> · monetized_cpa: <b>true</b></div></div></div><div class="sr-cap"><b>Клик по CPA-офферу — 350-600 ₽ в чистый PnL.</b> CAC = 0 ₽ (отказник уже наш). DWH ловит событие <code>safe_router_redirect</code> и инкрементит счётчик спасённого EPC.</div></div>`;
 }
 function renderRouting(){
  const goals=document.getElementById('routeGoals');
  if(!goals)return;
  goals.innerHTML=ROUTE_GOALS.map((g,i)=>`<div class="route-goal"><span class="rg-num">${i+1}</span><span class="rg-text">${escapeHtml(g)}</span></div>`).join('');
  renderRoutingDiagram();
+ renderRoutingDecisionTree();
+ renderRoutingSoftReject();
  document.getElementById('routeStatuses').innerHTML=ROUTE_STATUSES.map(s=>`<div class="status-card ${s.cls}"><div class="sc-head"><span class="sc-tag">${escapeHtml(s.code)}</span><span class="sc-title">${escapeHtml(s.title)}</span></div><div class="metric-sub">${escapeHtml(s.desc)}</div><div class="sc-logic">${escapeHtml(s.logic)}</div></div>`).join('');
  document.getElementById('routeFlows').innerHTML=ROUTE_FLOWS.map(f=>`<div class="card"><div class="card-title"><div><span class="rf-tag">${escapeHtml(f.tag)}</span><p style="margin:6px 0 0;color:var(--muted);font-size:13px">${escapeHtml(f.lead)}</p></div></div><div class="route-flow">${f.steps.map((st,i)=>`<div class="route-step" data-n="${i+1}"><div class="rs-title">${escapeHtml(st[0])}</div><div class="rs-text">${escapeHtml(st[1])}</div></div>`).join('')}</div></div>`).join('');
  document.getElementById('routeSecurity').innerHTML=ROUTE_SECURITY.map(p=>`<li>${p}</li>`).join('');
