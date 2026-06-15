@@ -276,7 +276,7 @@ canvas{display:block;width:100%;max-width:100%;height:auto;cursor:crosshair}
 .criterion .ck{flex:0 0 auto;width:22px;height:22px;border-radius:7px;display:grid;place-items:center;background:color-mix(in srgb,var(--green) 16%,transparent);color:var(--green);font-weight:800;font-size:13px}
 /* ---------- Block-flow diagram (Miro-style) ---------- */
 .route-diagram-wrap{overflow-x:auto;padding:6px 2px 2px}
-.route-diagram svg{width:100%;min-width:880px;height:auto;display:block}
+.route-diagram svg{width:100%;min-width:1280px;height:auto;display:block}
 .route-diagram .rd-edge{fill:none;stroke:var(--line-strong);stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
 .route-diagram .rd-arrow{fill:var(--line-strong)}
 .route-diagram .rd-elabel{fill:var(--muted);font-family:var(--font);font-size:11px;font-weight:700}
@@ -340,6 +340,37 @@ canvas{display:block;width:100%;max-width:100%;height:auto;cursor:crosshair}
 .route-diagram .rd-box.rd-soft{border:1px dashed var(--violet);background:color-mix(in srgb,var(--violet) 6%,var(--surface));padding:9px 13px;gap:4px}
 .route-diagram .rd-soft-pill{align-self:flex-start;font-size:10.5px;font-weight:800;letter-spacing:-.01em;padding:2px 9px;border-radius:980px;background:color-mix(in srgb,var(--violet) 18%,transparent);color:var(--violet)}
 .route-diagram .rd-box.rd-soft .rd-s code,.route-diagram .rd-box.rd-soft .rd-s b{font-family:"SF Mono",ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:10.5px;color:var(--ink)}
+/* ---------- Big four-branch layout (CEO single screen) ---------- */
+.route-diagram-card{padding:18px}
+.route-diagram .rd-box.rd-branch{border-top-width:5px;background:linear-gradient(180deg,var(--surface),color-mix(in srgb,var(--surface-2) 70%,var(--surface)));padding:12px 14px;gap:8px;justify-content:flex-start}
+.route-diagram .rd-box.rd-branch.c-target{border-top-color:var(--green)}
+.route-diagram .rd-box.rd-branch.c-active{border-top-color:var(--blue)}
+.route-diagram .rd-box.rd-branch.c-rejected{border-top-color:var(--red)}
+.route-diagram .rd-box.rd-branch.c-noncore{border-top-color:var(--orange)}
+.route-diagram .rd-box.rd-branch .rd-bh-top{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.route-diagram .rd-box.rd-branch .rd-t{font-size:14.5px;font-weight:700;line-height:1.25}
+.route-diagram .rd-box.rd-branch .rd-s{font-size:11.5px;color:var(--muted);line-height:1.35}
+.route-diagram .rd-mon-flag{font-size:10px;font-weight:700;letter-spacing:.02em;padding:2px 8px;border-radius:980px;font-family:"SF Mono",ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+.route-diagram .rd-mon-flag b{font-weight:800}
+.route-diagram .rd-mon-ext{background:color-mix(in srgb,#d4a017 18%,transparent);color:#a87800;border:1px solid color-mix(in srgb,#d4a017 30%,transparent)}
+.route-diagram .rd-mon-int{background:color-mix(in srgb,var(--faint) 18%,transparent);color:var(--muted);border:1px solid var(--line)}
+.route-diagram .rd-box.rd-mini{border-radius:12px;padding:10px 12px;gap:6px;justify-content:flex-start;background:var(--surface);border:1px solid var(--line)}
+.route-diagram .rd-box.rd-mini.c-target{border-left:3px solid var(--green)}
+.route-diagram .rd-box.rd-mini.c-active{border-left:3px solid var(--blue)}
+.route-diagram .rd-box.rd-mini.c-rejected{border-left:3px solid var(--red)}
+.route-diagram .rd-box.rd-mini.c-noncore{border-left:3px solid var(--orange)}
+.route-diagram .rd-mini-h{font-size:10.5px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.route-diagram .rd-mini-b{font-size:12px;line-height:1.4;color:var(--text)}
+.route-diagram .rd-mini-b b{color:var(--ink);font-variant-numeric:tabular-nums}
+.route-diagram .rd-mini-b code{font-family:"SF Mono",ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:11px;color:var(--ink);background:var(--surface-2);padding:1px 5px;border-radius:5px}
+.route-diagram .rd-cap-grid{display:grid;grid-template-columns:1fr;gap:3px;font-size:11.5px;line-height:1.4;color:var(--muted)}
+.route-diagram .rd-cap-grid b{color:var(--ink);font-variant-numeric:tabular-nums;font-weight:700}
+.route-diagram .rd-mini-chips{display:flex;flex-wrap:wrap;gap:4px;align-items:center}
+.route-diagram .rd-mini-chips .rd-mini-chip-h{font-size:10px;font-weight:800;letter-spacing:.04em;color:var(--muted);text-transform:uppercase;margin-right:2px}
+.route-diagram .rd-soft-strip{display:flex;gap:6px;align-items:stretch}
+.route-diagram .rd-soft-strip .rd-soft-step{flex:1;background:color-mix(in srgb,var(--violet) 6%,var(--surface));border:1px dashed var(--violet);border-radius:10px;padding:6px 8px;display:flex;flex-direction:column;gap:2px}
+.route-diagram .rd-soft-strip .rd-soft-step .rd-soft-n{font-size:9.5px;font-weight:800;color:var(--violet);letter-spacing:.06em;text-transform:uppercase}
+.route-diagram .rd-soft-strip .rd-soft-step .rd-soft-tx{font-size:10.5px;line-height:1.35;color:var(--text)}
 
 /* ---------- Decision Tree table ---------- */
 .dt-table{display:grid;gap:8px}
@@ -682,16 +713,13 @@ canvas{display:block;width:100%;max-width:100%;height:auto;cursor:crosshair}
         <div class="route-goals" id="routeGoals"></div>
       </div>
 
-      <h2 class="divider-title">Блок-схема маршрутизации · Smart Safe Router</h2>
-      <p class="route-lead">Сквозной путь трафика от точки входа до витрины офферов. Ядро — <b>Smart Safe Router</b>: при отказе ЦФ система перехватывает сессию, через S2S API определяет статус клиента и собирает персональную витрину из CPA-офферов. Цель — конвертировать 100% отказного трафика в выручку без риска перекредитованности.</p>
-      <div class="card"><div class="route-diagram-wrap"><div id="routeDiagram" class="route-diagram"></div></div><p class="rd-caption">Цвет верхней кромки выходного блока = статус клиента. В каждом блоке — чипы разрешённых (зелёные) и заблокированных (красные) категорий офферов. Под веткой <b>CF_REJECTED</b> — под-поток <b>Soft Reject Flow</b>, в котором без перезагрузки страницы перестраивается витрина и отправляется событие <code>safe_router_redirect</code>.</p></div>
+      <h2 class="divider-title">Блок-схема Smart Safe Router · Единый экран</h2>
+      <p class="route-lead">Один экран закрывает шесть вопросов CEO: история пользователя, боль, обоснование выбора Выручай.ру, схема монетизации с участниками, реальный (внешний) заработок и ёмкость по каждой из четырёх веток (отказники, действующие, целевые, непрофильные). Ниже — интерактивный калькулятор: изменяйте объёмы трафика и цифры в карточках веток обновятся без перезагрузки страницы.</p>
+      <div class="card route-diagram-card"><div class="route-diagram-wrap"><div id="routeDiagram" class="route-diagram"></div></div><p class="rd-caption">Цвет верхней кромки колонки = статус клиента. Бейдж <code>is_external_monetization</code> отличает ветки с внешним доходом (золотой) от внутренней синергии группы (серый). Под веткой <b>CF_REJECTED</b> — мини-сценарий Soft Reject: лоадер «Анализируем резервные фонды…» (2–3 с) → перестроение витрины → клик по CPA → событие <code>safe_router_redirect</code>.</p></div>
 
-      <h2 class="divider-title">Карта сегментов и монетизации · User Stories + Volume Calculator</h2>
-      <p class="route-lead">Один экран — четыре ветки роутера, путь клиента, его боль, обоснование выбора Выручай.ру и схема монетизации с пометкой <b>is_external_monetization</b>. Ниже — интерактивный калькулятор емкости: меняйте объёмы трафика и сразу видите потенциальный внешний доход.</p>
-      <div class="seg-map" id="routeSegments"></div>
       <div class="card calc-card" aria-labelledby="calcTitle">
         <div>
-          <div class="card-title"><div><span class="eyebrow">Analytics · Volume Calculator</span><h3 id="calcTitle">Калькулятор емкости сегментов</h3><p>Ручной ввод прогнозируемых объёмов в месяц. Целевые клиенты (CF_TARGET) не участвуют — там <b>внутренняя синергия</b>, а не внешний доход.</p></div></div>
+          <div class="card-title"><div><span class="eyebrow">Аналитика · Калькулятор ёмкости</span><h3 id="calcTitle">Калькулятор ёмкости сегментов</h3><p>Ручной ввод прогнозируемых объёмов в месяц. Целевые клиенты (CF_TARGET) не участвуют — там <b>внутренняя синергия</b>, а не внешний доход.</p></div></div>
           <div class="calc-inputs">
             <div class="calc-field"><label for="calcRejected">Отказники <span class="calc-sub">CF_REJECTED · чел./мес</span></label><input id="calcRejected" type="number" min="0" step="100" inputmode="numeric" autocomplete="off"></div>
             <div class="calc-field"><label for="calcActive">Действующие <span class="calc-sub">CF_ACTIVE · чел./мес</span></label><input id="calcActive" type="number" min="0" step="100" inputmode="numeric" autocomplete="off"></div>
@@ -711,34 +739,6 @@ canvas{display:block;width:100%;max-width:100%;height:auto;cursor:crosshair}
           <div class="calc-breakdown" id="calcBreakdown"></div>
         </div>
       </div>
-
-      <h2 class="divider-title">Decision Tree · «Статус ЦФ → Разрешённые / Заблокированные категории»</h2>
-      <p class="route-lead">Маппинг статуса в правила витрины — единый источник правды для бэкенда (Offers Engine) и DWH (схема <code>cf_status_offer_rules</code>). Любое изменение здесь требует регрессии unit-тестов CF_ACTIVE / CF_REJECTED.</p>
-      <div class="card"><div id="routeDecisionTree" class="dt-table"></div></div>
-
-      <h2 class="divider-title">Anti-Refusal Safe · Soft Reject Flow (UI/UX)</h2>
-      <p class="route-lead">«WOW-сценарий» для CEO: пользователь Иван получает отказ ЦФ — экран не показывает красный крестик, а плавно перестраивается в витрину запасных МФО. От события до клика по CPA — 2-3 секунды, CAC = 0 ₽, чистый PnL — 350-600 ₽ за лид.</p>
-      <div class="card"><div id="routeSoftReject" class="sr-grid"></div></div>
-
-      <h2 class="divider-title">1. Статусы пользователей (CF Client Statuses)</h2>
-      <p class="route-lead">API Центрофинанса возвращает один из статусов при проверке номера (или токена). От статуса зависит, как Offers Engine собирает витрину.</p>
-      <div class="grid route-status-grid" id="routeStatuses"></div>
-
-      <h2 class="divider-title">2. Пути взаимодействия (User Flows)</h2>
-      <div class="grid two" id="routeFlows"></div>
-
-      <h2 class="divider-title">3. Контракты S2S API</h2>
-      <div class="card"><div class="card-title"><div><h3>Безопасность и хеширование</h3><p>Базовые правила обмена с API ЦФ</p></div></div><ul class="rationale-list" id="routeSecurity"></ul></div>
-      <div class="grid two" id="routeEndpoints"></div>
-
-      <h2 class="divider-title">4. Аналитика и поля в БД</h2>
-      <div class="grid two">
-        <div class="card"><div class="card-title"><div><h3>Поля сессии/лида для сквозной unit-экономики</h3><p>Сохраняются при входе на маркетплейс</p></div></div><div class="table-wrap" style="border:0;box-shadow:none"><table id="routeAnalyticsTable"></table></div></div>
-        <div class="card"><div class="card-title"><div><h3>Логика CAC по базе ЦФ</h3><p>Маржа с CPA-сделок по базе ЦФ идёт в чистый PnL</p></div></div><ul class="rationale-list" id="routeCacNote"></ul></div>
-      </div>
-
-      <h2 class="divider-title">5. Критерии приёмки</h2>
-      <div class="card"><div class="route-criteria" id="routeCriteria"></div></div>
     </section>
 
     <section id="tab-retention" class="panel">
