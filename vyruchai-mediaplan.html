@@ -438,6 +438,59 @@ canvas{display:block;width:100%;max-width:100%;height:auto;cursor:crosshair}
   .topbar-inner{align-items:flex-start;flex-direction:column}
   .filters{width:100%}
 }
+/* Smart Safe Router · Карта сегментов и монетизации (one-screen executive picture) */
+.seg-map{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:var(--gap)}
+.seg-card{position:relative;border:1px solid var(--line);border-top-width:4px;border-radius:var(--radius-sm);background:var(--surface);box-shadow:var(--shadow-soft);padding:18px;display:flex;flex-direction:column;gap:11px;transition:transform .22s var(--ease),box-shadow .22s var(--ease),border-color .22s var(--ease)}
+.seg-card:hover{transform:translateY(-3px);box-shadow:var(--shadow)}
+.seg-card.s-rejected{border-top-color:var(--red)}
+.seg-card.s-active{border-top-color:var(--blue)}
+.seg-card.s-target{border-top-color:var(--green)}
+.seg-card.s-noncore{border-top-color:var(--orange)}
+.seg-card .sg-head{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.seg-card .sg-code{font-size:11.5px;font-weight:700;letter-spacing:-.01em;border-radius:980px;padding:3px 10px;background:var(--surface-3);color:var(--text);font-variant-numeric:tabular-nums}
+.seg-card.s-rejected .sg-code{background:color-mix(in srgb,var(--red) 16%,transparent);color:var(--red)}
+.seg-card.s-active .sg-code{background:color-mix(in srgb,var(--blue) 16%,transparent);color:var(--blue)}
+.seg-card.s-target .sg-code{background:color-mix(in srgb,var(--green) 16%,transparent);color:var(--green)}
+.seg-card.s-noncore .sg-code{background:color-mix(in srgb,var(--orange) 16%,transparent);color:var(--orange)}
+.seg-card .sg-title{font-size:14px;font-weight:650;letter-spacing:-.01em;line-height:1.3}
+.seg-card .sg-row{display:flex;flex-direction:column;gap:2px}
+.seg-card .sg-label{font-size:10.5px;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);font-weight:700}
+.seg-card .sg-text{font-size:12.5px;line-height:1.45;color:var(--text)}
+.seg-card .sg-text.muted{color:var(--muted)}
+.seg-card .sg-rule{font-family:"SF Mono",ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:11px;color:var(--text);background:var(--surface-2);border:1px solid var(--line);border-radius:var(--radius-xs);padding:7px 9px;line-height:1.4;word-break:break-word}
+.seg-card .sg-mon{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.seg-card .sg-mon-tag{font-size:10.5px;font-weight:800;letter-spacing:.04em;text-transform:uppercase;padding:3px 9px;border-radius:980px;background:color-mix(in srgb,var(--violet) 16%,transparent);color:var(--violet)}
+.seg-card .sg-mon-tag.is-internal{background:color-mix(in srgb,var(--green) 16%,transparent);color:var(--green)}
+.seg-card .sg-mon-flag{font-size:10.5px;font-weight:700;letter-spacing:-.01em;color:var(--muted)}
+.seg-card .sg-mon-flag b{color:var(--text);font-variant-numeric:tabular-nums}
+.seg-card .sg-cap{margin-top:auto;display:flex;justify-content:space-between;gap:8px;padding-top:8px;border-top:1px dashed var(--line);font-size:11.5px;color:var(--muted)}
+.seg-card .sg-cap b{color:var(--text);font-variant-numeric:tabular-nums}
+@media(max-width:1100px){.seg-map{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:560px){.seg-map{grid-template-columns:1fr}}
+
+/* Volume Calculator (Калькулятор емкости сегментов) */
+.calc-card{display:grid;grid-template-columns:minmax(0,1.2fr) minmax(0,1fr);gap:var(--gap);align-items:stretch}
+.calc-inputs{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}
+.calc-field{display:flex;flex-direction:column;gap:6px}
+.calc-field label{font-size:11px;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);font-weight:700}
+.calc-field .calc-sub{font-size:11px;color:var(--faint);font-weight:600}
+.calc-field input{width:100%;border:1px solid var(--line-strong);background:var(--surface-2);color:var(--text);border-radius:var(--radius-xs);padding:11px 13px;font:inherit;font-size:15px;font-weight:600;font-variant-numeric:tabular-nums;transition:border-color .18s var(--ease),box-shadow .18s var(--ease)}
+.calc-field input:focus{outline:0;border-color:var(--blue);box-shadow:0 0 0 4px color-mix(in srgb,var(--blue) 14%,transparent)}
+.calc-field input.is-invalid{border-color:var(--red)}
+.calc-meta{display:flex;flex-wrap:wrap;gap:14px 22px;margin-top:14px;font-size:12px;color:var(--muted)}
+.calc-meta b{color:var(--text);font-variant-numeric:tabular-nums}
+.calc-formula{margin-top:10px;padding:10px 12px;border-radius:var(--radius-xs);background:var(--surface-3);border:1px solid var(--line);font-family:"SF Mono",ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:11.5px;color:var(--muted);line-height:1.5}
+.calc-formula b{color:var(--text)}
+.calc-out{display:flex;flex-direction:column;gap:10px;border:1px solid var(--line);border-radius:var(--radius-sm);background:linear-gradient(135deg,color-mix(in srgb,var(--green) 9%,var(--surface)),color-mix(in srgb,var(--blue) 7%,var(--surface)));padding:18px 20px;justify-content:center}
+.calc-out .calc-out-label{font-size:11px;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);font-weight:700}
+.calc-out .calc-out-value{font-size:34px;font-weight:700;letter-spacing:-.02em;font-variant-numeric:tabular-nums;line-height:1.05;color:var(--text);transition:color .25s var(--ease)}
+.calc-out .calc-out-value.is-bump{color:var(--green)}
+.calc-out .calc-out-sub{font-size:12.5px;color:var(--muted);line-height:1.45}
+.calc-breakdown{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;margin-top:8px}
+.calc-breakdown div{font-size:11px;color:var(--muted);line-height:1.4}
+.calc-breakdown div b{display:block;color:var(--text);font-size:13px;font-weight:650;font-variant-numeric:tabular-nums}
+@media(max-width:960px){.calc-card{grid-template-columns:1fr}.calc-inputs{grid-template-columns:1fr}.calc-breakdown{grid-template-columns:1fr 1fr}}
+
 @media(max-width:560px){
   main{padding:22px 14px 48px}
   .tabs,.topbar-inner{padding-left:14px;padding-right:14px}
@@ -632,6 +685,32 @@ canvas{display:block;width:100%;max-width:100%;height:auto;cursor:crosshair}
       <h2 class="divider-title">Блок-схема маршрутизации · Smart Safe Router</h2>
       <p class="route-lead">Сквозной путь трафика от точки входа до витрины офферов. Ядро — <b>Smart Safe Router</b>: при отказе ЦФ система перехватывает сессию, через S2S API определяет статус клиента и собирает персональную витрину из CPA-офферов. Цель — конвертировать 100% отказного трафика в выручку без риска перекредитованности.</p>
       <div class="card"><div class="route-diagram-wrap"><div id="routeDiagram" class="route-diagram"></div></div><p class="rd-caption">Цвет верхней кромки выходного блока = статус клиента. В каждом блоке — чипы разрешённых (зелёные) и заблокированных (красные) категорий офферов. Под веткой <b>CF_REJECTED</b> — под-поток <b>Soft Reject Flow</b>, в котором без перезагрузки страницы перестраивается витрина и отправляется событие <code>safe_router_redirect</code>.</p></div>
+
+      <h2 class="divider-title">Карта сегментов и монетизации · User Stories + Volume Calculator</h2>
+      <p class="route-lead">Один экран — четыре ветки роутера, путь клиента, его боль, обоснование выбора Выручай.ру и схема монетизации с пометкой <b>is_external_monetization</b>. Ниже — интерактивный калькулятор емкости: меняйте объёмы трафика и сразу видите потенциальный внешний доход.</p>
+      <div class="seg-map" id="routeSegments"></div>
+      <div class="card calc-card" aria-labelledby="calcTitle">
+        <div>
+          <div class="card-title"><div><span class="eyebrow">Analytics · Volume Calculator</span><h3 id="calcTitle">Калькулятор емкости сегментов</h3><p>Ручной ввод прогнозируемых объёмов в месяц. Целевые клиенты (CF_TARGET) не участвуют — там <b>внутренняя синергия</b>, а не внешний доход.</p></div></div>
+          <div class="calc-inputs">
+            <div class="calc-field"><label for="calcRejected">Отказники <span class="calc-sub">CF_REJECTED · чел./мес</span></label><input id="calcRejected" type="number" min="0" step="100" inputmode="numeric" autocomplete="off"></div>
+            <div class="calc-field"><label for="calcActive">Действующие <span class="calc-sub">CF_ACTIVE · чел./мес</span></label><input id="calcActive" type="number" min="0" step="100" inputmode="numeric" autocomplete="off"></div>
+            <div class="calc-field"><label for="calcNoncore">Непрофильные <span class="calc-sub">CF_NON_CORE · чел./мес</span></label><input id="calcNoncore" type="number" min="0" step="100" inputmode="numeric" autocomplete="off"></div>
+          </div>
+          <div class="calc-meta">
+            <span>Конверсия в выдачу: <b id="calcCR">8%</b></span>
+            <span>Средний CPA: <b id="calcCPA">1 500 ₽</b></span>
+            <span>Внешний трафик: <b id="calcSum">0 чел.</b></span>
+          </div>
+          <div class="calc-formula">expectedRevenue = (rejected + active + noncore) × <b>0.08</b> × <b>1 500</b> ₽</div>
+        </div>
+        <div class="calc-out" role="status" aria-live="polite">
+          <span class="calc-out-label">Прогноз внешней выручки в месяц</span>
+          <span class="calc-out-value" id="calcRevenue">0 ₽</span>
+          <span class="calc-out-sub" id="calcRevenueSub">Введите объёмы — пересчёт идёт без перезагрузки страницы.</span>
+          <div class="calc-breakdown" id="calcBreakdown"></div>
+        </div>
+      </div>
 
       <h2 class="divider-title">Decision Tree · «Статус ЦФ → Разрешённые / Заблокированные категории»</h2>
       <p class="route-lead">Маппинг статуса в правила витрины — единый источник правды для бэкенда (Offers Engine) и DWH (схема <code>cf_status_offer_rules</code>). Любое изменение здесь требует регрессии unit-тестов CF_ACTIVE / CF_REJECTED.</p>
