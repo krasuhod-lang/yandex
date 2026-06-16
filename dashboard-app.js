@@ -1037,7 +1037,7 @@ const ROUTE_SEGMENTS=[
    ['+2 часа','SMS через шлюз P1 «Ваши 3 одобренных займа ждут вас»'],
    ['+24 часа','Email с персональной подборкой']
   ],
-  abandonedDesc:'Пользователь ушел с витрины после получения статуса CF_REJECTED, не кликнув на CPA-оффер. Возврат 15% ушедшего отказного трафика на витрину. Монетизация базы (тест на 10 000 контактов).'
+  abandonedDesc:'Пользователь ушёл с витрины после получения статуса CF_REJECTED, не кликнув на CPA-оффер. Возврат 15% ушедшего отказного трафика на витрину. Монетизация базы (тест на 10 000 контактов).'
  },
  {cls:'s-active',code:'CF_ACTIVE',title:'Ветка B · Действующие клиенты',
   userStory:'Я как действующий клиент ЦФ хочу безопасные не-кредитные продукты (карты, страхование, подработку), чтобы не усугублять свою долговую нагрузку.',
@@ -1172,7 +1172,7 @@ function renderRoutingDiagram(){
  let nodes='';
  nodes+=fo(320,30,360,80,'rd-entry','<span class="rd-t">Платный трафик Маркетплейса</span><span class="rd-s">PPC, SEO, CPA-сети — холодная органика и закупка трафика</span>');
  nodes+=fo(1120,30,360,80,'rd-entry','<span class="rd-t">База Центрофинанса</span><span class="rd-s">SMS-приглашение, подписанный одноразовый JWT (TTL 24 ч), флаг <b>is_cf_base = true</b></span>');
- nodes+=fo(630,160,540,110,'rd-hub','<span class="rd-t">Маркетплейс Выручай.ру · Сбор согласий и Идентификация</span><span class="rd-s">Ввод номера телефона. Обязательный чекбокс (152-ФЗ): <em>«Согласен на обработку ПД и передачу партнерам»</em>. Юридическая защита Smart Safe Router перед отправкой лида в CPA. Резолв одноразового JWT (тёплый) или SHA-256 хеша.</span>');
+ nodes+=fo(630,160,540,110,'rd-hub','<span class="rd-t">Маркетплейс Выручай.ру · Сбор согласий и Идентификация</span><span class="rd-s">Ввод номера телефона. Обязательный чекбокс (152-ФЗ): <em>«Согласен на обработку ПД и передачу партнерам»</em>. Юридическая защита Smart Safe Router перед отправкой лида в CPA. Разрешение одноразового JWT (тёплый) или SHA-256 хеша.</span>');
  nodes+=fo(630,300,540,84,'rd-hub rd-killer','<span class="rd-killer-badge">★ Smart Safe Router · S2S API ЦФ</span><span class="rd-t">Решающий узел · POST check-hash / get-profile</span><span class="rd-s">Только Server-to-Server, только хеши, подписанные токены — 100% отказного трафика в выручку</span>');
  // Diamond decision
  const diamond=`<polygon class="rd-diamond" points="900,424 1044,492 900,560 756,492"/>`+
@@ -1207,8 +1207,10 @@ function renderRoutingDiagram(){
    ['5 · Реальный заработок',realInner],
    ['6 · Ёмкость сегмента',capInner]
   ];
-  // Mini #4 (actors) needs more height
-  const heights=[MINI_H,MINI_H,MINI_H,MINI_H+82,MINI_H,MINI_H+10];
+  // Mini #4 (actors) needs extra height for list items, Mini #6 (capacity) needs extra height for padding
+  const MINI_H_ACTOR_EXTRA=82;
+  const MINI_H_CAPACITY_EXTRA=10;
+  const heights=[MINI_H,MINI_H,MINI_H,MINI_H+MINI_H_ACTOR_EXTRA,MINI_H,MINI_H+MINI_H_CAPACITY_EXTRA];
   let curY=MINI_Y0;
   mini.forEach((m,j)=>{
    const h=heights[j];
