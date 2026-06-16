@@ -991,8 +991,8 @@ function renderCentrofinans(){
 // Вкладка «Маршрутизация»: схема статусов, флоу A/B, S2S-контракты, аналитика и критерии приёмки
 // для системы кросс-идентификации трафика Центрофинанс ⇄ Выручай.ру.
 const ROUTE_GOALS=[
- 'Максимизировать выдачи для ЦФ — забирать себе лучших лидов.',
- 'Монетизировать отказной и непрофильный трафик через CPA-партнёров (МФО / банки).',
+ 'Максимизировать выдачи для ЦФ — забирать себе целевых лидов из внешнего трафика.',
+ 'Балансировать непрофильный трафик через CPA-партнёров (МФО / банки) — Zero-Waste окупаемость CAC.',
  'Исключить перекредитованность действующих клиентов ЦФ у конкурентов.',
  'Гарантировать безопасность базы ЦФ — никаких прямых сливов конкурентам.'
 ];
@@ -1008,7 +1008,7 @@ const ROUTE_STATUSES=[
  {cls:'s-active',code:'CF_ACTIVE',title:'Действующий клиент ЦФ',desc:'Уже есть активный заём / долг.',logic:'Запрет на конкуренцию: все МФО-конкуренты (займы) полностью скрыты. Первым показываем Кредитную линию (продукт ЦФ), далее — иные предложения, кроме займов: РКО, карты, страхование, рефинансирование в банках.',out:'Кредитная линия ЦФ №1, далее иные продукты (кроме займов)',
   ui:'Специальные предложения для клиентов Центрофинанса',allow:['Кредитная линия ЦФ','Дебетовые карты','РКО','HR-офферы','Страхование','Дожим (Email)'],block:['МФО-конкуренты','Любые сторонние займы']},
  {cls:'s-rejected',code:'CF_REJECTED',title:'Отказник ЦФ · киллер-сегмент',desc:'ЦФ отклонил заявку по скорингу / КИ.',logic:'Полная свобода монетизации. Оффер ЦФ скрыт. Витрина из МФО-партнёров, готовых кредитовать с плохой КИ. Сделка уходит по CPA. Активируется Soft Reject Flow — экран без перезагрузки перестраивается в новую витрину.',out:'CPA-витрина ТОП-3 МФО, оффер ЦФ скрыт',
-  ui:'У нас есть 3 компании, готовые выдать вам деньги прямо сейчас',allow:['ТОП-3 МФО (CPA)','Сорт. по EPC × Approval Rate','Soft Reject Flow','Брошенная корзина'],block:['Оффер ЦФ']},
+  ui:'Мы подобрали для вас 3 альтернативных финансовых решения с высокой вероятностью одобрения',allow:['ТОП-3 МФО (CPA)','Сорт. по EPC × Approval Rate','Soft Reject Flow','Брошенная корзина'],block:['Оффер ЦФ']},
  {cls:'s-noncore',code:'CF_NON_CORE',title:'Непрофильный для ЦФ',desc:'Продукт / сумма / срок вне профиля ЦФ (ипотека, авто, крупная сумма).',logic:'Лид не подходит ЦФ — продаём его другим игрокам рынка. Оффер ЦФ скрыт, показываем витрину крупных банков и залоговых продуктов.',out:'Витрина банков и залоговых продуктов',
   ui:'Подобрали для вас банковские продукты под вашу задачу',allow:['Потребкредиты банков','Автокредиты','Займы под залог','Ипотека'],block:['МФО (PDL)','Оффер ЦФ']},
  {cls:'s-notfound',code:'NOT_FOUND',title:'Новый (органический) трафик',desc:'В базе ЦФ не числится.',logic:'Смешанная витрина. ЦФ на 1-м месте + 2-3 партнёрских МФО для сравнения, конкуренты также доступны.',out:'Смешанная витрина: ЦФ №1 + 2-3 МФО',
@@ -1025,7 +1025,7 @@ const ROUTE_SEGMENTS=[
   scheme:'Стороннее МФО-партнёр платит маркетплейсу комиссию за выданный заём (≈ 1 500–2 500 ₽).',
   actors:[
    ['Клиент','получает заём в стороннем МФО'],
-   ['Выручай.ру','показывает витрину запасных МФО, фиксирует CPA'],
+   ['Выручай.ру','показывает витрину альтернативных МФО, фиксирует CPA'],
    ['МФО-партнёр','платит маркетплейсу CPA за оформленный заём'],
    ['Центрофинанс','не участвует в сделке, оффер скрыт']
   ],
@@ -1085,10 +1085,10 @@ const ROUTE_SEGMENTS=[
   capacity:'≈ 6 000 чел./мес',defaultVol:6000,payoutHint:'до 10 000 ₽ за выдачу'}
 ];
 const ROUTE_STEP_SCHEMES=[
-{cls:'c-rejected',code:'CF_REJECTED',title:'Soft Reject Flow',desc:'Заявка без повторной анкеты превращается в витрину ТОП-3 МФО после отказа ЦФ.',
+{cls:'c-rejected',code:'CF_REJECTED',title:'Zero-Waste Traffic: Интеллектуальная окупаемость маркетинга',desc:'Конкурентное преимущество Выручай.ру перед Банки.ру: мы не теряем лиды. Внешний трафик из Яндекса проходит проверку API. Если профиль Ивана не подходит ЦФ, система (без перезагрузки экрана) генерирует витрину CPA-партнёров. Затраты на привлечение Ивана (CAC) полностью компенсируются CPA-выплатой, давая чистый профит.',
  steps:[
   {title:'Заявка',subtitle:'Телефон + сумма',screen:'form',cta:'Проверить одобрение'},
-  {title:'Решение роутера',subtitle:'CF_REJECTED · лоадер 2–3 с',screen:'loader',tip:'Подбираем запасные варианты'},
+  {title:'Решение роутера',subtitle:'CF_REJECTED · лоадер 2–3 с',screen:'loader',tip:'Подбираем альтернативные предложения'},
   {title:'ТОП-3 МФО',subtitle:'Готовы выдать деньги сейчас',screen:'mfo',event:'safe_router_redirect'}
  ]},
 {cls:'c-active',code:'CF_ACTIVE',title:'Защита действующего клиента',desc:'После определения активного займа кредитные офферы скрываются, остаются безопасные продукты.',
@@ -1204,7 +1204,7 @@ function renderRoutingDiagram(){
  nodes+=fo(320,30,360,80,'rd-entry','<span class="rd-t">Платный трафик Маркетплейса</span><span class="rd-s">PPC, SEO, CPA-сети — холодная органика и закупка трафика</span>');
  nodes+=fo(1120,30,360,80,'rd-entry','<span class="rd-t">База Центрофинанса</span><span class="rd-s">SMS-приглашение, подписанный одноразовый JWT (TTL 24 ч), флаг <b>is_cf_base = true</b></span>');
  nodes+=fo(630,160,540,110,'rd-hub','<span class="rd-t">Маркетплейс Выручай.ру · Сбор согласий и Идентификация</span><span class="rd-s">Ввод номера телефона. Обязательный чекбокс (152-ФЗ): <em>«Согласен на обработку ПД и передачу партнерам»</em>. Юридическая защита Smart Safe Router перед отправкой лида в CPA. Разрешение одноразового JWT (тёплый) или SHA-256 хеша.</span>');
- nodes+=fo(630,300,540,84,'rd-hub rd-killer','<span class="rd-killer-badge">★ Smart Safe Router · S2S API ЦФ</span><span class="rd-t">Решающий узел · POST check-hash / get-profile</span><span class="rd-s">Только Server-to-Server, только хеши, подписанные токены — 100% отказного трафика в выручку</span>');
+ nodes+=fo(630,300,540,84,'rd-hub rd-killer','<span class="rd-killer-badge">★ Smart Safe Router · S2S API ЦФ</span><span class="rd-t">Решающий узел · POST check-hash / get-profile</span><span class="rd-s">Только Server-to-Server, только хеши, подписанные токены — 100% непрофильного трафика в выручку (Zero-Waste)</span>');
  // Diamond decision
  const diamond=`<polygon class="rd-diamond" points="900,424 1044,492 900,560 756,492"/>`+
   `<foreignObject x="762" y="434" width="276" height="116"><div xmlns="${NS}" class="rd-decision-label"><span class="rd-t">Какой статус клиента?</span><span class="rd-s">Offers Engine применяет правила маршрутизации</span></div></foreignObject>`;
@@ -1275,6 +1275,30 @@ function renderRoutingDiagram(){
   `<defs><marker id="rdArrow" markerWidth="9" markerHeight="9" refX="7" refY="4.5" orient="auto" markerUnits="userSpaceOnUse"><path class="rd-arrow" d="M0,0 L9,4.5 L0,9 Z"/></marker></defs>`+
   edges+labels+nodes+diamond+branchSvg+`</svg>`;
 }
+function renderRouteOkrKpis(){
+ const host=document.getElementById('routeOkrKpis');
+ if(!host)return;
+ // CAC Reduction = expected CPA revenue / total external traffic spend, capped at 100%.
+ // Используем дефолтные объёмы из ROUTE_SEGMENTS как базовый сценарий: непрофильный поток (REJECTED + NON_CORE) приносит CPA-компенсацию.
+ const seg=Object.fromEntries(ROUTE_SEGMENTS.map(s=>[s.code,s]));
+ const rejected=(seg.CF_REJECTED?.defaultVol)||0;
+ const active  =(seg.CF_ACTIVE?.defaultVol)||0;
+ const noncore =(seg.CF_NON_CORE?.defaultVol)||0;
+ const target  =Math.max(1,(seg.CF_TARGET?.defaultVol)||12000); // якорный объём ЦФ (целевые лиды)
+ const totalExternal=rejected+active+noncore+target;
+ const compensated=rejected+noncore;
+ const cacReductionPct=Math.round(100*compensated/Math.max(1,totalExternal));
+ const coreAllocPct  =Math.round(100*target/Math.max(1,totalExternal));
+ const cards=[
+  {id:'cac',label:'CAC Reduction',value:'−'+cacReductionPct+'%',sub:'CPA-компенсация непрофильного и резервного трафика снижает суммарный CAC закупки',cls:'positive'},
+  {id:'revenue',label:'Zero-Competition Rate',value:'100%',sub:'Сегмент CF_ACTIVE: МФО-конкуренты заблокированы — действующие клиенты ЦФ защищены от перекредитованности',cls:'positive'},
+  {id:'revenue',label:'Core Allocation · ЦФ',value:coreAllocPct+'%',sub:'Доля внешнего трафика, переданная якорному партнёру (Центрофинанс) как целевые лиды',cls:'positive'}
+ ];
+ host.innerHTML=cards.map(x=>{
+  const attrs=x.id?drillAttrs('metric',x.id):'';
+  return `<div class="card tight" ${attrs}><div class="card-title"><div class="metric-label">${escapeHtml(x.label)}</div></div><div class="metric-value ${ALLOWED_METRIC_CLASSES.has(x.cls)?x.cls:''}">${escapeHtml(x.value)}</div><div class="metric-sub">${escapeHtml(x.sub)}</div></div>`;
+ }).join('');
+}
 function renderRouting(){
  const goals=document.getElementById('routeGoals');
  if(!goals)return;
@@ -1282,6 +1306,7 @@ function renderRouting(){
  renderRouteStories();
  renderRoutingDiagram();
  renderRouteStepSchemes();
+ renderRouteOkrKpis();
  initVolumeCalculator();
 }
 // Drag-to-scroll для широкой PNL-таблицы: зажатая левая кнопка мыши тянет таблицу влево/вправо.
