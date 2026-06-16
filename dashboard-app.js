@@ -1046,7 +1046,7 @@ function renderRouteDecisionTree(){
  const chips=(arr,kind)=>arr.length?arr.map(x=>`<span class="dt-chip dt-${kind}">${escapeHtml(x)}</span>`).join(''):`<span class="dt-chip dt-none">—</span>`;
  host.innerHTML=ROUTE_DECISION_TREE.map(r=>`<div class="dt-row ${escapeHtml(r.cls)}"><div class="dt-status"><span class="dt-code">${escapeHtml(r.code)}</span><span class="dt-title">${escapeHtml(r.title)}</span><span class="dt-ui">${escapeHtml(r.ui)}</span><span class="dt-ui" style="font-style:normal;color:var(--text);font-size:12.5px;margin-top:4px">${escapeHtml(r.logic)}</span></div><div class="dt-cell dt-cell-allow"><span class="dt-cell-h">Show · разрешено</span><div class="dt-cell-chips">${chips(r.allow,'allow')}</div></div><div class="dt-cell dt-cell-block"><span class="dt-cell-h">Hide · блокируется</span><div class="dt-cell-chips">${chips(r.block,'block')}</div></div></div>`).join('');
 }
-const VOLUME_CALC_CR=0.08;
+const VOLUME_CALC_CR=0.02;
 const VOLUME_CALC_CPA=1500;
 const ROUTE_SEGMENTS=[
  {cls:'s-rejected',code:'CF_REJECTED',title:'Ветка A · Отказники',
