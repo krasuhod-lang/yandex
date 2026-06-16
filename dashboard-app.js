@@ -997,10 +997,10 @@ const ROUTE_GOALS=[
  'Гарантировать безопасность базы ЦФ — никаких прямых сливов конкурентам.'
 ];
 const ROUTE_USER_STORIES=[
- {cls:'s-new',segment:'Новый · внешний трафик',title:'Быстро получить деньги здесь и сейчас',story:'Как новый клиент, который ищет, где взять деньги «здесь и сейчас» без сложных условий, я хочу быстро подобрать займ/кредит из нескольких вариантов, увидеть реальные ставки и онлайн-одобрение.',outcome:'Цель: не ходить по сайтам и отделениям, получить деньги в течение дня.'},
- {cls:'s-repeat',segment:'Повторный · база ЦФ',title:'Персональные продукты в один клик',story:'Как действующий клиент Центрофинанс с положительным опытом займа, я хочу видеть персональные предложения: рефинанс, кредитку, страховку, вклад — на основе моей истории.',outcome:'Цель: выгодные условия без повторной анкеты и проверки всех документов.'},
- {cls:'s-overdue',segment:'Просроченный · база ЦФ',title:'План выхода из просрочки',story:'Как клиент с просрочкой по займу в Центрофинанс, который испытывает стресс из-за долга, я хочу получить понятный план: реструктуризация, рефинанс через партнёров, страховые опции.',outcome:'Цель: снизить нагрузку, восстановить кредитную историю и вернуться к нормальному использованию продуктов.'},
- {cls:'s-dormant',segment:'Спящий >6 мес · база ЦФ',title:'Вернуться через релевантную подборку',story:'Как бывший клиент Центрофинанс, который больше полугода ничем не пользуется и «забыл» про сервис, я хочу иногда получать подборки ОСАГО, карт с кэшбэком и вкладов на основе прошлых операций.',outcome:'Цель: при новой финансовой задаче быстро выбрать продукт в знакомом интерфейсе.'}
+ {cls:'s-rejected',segment:'Story 1 · Soft Reject',title:'Окупаемость нецелевого трафика',story:'Как бизнес я хочу, чтобы клиент, получивший отказ от ЦФ по скорингу (CF_REJECTED), не уходил с платформы: лоадер «Анализ профиля…» → SPA-витрина с 3 альтернативными МФО со 100% одобрением.',outcome:'Результат: CAC окупается за счёт CPA-выплаты от стороннего МФО.'},
+ {cls:'s-repeat',segment:'Story 2 · LTV Recovery',title:'Возврат «спящих» и повторных',story:'Как партнёр (ЦФ) я хочу первым получать своих повторных и «спящих» клиентов (CF_REPEAT / CF_DORMANT): закрепленный оффер ЦФ с бейджем «Предодобрено как надёжному клиенту», и только после отказа — открытие остальной витрины.',outcome:'Результат: рост LTV базы ЦФ без расходов партнёра на ретаргетинг.'},
+ {cls:'s-active',segment:'Story 3 · Anti-Cannibalization',title:'Защита действующих заёмщиков',story:'Как риск-менеджер ЦФ я хочу, чтобы действующий клиент (CF_ACTIVE) не набрал займов у конкурентов на нашей же витрине: жёсткая блокировка любых кредитных продуктов (МФО, кредитки), показ только дебетовых карт, РКО, страховок и HR-вакансий.',outcome:'Результат: защита от долговой нагрузки + Zero-Waste монетизация через некредитные CPA.'},
+ {cls:'s-overdue',segment:'Story 4 · NPL Monetization',title:'Заработок на «токсичном» трафике',story:'Как бизнес я хочу зарабатывать даже на токсичном трафике: при CF_OVERDUE (открытое взыскание) кредитовать нельзя — система блокирует все МФО и Банки и перестраивает витрину под офферы БФЛ (Банкротство физлиц) и HR (Поиск работы).',outcome:'Результат: лид на банкротство приносит CPA-доход (до 3000 ₽), окупая затраты на привлечение должника.'}
 ];
 const ROUTE_STATUSES=[
  {cls:'s-target',code:'CF_TARGET',title:'Подходит для ЦФ',desc:'Идеальный профиль, хорошая КИ.',logic:'Маршрутизация сделки в ЦФ. Оффер ЦФ на 1-м месте или «режим SOS» (эксклюзивная выдача в ЦФ). Остальные МФО скрыты.',out:'Оффер ЦФ №1 или SOS-режим (эксклюзив ЦФ)',
@@ -1014,6 +1014,38 @@ const ROUTE_STATUSES=[
  {cls:'s-notfound',code:'NOT_FOUND',title:'Новый (органический) трафик',desc:'В базе ЦФ не числится.',logic:'Смешанная витрина. ЦФ на 1-м месте + 2-3 партнёрских МФО для сравнения, конкуренты также доступны.',out:'Смешанная витрина: ЦФ №1 + 2-3 МФО',
   ui:'Подобрали лучшие предложения под ваш запрос',allow:['ЦФ №1','2-3 партнёрских МФО','Сравнение условий'],block:[]}
 ];
+const ROUTE_DECISION_TREE=[
+ {cls:'s-target',code:'CF_TARGET',title:'Идеальный профиль, новый клиент',ui:'Лучший оффер ЦФ, конкуренты скрыты (режим SOS)',
+  allow:['Только ЦФ (Режим SOS)'],block:['Все конкуренты-МФО','Банки'],
+  logic:'Отдаём целевой лид якорному партнёру.'},
+ {cls:'s-active',code:'CF_ACTIVE',title:'Действующий заём в ЦФ без просрочек',ui:'«Специальные предложения для клиентов ЦФ»',
+  allow:['Дебетовые карты','Страхование','HR-вакансии','РКО'],block:['Все кредитные продукты (PDL, МФО, кредиты)'],
+  logic:'Защита от перекредитованности.'},
+ {cls:'s-repeat',code:'CF_REPEAT',title:'Успешно закрыл займ в ЦФ',ui:'Закреплённый оффер ЦФ + бейдж «Предодобрено как надёжному клиенту»',
+  allow:['ЦФ (1-е место)','Кредитные карты'],block:['Другие МФО (до отказа в ЦФ)'],
+  logic:'Возврат проверенных клиентов (LTV Recovery).'},
+ {cls:'s-dormant',code:'CF_DORMANT',title:'Спящий клиент (закрыл > 6 мес назад)',ui:'Оффер ЦФ со скидкой + смешанная витрина',
+  allow:['ЦФ (со скидкой)','Рефинансирование','Кредитные карты'],block:[],
+  logic:'Реактивация базы.'},
+ {cls:'s-overdue',code:'CF_OVERDUE',title:'Открытая жёсткая просрочка (NPL)',ui:'«Помощь в трудной ситуации» — БФЛ и поиск работы',
+  allow:['Юристы по банкротству (БФЛ)','Работа / HR'],block:['Все МФО','Все Банки','PDL','Кредитные карты'],
+  logic:'NPL Monetization — монетизация токсичного трафика через B2B/Услуги.'},
+ {cls:'s-rejected',code:'CF_REJECTED',title:'Отказ ЦФ по скорингу',ui:'«Подобраны 3 альтернативных решения со 100% одобрением» (Soft Reject Flow, без перезагрузки)',
+  allow:['ТОП-3 CPA МФО с высоким апрувом'],block:['Оффер ЦФ'],
+  logic:'Монетизация нецелевого трафика (Soft Reject).'},
+ {cls:'s-noncore',code:'CF_NON_CORE',title:'Запрос не по профилю ЦФ (ипотека, залог)',ui:'Витрина банковских и залоговых продуктов',
+  allow:['Банковские кредиты','Ипотека','Автокредиты','Займы под ПТС'],block:['Микрозаймы (PDL)'],
+  logic:'Свободная CPA-маршрутизация.'},
+ {cls:'s-notfound',code:'NOT_FOUND',title:'Органика — в БД ЦФ не найден',ui:'Смешанная конкурентная витрина',
+  allow:['ЦФ (1-е место)','2–3 МФО','Кредитные карты'],block:[],
+  logic:'Обычная конкурентная выдача.'}
+];
+function renderRouteDecisionTree(){
+ const host=document.getElementById('routeDecisionTree');
+ if(!host)return;
+ const chips=(arr,kind)=>arr.length?arr.map(x=>`<span class="dt-chip dt-${kind}">${escapeHtml(x)}</span>`).join(''):`<span class="dt-chip dt-none">—</span>`;
+ host.innerHTML=ROUTE_DECISION_TREE.map(r=>`<div class="dt-row ${escapeHtml(r.cls)}"><div class="dt-status"><span class="dt-code">${escapeHtml(r.code)}</span><span class="dt-title">${escapeHtml(r.title)}</span><span class="dt-ui">${escapeHtml(r.ui)}</span><span class="dt-ui" style="font-style:normal;color:var(--text);font-size:12.5px;margin-top:4px">${escapeHtml(r.logic)}</span></div><div class="dt-cell dt-cell-allow"><span class="dt-cell-h">Show · разрешено</span><div class="dt-cell-chips">${chips(r.allow,'allow')}</div></div><div class="dt-cell dt-cell-block"><span class="dt-cell-h">Hide · блокируется</span><div class="dt-cell-chips">${chips(r.block,'block')}</div></div></div>`).join('');
+}
 const VOLUME_CALC_CR=0.08;
 const VOLUME_CALC_CPA=1500;
 const ROUTE_SEGMENTS=[
@@ -1102,6 +1134,12 @@ const ROUTE_STEP_SCHEMES=[
   {title:'Идентификация',subtitle:'Профиль и запрос совпали',screen:'form',cta:'Получить лучший оффер'},
   {title:'Приоритет ЦФ',subtitle:'CF_TARGET · конкуренты скрыты',screen:'loader',tip:'Фиксируем эксклюзивный маршрут'},
   {title:'Оффер ЦФ №1',subtitle:'Прямой переход к оформлению',screen:'target',event:'centrofinance_lead'}
+ ]},
+{cls:'c-overdue',code:'CF_OVERDUE',title:'NPL Monetization · Заработок на токсичном трафике',desc:'Клиент с открытой жёсткой просрочкой. Кредитовать нельзя — все МФО и Банки заблокированы. Витрина перестраивается под БФЛ (Банкротство физлиц) и HR (Поиск работы). Лид на банкротство приносит CPA-доход до 3 000 ₽, окупая затраты на привлечение должника.',
+ steps:[
+  {title:'Заявка',subtitle:'Телефон + сумма',screen:'form',cta:'Проверить одобрение'},
+  {title:'Решение роутера',subtitle:'CF_OVERDUE · все МФО и Банки скрыты',screen:'loader',tip:'Подбираем безопасные решения'},
+  {title:'БФЛ + HR',subtitle:'Юристы по банкротству и вакансии',screen:'overdue',event:'npl_monetization_redirect'}
  ]}
 ];
 function calculateExternalRevenue(rejectedVol,activeVol,noncoreVol){
@@ -1182,6 +1220,9 @@ function renderRouteStepSchemes(){
   [['Карта с кэшбэком','выпуск 0 ₽'],['Подработка','отклик за 1 минуту'],['Страхование','полис онлайн']].map((o,i)=>`<div class="sr-offer"><span class="sr-logo sr-logo-${i+1}">${i+1}</span><span><span class="sr-name">${escapeHtml(o[0])}</span><span class="sr-rate">${escapeHtml(o[1])}</span></span><span class="sr-go">›</span></div>`).join('')+
   `<div class="sr-evt"><b>${escapeHtml(step.event)}</b> · займы скрыты</div></div>`;
  if(step.screen==='target')return `<div class="sr-screen sr-screen-shop sr-screen-target"><div class="sr-h sr-h-win">${escapeHtml(step.title)}</div><div class="sr-sub">${escapeHtml(step.subtitle)}</div><div class="sr-offer"><span class="sr-logo sr-logo-2">ЦФ</span><span><span class="sr-name">Центрофинанс</span><span class="sr-rate">персональное одобрение</span></span><span class="sr-go">›</span></div><div class="sr-offer sr-muted-offer"><span class="sr-logo">×</span><span><span class="sr-name">Конкуренты</span><span class="sr-rate">скрыты роутером</span></span><span class="sr-go">—</span></div><div class="sr-cta">${escapeHtml(step.event)}</div></div>`;
+ if(step.screen==='overdue')return `<div class="sr-screen sr-screen-shop sr-screen-overdue"><div class="sr-h">${escapeHtml(step.title)}</div><div class="sr-sub">${escapeHtml(step.subtitle)}</div>`+
+  [['БФЛ-юрист','списание долгов · от 0 ₽'],['Подработка','отклик за 1 минуту'],['Соц. поддержка','помощь должникам']].map((o,i)=>`<div class="sr-offer"><span class="sr-logo sr-logo-${i+1}">${i+1}</span><span><span class="sr-name">${escapeHtml(o[0])}</span><span class="sr-rate">${escapeHtml(o[1])}</span></span><span class="sr-go">›</span></div>`).join('')+
+  `<div class="sr-offer sr-muted-offer"><span class="sr-logo">×</span><span><span class="sr-name">МФО и банки</span><span class="sr-rate">заблокированы</span></span><span class="sr-go">—</span></div><div class="sr-evt"><b>${escapeHtml(step.event)}</b> · CPA до 3 000 ₽</div></div>`;
  return `<div class="sr-screen ${schemeCls==='c-active'?'sr-screen-active':''}"><div class="sr-bar"></div><div class="sr-h">${escapeHtml(step.title)}</div><div class="sr-sub">${escapeHtml(step.subtitle)}</div><div class="sr-input">+7 ··· ···-··-··</div><div class="sr-input">Сумма: 15 000 ₽</div><div class="sr-cta ${schemeCls==='c-target'?'sr-cta-blue':''}">${escapeHtml(step.cta||'Продолжить')}</div></div>`;
  };
  host.innerHTML=ROUTE_STEP_SCHEMES.map(s=>`<article class="route-scheme ${escapeHtml(s.cls)}"><div class="route-scheme-head"><div><span class="eyebrow">UI-схема · 3 шага</span><h3>${escapeHtml(s.title)}</h3><p>${escapeHtml(s.desc)}</p></div><span class="route-scheme-badge">${escapeHtml(s.code)}</span></div><div class="sr-grid">${s.steps.map((step,i)=>`<div class="sr-stage"><span class="sr-step-num">${i+1}</span><div class="sr-phone ${i===1?'sr-phone-pulse':''}">${screen(step,i,s.cls)}</div><p class="sr-cap"><b>${escapeHtml(step.title)}</b><br>${escapeHtml(step.subtitle)}</p></div>`).join('')}</div></article>`).join('');
@@ -1190,28 +1231,28 @@ function renderRoutingDiagram(){
  const host=document.getElementById('routeDiagram');
  if(!host)return;
  const NS='http://www.w3.org/1999/xhtml';
- const fo=(x,y,w,h,cls,inner,extraAttr='')=>`<foreignObject x="${x}" y="${y}" width="${w}" height="${h}"${extraAttr?' '+extraAttr:''}><div xmlns="${NS}" class="rd-box ${cls}">${inner}</div></foreignObject>`;
+ const outCls={'s-target':'c-target','s-active':'c-active','s-rejected':'c-rejected','s-noncore':'c-noncore'};
+ // ---- SVG funnel (entry → hub → router → diamond → 4 branch headers).
+ // Mini-blocks are rendered as plain HTML grid below the SVG to avoid foreignObject clipping.
+ const fo=(x,y,w,h,cls,inner)=>`<foreignObject x="${x}" y="${y}" width="${w}" height="${h}"><div xmlns="${NS}" class="rd-box ${cls}">${inner}</div></foreignObject>`;
  const edge=(d,extra='')=>`<path class="rd-edge${extra?' '+extra:''}" d="${d}" marker-end="url(#rdArrow)"/>`;
  const elabel=(x,y,t,extra='')=>`<text class="rd-elabel${extra?' '+extra:''}" x="${x}" y="${y}" text-anchor="middle">${escapeHtml(t)}</text>`;
- const outCls={'s-target':'c-target','s-active':'c-active','s-rejected':'c-rejected','s-noncore':'c-noncore'};
- // ---- Layout constants (viewBox 1800 x 3000) ----
  const COL_W=420,COL_GAP=16;
  const colX=[20,20+COL_W+COL_GAP,20+(COL_W+COL_GAP)*2,20+(COL_W+COL_GAP)*3]; // 20, 456, 892, 1328
- const HEADER_Y=600,HEADER_H=156;
- const MINI_Y0=776,MINI_H=178,MINI_GAP=16;
- // ---- Top entry nodes ----
+ const HEADER_Y=620,HEADER_H=180;
+ const VIEW_H=HEADER_Y+HEADER_H+40;
+ // Top entry nodes (taller boxes — text fits comfortably, no clipping)
  let nodes='';
- nodes+=fo(320,30,360,80,'rd-entry','<span class="rd-t">Платный трафик Маркетплейса</span><span class="rd-s">PPC, SEO, CPA-сети — холодная органика и закупка трафика</span>');
- nodes+=fo(1120,30,360,80,'rd-entry','<span class="rd-t">База Центрофинанса</span><span class="rd-s">SMS-приглашение, подписанный одноразовый JWT (TTL 24 ч), флаг <b>is_cf_base = true</b></span>');
- nodes+=fo(630,160,540,110,'rd-hub','<span class="rd-t">Маркетплейс Выручай.ру · Сбор согласий и Идентификация</span><span class="rd-s">Ввод номера телефона. Обязательный чекбокс (152-ФЗ): <em>«Согласен на обработку ПД и передачу партнерам»</em>. Юридическая защита Smart Safe Router перед отправкой лида в CPA. Разрешение одноразового JWT (тёплый) или SHA-256 хеша.</span>');
- nodes+=fo(630,300,540,84,'rd-hub rd-killer','<span class="rd-killer-badge">★ Smart Safe Router · S2S API ЦФ</span><span class="rd-t">Решающий узел · POST check-hash / get-profile</span><span class="rd-s">Только Server-to-Server, только хеши, подписанные токены — 100% непрофильного трафика в выручку (Zero-Waste)</span>');
- // Diamond decision
- const diamond=`<polygon class="rd-diamond" points="900,424 1044,492 900,560 756,492"/>`+
-  `<foreignObject x="762" y="434" width="276" height="116"><div xmlns="${NS}" class="rd-decision-label"><span class="rd-t">Какой статус клиента?</span><span class="rd-s">Offers Engine применяет правила маршрутизации</span></div></foreignObject>`;
- // Branch headers + 6 mini-blocks each
+ nodes+=fo(300,30,400,110,'rd-entry','<span class="rd-t">Платный трафик Маркетплейса</span><span class="rd-s">PPC, SEO, CPA-сети — холодная органика и закупка трафика</span>');
+ nodes+=fo(1100,30,400,110,'rd-entry','<span class="rd-t">База Центрофинанса</span><span class="rd-s">SMS-приглашение, подписанный одноразовый JWT (TTL 24 ч), флаг <b>is_cf_base = true</b></span>');
+ nodes+=fo(610,170,580,140,'rd-hub','<span class="rd-t">Маркетплейс Выручай.ру · Сбор согласий и Идентификация</span><span class="rd-s">Ввод номера телефона. Обязательный чекбокс (152-ФЗ): <em>«Согласен на обработку ПД и передачу партнерам»</em>. Юридическая защита Smart Safe Router перед отправкой лида в CPA. Разрешение одноразового JWT (тёплый) или SHA-256 хеша.</span>');
+ nodes+=fo(610,340,580,110,'rd-hub rd-killer','<span class="rd-killer-badge">★ Smart Safe Router · S2S API ЦФ</span><span class="rd-t">Решающий узел · POST /api/v1/cf/check-hash</span><span class="rd-s">Только Server-to-Server, только SHA-256-хеши и подписанные токены — 100% непрофильного трафика конвертируем в выручку (Zero-Waste).</span>');
+ // Diamond decision (bigger, easier to read)
+ const diamond=`<polygon class="rd-diamond" points="900,478 1064,556 900,634 736,556"/>`+
+  `<foreignObject x="744" y="492" width="312" height="128"><div xmlns="${NS}" class="rd-decision-label"><span class="rd-t">Какой статус клиента?</span><span class="rd-s">Offers Engine применяет правила маршрутизации (Decision Tree)</span></div></foreignObject>`;
+ // Branch headers (only — mini blocks moved to HTML grid)
  const branches=ROUTE_SEGMENTS;
  let branchSvg='';
- let diagramBottom=0;
  branches.forEach((b,i)=>{
   const x=colX[i],cls=outCls[b.cls]||'';
   const monBadge=b.isExternal
@@ -1221,59 +1262,48 @@ function renderRoutingDiagram(){
    `<span class="rd-t">${escapeHtml(b.title)}</span>`+
    `<span class="rd-s">${escapeHtml(b.path)}</span>`;
   branchSvg+=fo(x,HEADER_Y,COL_W,HEADER_H,`rd-branch ${cls}`,headerInner);
-  // Build mini-blocks
-  const actorsHtml=b.actors?`<ul style="margin:2px 0 0;padding-left:14px;list-style:disc">${b.actors.map(a=>`<li><b>${escapeHtml(a[0])}</b> — ${escapeHtml(a[1])}</li>`).join('')}</ul>`:'';
+ });
+ const sourceArrowY=140;
+ const edges=[
+  edge(`M500,${sourceArrowY} V174 H900 V170`),
+  edge(`M1300,${sourceArrowY} V174 H900 V170`),
+  edge('M900,310 V340'),
+  edge('M900,450 V478'),
+  `<path class="rd-edge" d="M900,634 V${HEADER_Y-20}"/>`,
+  edge(`M900,${HEADER_Y-20} H${colX[0]+COL_W/2} V${HEADER_Y}`),
+  edge(`M900,${HEADER_Y-20} H${colX[1]+COL_W/2} V${HEADER_Y}`),
+  edge(`M900,${HEADER_Y-20} H${colX[2]+COL_W/2} V${HEADER_Y}`),
+  edge(`M900,${HEADER_Y-20} H${colX[3]+COL_W/2} V${HEADER_Y}`)
+ ].join('');
+ const labels=elabel(650,164,'JWT-токен (тёплый)')+elabel(1150,164,'SHA-256 хеш (холодный)')+
+  elabel(900,470,'Smart Safe Router · перехват отказа','rd-elabel-killer');
+ const svg=`<svg viewBox="0 0 1800 ${VIEW_H}" preserveAspectRatio="xMidYMid meet" role="img" aria-labelledby="rdTitle rdDesc">`+
+  `<title id="rdTitle">CJM Smart Safe Router</title><desc id="rdDesc">Блок-схема показывает путь клиента от идентификации до статуса Центрофинанс и далее в одну из четырёх веток монетизации.</desc>`+
+  `<defs><marker id="rdArrow" markerWidth="11" markerHeight="11" refX="8" refY="5.5" orient="auto" markerUnits="userSpaceOnUse"><path class="rd-arrow" d="M0,0 L11,5.5 L0,11 Z"/></marker></defs>`+
+  edges+labels+nodes+diamond+branchSvg+`</svg>`;
+ // ---- HTML grid: 4 columns × 6 rows of mini-cards (auto-sizes, no clipping).
+ const cardForBranch=(b)=>{
+  const cls=outCls[b.cls]||'';
+  const actorsHtml=b.actors?`<ul class="rd-grid-actors">${b.actors.map(a=>`<li><b>${escapeHtml(a[0])}</b> — ${escapeHtml(a[1])}</li>`).join('')}</ul>`:'';
   const isTarget=b.code==='CF_TARGET';
   const capInner=isTarget
    ?`<div class="rd-cap-grid"><div>${escapeHtml(b.capacity)}</div><div>Внешний доход: <b>0 ₽</b> (внутренняя синергия)</div></div>`
-   :`<div class="rd-cap-grid"><div>Прогноз: <b><span data-cap-vol="${escapeHtml(b.code)}">${(b.defaultVol||0).toLocaleString('ru-RU')}</span></b> чел./мес</div><div>Внешний доход/мес: <b><span data-cap-rev="${escapeHtml(b.code)}">${formatRub((b.defaultVol||0)*VOLUME_CALC_CR*VOLUME_CALC_CPA)}</span></b></div><div style="font-size:10.5px">Формула: объём × <b>${(VOLUME_CALC_CR*100).toFixed(0)}%</b> × <b>${VOLUME_CALC_CPA.toLocaleString('ru-RU')} ₽</b></div></div>`;
+   :`<div class="rd-cap-grid"><div>Прогноз: <b><span data-cap-vol="${escapeHtml(b.code)}">${(b.defaultVol||0).toLocaleString('ru-RU')}</span></b> чел./мес</div><div>Внешний доход/мес: <b><span data-cap-rev="${escapeHtml(b.code)}">${formatRub((b.defaultVol||0)*VOLUME_CALC_CR*VOLUME_CALC_CPA)}</span></b></div><div class="rd-cap-formula">Формула: объём × <b>${(VOLUME_CALC_CR*100).toFixed(0)}%</b> × <b>${VOLUME_CALC_CPA.toLocaleString('ru-RU')} ₽</b></div></div>`;
   const realInner=`<div class="rd-mini-b">${escapeHtml(b.realIncome||'')}</div>`+
-   (b.payoutHint?`<div class="rd-cap-grid" style="margin-top:4px"><div>CPA-выплата: <b>${escapeHtml(b.payoutHint)}</b></div></div>`:'');
-  const moneyInner=`<div class="rd-mini-b">${escapeHtml(b.scheme)}</div>${actorsHtml?`<div class="rd-mini-b" style="margin-top:4px">${actorsHtml}</div>`:''}`;
-  const mini=[
+   (b.payoutHint?`<div class="rd-cap-grid" style="margin-top:6px"><div>CPA-выплата: <b>${escapeHtml(b.payoutHint)}</b></div></div>`:'');
+  const moneyInner=`<div class="rd-mini-b">${escapeHtml(b.scheme)}</div>${actorsHtml}`;
+  const rows=[
    ['1 · История пользователя',`<div class="rd-mini-b">${escapeHtml(b.userStory||b.path)}</div>`],
    ['2 · Боль клиента',`<div class="rd-mini-b">${escapeHtml(b.pain)}</div>`],
-   ['3 · Почему Выручай.ру',`<div class="rd-mini-b">${escapeHtml(b.whyUs)}</div><div class="rd-flow-note">Связка: пользовательский интент → статус ЦФ → витрина → CRM/DWH → дожим.</div>`],
-   ['4 · Схема монетизации · участники и потоки',moneyInner],
+   ['3 · Почему Выручай.ру',`<div class="rd-mini-b">${escapeHtml(b.whyUs)}</div><div class="rd-flow-note">Связка: интент → статус ЦФ → витрина → CRM/DWH → дожим.</div>`],
+   ['4 · Схема монетизации',moneyInner],
    ['5 · Реальный заработок',realInner],
    ['6 · Ёмкость сегмента',capInner]
   ];
-  // Mini #4 (actors) needs extra height for list items, Mini #6 (capacity) needs extra height for padding
-  const MINI_H_ACTOR_EXTRA=128;
-  const MINI_H_CAPACITY_EXTRA=34;
-  const heights=[MINI_H,MINI_H,MINI_H,MINI_H+MINI_H_ACTOR_EXTRA,MINI_H,MINI_H+MINI_H_CAPACITY_EXTRA];
-  let curY=MINI_Y0;
-  mini.forEach((m,j)=>{
-   const h=heights[j];
-   branchSvg+=`<foreignObject x="${x}" y="${curY}" width="${COL_W}" height="${h}"><div xmlns="${NS}" class="rd-box rd-mini ${cls}"><span class="rd-mini-h">${escapeHtml(m[0])}</span>${m[1]}</div></foreignObject>`;
-   curY+=h+MINI_GAP;
-  });
-  // Track the lowest point across all branches so the viewBox fits the content
-  // without leaving an empty gap. Step-by-step scenarios (Soft Reject Flow и т.п.)
-  // живут отдельным блоком «3-шаговые интерфейсные сценарии», поэтому здесь не дублируются.
-  diagramBottom=Math.max(diagramBottom,curY);
- });
- const VIEW_H=Math.round(diagramBottom+40);
- // ---- Edges ----
- const sourceArrowY=110;
- const edges=[
-  edge(`M500,${sourceArrowY} V134 H900 V160`),
-  edge(`M1300,${sourceArrowY} V134 H900 V160`),
-  edge('M900,270 V300'),
-  edge('M900,384 V424'),
-  `<path class="rd-edge" d="M900,560 V600"/>`,
-  // diamond → 4 branch header centers
-  edge(`M900,580 H${colX[0]+COL_W/2} V${HEADER_Y}`),
-  edge(`M900,580 H${colX[1]+COL_W/2} V${HEADER_Y}`),
-  edge(`M900,580 H${colX[2]+COL_W/2} V${HEADER_Y}`),
-  edge(`M900,580 H${colX[3]+COL_W/2} V${HEADER_Y}`)
- ].join('');
- const labels=elabel(650,128,'JWT-токен (тёплый)')+elabel(1150,128,'SHA-256 хеш (холодный)')+
-  elabel(900,414,'Smart Safe Router · перехват отказа','rd-elabel-killer');
- host.innerHTML=`<svg viewBox="0 0 1800 ${VIEW_H}" preserveAspectRatio="xMidYMid meet" role="img" aria-labelledby="rdTitle rdDesc">`+
-  `<title id="rdTitle">CJM Smart Safe Router</title><desc id="rdDesc">Блок-схема показывает путь клиента от идентификации до статуса Центрофинанс, витрины офферов, события DWH и CRM-дожима.</desc>`+
-  `<defs><marker id="rdArrow" markerWidth="9" markerHeight="9" refX="7" refY="4.5" orient="auto" markerUnits="userSpaceOnUse"><path class="rd-arrow" d="M0,0 L9,4.5 L0,9 Z"/></marker></defs>`+
-  edges+labels+nodes+diamond+branchSvg+`</svg>`;
+  return `<div class="rd-col rd-col-${cls}">`+rows.map(r=>`<div class="rd-mini ${cls}"><span class="rd-mini-h">${escapeHtml(r[0])}</span>${r[1]}</div>`).join('')+`</div>`;
+ };
+ const grid=`<div class="rd-html-grid" aria-label="Детализация веток Smart Safe Router">${branches.map(cardForBranch).join('')}</div>`;
+ host.innerHTML=svg+grid;
 }
 function renderRouteOkrKpis(){
  const host=document.getElementById('routeOkrKpis');
@@ -1304,6 +1334,7 @@ function renderRouting(){
  if(!goals)return;
  goals.innerHTML=ROUTE_GOALS.map((g,i)=>`<div class="route-goal"><span class="rg-num">${i+1}</span><span class="rg-text">${escapeHtml(g)}</span></div>`).join('');
  renderRouteStories();
+ renderRouteDecisionTree();
  renderRoutingDiagram();
  renderRouteStepSchemes();
  renderRouteOkrKpis();
