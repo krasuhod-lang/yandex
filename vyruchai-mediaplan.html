@@ -8,6 +8,7 @@
 :root{
   color-scheme:light;
   --font:-apple-system,BlinkMacSystemFont,"SF Pro Display","SF Pro Text","Inter","Segoe UI",Arial,sans-serif;
+  --font-mono:"SF Mono",ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
   --bg:#f5f5f7;--surface:#ffffff;--surface-2:#fbfbfd;--surface-3:#f0f0f5;
   --text:#1d1d1f;--muted:#6e6e73;--faint:#a1a1a6;--line:#e3e3e8;--line-strong:#d2d2d7;
   --blue:#0071e3;--green:#1d9d52;--orange:#c2680a;--red:#e0162b;--violet:#6e5dc6;
@@ -264,14 +265,14 @@ canvas{display:block;width:100%;max-width:100%;height:auto;cursor:crosshair}
 .route-step .rs-title{font-size:13.5px;font-weight:600}
 .route-step .rs-text{font-size:13px;color:var(--muted);line-height:1.48;margin-top:2px}
 .code-block{background:var(--surface-3);border:1px solid var(--line);border-radius:var(--radius-xs);padding:14px 16px;overflow:auto;margin:0}
-.code-block pre{margin:0;font-family:"SF Mono",ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:12px;line-height:1.55;color:var(--text);white-space:pre;tab-size:2}
+.code-block pre{margin:0;font-family:var(--font-mono);font-size:12px;line-height:1.55;color:var(--text);white-space:pre;tab-size:2}
 .code-block .c-method{color:var(--violet);font-weight:700}
 .code-block .c-key{color:var(--blue)}
 .code-block .c-str{color:var(--green)}
 .endpoint-card .ep-name{font-size:13px;color:var(--muted);margin:0 0 10px}
 .route-criteria{display:grid;gap:10px}
 #routeAnalyticsTable td{white-space:normal}
-#routeAnalyticsTable td:first-child{font-family:"SF Mono",ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-weight:600}
+#routeAnalyticsTable td:first-child{font-family:var(--font-mono);font-weight:600}
 .criterion{display:flex;gap:12px;align-items:flex-start;font-size:13.5px;line-height:1.45}
 .criterion .ck{flex:0 0 auto;width:22px;height:22px;border-radius:7px;display:grid;place-items:center;background:color-mix(in srgb,var(--green) 16%,transparent);color:var(--green);font-weight:800;font-size:13px}
 /* ---------- Block-flow diagram (Miro-style) ---------- */
@@ -339,7 +340,7 @@ canvas{display:block;width:100%;max-width:100%;height:auto;cursor:crosshair}
 .route-diagram .rd-elabel.rd-elabel-killer{fill:var(--violet);font-size:11px;font-weight:800;letter-spacing:.03em;text-transform:uppercase}
 .route-diagram .rd-box.rd-soft{border:1px dashed var(--violet);background:color-mix(in srgb,var(--violet) 6%,var(--surface));padding:9px 13px;gap:4px}
 .route-diagram .rd-soft-pill{align-self:flex-start;font-size:11.5px;font-weight:800;letter-spacing:-.01em;padding:2px 9px;border-radius:980px;background:color-mix(in srgb,var(--violet) 18%,transparent);color:var(--violet)}
-.route-diagram .rd-box.rd-soft .rd-s code,.route-diagram .rd-box.rd-soft .rd-s b{font-family:"SF Mono",ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:11.5px;color:var(--ink)}
+.route-diagram .rd-box.rd-soft .rd-s code,.route-diagram .rd-box.rd-soft .rd-s b{font-family:var(--font-mono);font-size:11.5px;color:var(--ink)}
 /* ---------- Big four-branch layout (CEO single screen) ---------- */
 .route-diagram-card{padding:18px}
 .route-diagram .rd-box.rd-branch{border-top-width:5px;background:linear-gradient(180deg,var(--surface),color-mix(in srgb,var(--surface-2) 70%,var(--surface)));padding:12px 14px;gap:8px;justify-content:flex-start}
@@ -350,7 +351,7 @@ canvas{display:block;width:100%;max-width:100%;height:auto;cursor:crosshair}
 .route-diagram .rd-box.rd-branch .rd-bh-top{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
 .route-diagram .rd-box.rd-branch .rd-t{font-size:16px;font-weight:700;line-height:1.25}
 .route-diagram .rd-box.rd-branch .rd-s{font-size:13px;color:var(--muted);line-height:1.35}
-.route-diagram .rd-mon-flag{font-size:11px;font-weight:700;letter-spacing:.02em;padding:2px 8px;border-radius:980px;font-family:"SF Mono",ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+.route-diagram .rd-mon-flag{font-size:11px;font-weight:700;letter-spacing:.01em;padding:2px 7px;border-radius:980px;font-family:var(--font-mono);line-height:1.25}
 .route-diagram .rd-mon-flag b{font-weight:800}
 .route-diagram .rd-mon-ext{background:color-mix(in srgb,#d4a017 18%,transparent);color:#a87800;border:1px solid color-mix(in srgb,#d4a017 30%,transparent)}
 .route-diagram .rd-mon-int{background:color-mix(in srgb,var(--faint) 18%,transparent);color:var(--muted);border:1px solid var(--line)}
@@ -362,7 +363,7 @@ canvas{display:block;width:100%;max-width:100%;height:auto;cursor:crosshair}
 .route-diagram .rd-mini-h{font-size:11.5px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
 .route-diagram .rd-mini-b{font-size:13.5px;line-height:1.4;color:var(--text)}
 .route-diagram .rd-mini-b b{color:var(--ink);font-variant-numeric:tabular-nums}
-.route-diagram .rd-mini-b code{font-family:"SF Mono",ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:12px;color:var(--ink);background:var(--surface-2);padding:1px 5px;border-radius:5px}
+.route-diagram .rd-mini-b code{font-family:var(--font-mono);font-size:12px;color:var(--ink);background:var(--surface-2);padding:1px 5px;border-radius:5px}
 .route-diagram .rd-cap-grid{display:grid;grid-template-columns:1fr;gap:3px;font-size:13px;line-height:1.4;color:var(--muted)}
 .route-diagram .rd-cap-grid b{color:var(--ink);font-variant-numeric:tabular-nums;font-weight:700}
 .route-diagram .rd-mini-chips{display:flex;flex-wrap:wrap;gap:4px;align-items:center}
@@ -371,6 +372,7 @@ canvas{display:block;width:100%;max-width:100%;height:auto;cursor:crosshair}
 .route-diagram .rd-soft-strip .rd-soft-step{flex:1;background:color-mix(in srgb,var(--violet) 6%,var(--surface));border:1px dashed var(--violet);border-radius:10px;padding:6px 8px;display:flex;flex-direction:column;gap:2px}
 .route-diagram .rd-soft-strip .rd-soft-step .rd-soft-n{font-size:10.5px;font-weight:800;color:var(--violet);letter-spacing:.06em;text-transform:uppercase}
 .route-diagram .rd-soft-strip .rd-soft-step .rd-soft-tx{font-size:12px;line-height:1.35;color:var(--text)}
+.route-diagram .rd-flow-note{font-size:11px;color:var(--muted);line-height:1.35;padding:5px 8px;border-radius:8px;background:var(--surface-3)}
 
 .route-diagram .rd-soft-pill.c-orange{color:var(--orange);border-color:color-mix(in srgb,var(--orange) 30%,transparent);background:color-mix(in srgb,var(--orange) 8%,var(--surface))}
 .route-diagram .rd-soft-strip .rd-soft-step.c-orange{border-color:var(--orange);background:color-mix(in srgb,var(--orange) 6%,var(--surface))}
@@ -392,7 +394,7 @@ canvas{display:block;width:100%;max-width:100%;height:auto;cursor:crosshair}
 .dt-row.s-noncore{border-left-color:var(--orange)}
 .dt-row.s-notfound{border-left-color:var(--faint)}
 .dt-status{display:flex;flex-direction:column;gap:4px;justify-content:center}
-.dt-code{font-family:"SF Mono",ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:12px;font-weight:700;color:var(--ink);align-self:flex-start;padding:2px 9px;border-radius:980px;background:var(--surface-3)}
+.dt-code{font-family:var(--font-mono);font-size:12px;font-weight:700;color:var(--ink);align-self:flex-start;padding:2px 9px;border-radius:980px;background:var(--surface-3)}
 .dt-row.s-target .dt-code{background:color-mix(in srgb,var(--green) 16%,transparent);color:var(--green)}
 .dt-row.s-active .dt-code{background:color-mix(in srgb,var(--blue) 16%,transparent);color:var(--blue)}
 .dt-row.s-rejected .dt-code{background:color-mix(in srgb,var(--red) 16%,transparent);color:var(--red)}
@@ -428,7 +430,7 @@ canvas{display:block;width:100%;max-width:100%;height:auto;cursor:crosshair}
 .sr-h{font-size:13px;font-weight:700;letter-spacing:-.01em;color:var(--text);line-height:1.3}
 .sr-h-win{background:linear-gradient(90deg,var(--green),var(--blue));-webkit-background-clip:text;background-clip:text;color:transparent}
 .sr-sub{font-size:11px;color:var(--muted);line-height:1.4}
-.sr-input{font-size:12px;padding:10px 12px;border:1px solid var(--line);border-radius:10px;color:var(--text);background:var(--surface-2);font-family:"SF Mono",ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+.sr-input{font-size:12px;padding:10px 12px;border:1px solid var(--line);border-radius:10px;color:var(--text);background:var(--surface-2);font-family:var(--font-mono)}
 .sr-cta{margin-top:auto;padding:11px;border-radius:12px;font-size:13px;font-weight:700;text-align:center;color:#fff}
 .sr-cta-blue{background:linear-gradient(135deg,var(--blue),var(--violet))}
 .sr-screen-load{justify-content:center;align-items:center;text-align:center;padding-top:40px}
@@ -447,11 +449,11 @@ canvas{display:block;width:100%;max-width:100%;height:auto;cursor:crosshair}
 .sr-name{font-size:11.5px;font-weight:700;color:var(--text);line-height:1.2}
 .sr-rate{font-size:10px;color:var(--muted);line-height:1.3}
 .sr-go{color:var(--green);font-weight:800;font-size:14px}
-.sr-evt{margin-top:auto;font-family:"SF Mono",ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:9.5px;color:var(--muted);background:var(--surface-3);border-radius:6px;padding:5px 7px;line-height:1.4}
+.sr-evt{margin-top:auto;font-family:var(--font-mono);font-size:9.5px;color:var(--muted);background:var(--surface-3);border-radius:6px;padding:5px 7px;line-height:1.4}
 .sr-evt b{color:var(--violet)}
 .sr-cap{font-size:13px;color:var(--muted);line-height:1.5;text-align:center;max-width:260px}
 .sr-cap b{color:var(--text)}
-.sr-cap code{font-family:"SF Mono",ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:11.5px;background:var(--surface-3);padding:1px 6px;border-radius:5px;color:var(--violet)}
+.sr-cap code{font-family:var(--font-mono);font-size:11.5px;background:var(--surface-3);padding:1px 6px;border-radius:5px;color:var(--violet)}
 @media(max-width:980px){.sr-grid{grid-template-columns:1fr}.sr-stage:not(:last-child)::after{content:"↓";right:50%;top:auto;bottom:-22px;transform:translateX(50%)}}
 @media(prefers-reduced-motion:reduce){.sr-phone-pulse,.sr-spinner,.sr-progress span,.sr-stage::after{animation:none}}
 @media(max-width:980px){.route-goals{grid-template-columns:1fr 1fr}.route-status-grid{grid-template-columns:1fr}}
@@ -498,7 +500,7 @@ canvas{display:block;width:100%;max-width:100%;height:auto;cursor:crosshair}
 .seg-card .sg-label{font-size:10.5px;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);font-weight:700}
 .seg-card .sg-text{font-size:12.5px;line-height:1.45;color:var(--text)}
 .seg-card .sg-text.muted{color:var(--muted)}
-.seg-card .sg-rule{font-family:"SF Mono",ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:11px;color:var(--text);background:var(--surface-2);border:1px solid var(--line);border-radius:var(--radius-xs);padding:7px 9px;line-height:1.4;word-break:break-word}
+.seg-card .sg-rule{font-family:var(--font-mono);font-size:11px;color:var(--text);background:var(--surface-2);border:1px solid var(--line);border-radius:var(--radius-xs);padding:7px 9px;line-height:1.4;word-break:break-word}
 .seg-card .sg-mon{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
 .seg-card .sg-mon-tag{font-size:10.5px;font-weight:800;letter-spacing:.04em;text-transform:uppercase;padding:3px 9px;border-radius:980px;background:color-mix(in srgb,var(--violet) 16%,transparent);color:var(--violet)}
 .seg-card .sg-mon-tag.is-internal{background:color-mix(in srgb,var(--green) 16%,transparent);color:var(--green)}
@@ -520,7 +522,7 @@ canvas{display:block;width:100%;max-width:100%;height:auto;cursor:crosshair}
 .calc-field input.is-invalid{border-color:var(--red)}
 .calc-meta{display:flex;flex-wrap:wrap;gap:14px 22px;margin-top:14px;font-size:12px;color:var(--muted)}
 .calc-meta b{color:var(--text);font-variant-numeric:tabular-nums}
-.calc-formula{margin-top:10px;padding:10px 12px;border-radius:var(--radius-xs);background:var(--surface-3);border:1px solid var(--line);font-family:"SF Mono",ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:11.5px;color:var(--muted);line-height:1.5}
+.calc-formula{margin-top:10px;padding:10px 12px;border-radius:var(--radius-xs);background:var(--surface-3);border:1px solid var(--line);font-family:var(--font-mono);font-size:11.5px;color:var(--muted);line-height:1.5}
 .calc-formula b{color:var(--text)}
 .calc-out{display:flex;flex-direction:column;gap:10px;border:1px solid var(--line);border-radius:var(--radius-sm);background:linear-gradient(135deg,color-mix(in srgb,var(--green) 9%,var(--surface)),color-mix(in srgb,var(--blue) 7%,var(--surface)));padding:18px 20px;justify-content:center}
 .calc-out .calc-out-label{font-size:11px;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);font-weight:700}
@@ -531,6 +533,20 @@ canvas{display:block;width:100%;max-width:100%;height:auto;cursor:crosshair}
 .calc-breakdown div{font-size:11px;color:var(--muted);line-height:1.4}
 .calc-breakdown div b{display:block;color:var(--text);font-size:13px;font-weight:650;font-variant-numeric:tabular-nums}
 @media(max-width:960px){.calc-card{grid-template-columns:1fr}.calc-inputs{grid-template-columns:1fr}.calc-breakdown{grid-template-columns:1fr 1fr}}
+
+/* CJM segment user stories */
+.story-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:var(--gap)}
+.story-card{border:1px solid var(--line);border-top-width:4px;border-radius:var(--radius-sm);background:linear-gradient(180deg,var(--surface),var(--surface-2));box-shadow:var(--shadow-soft);padding:18px;display:flex;flex-direction:column;gap:10px;min-height:230px}
+.story-card.s-new{border-top-color:var(--green)}
+.story-card.s-repeat{border-top-color:var(--blue)}
+.story-card.s-overdue{border-top-color:var(--red)}
+.story-card.s-dormant{border-top-color:var(--orange)}
+.story-card .story-segment{font-size:11px;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);font-weight:800}
+.story-card .story-title{margin:0;font-size:15px;letter-spacing:-.01em;line-height:1.25}
+.story-card .story-text{margin:0;color:var(--text);font-size:13px;line-height:1.5}
+.story-card .story-outcome{margin-top:auto;color:var(--muted);font-size:12px;line-height:1.4;padding-top:10px;border-top:1px dashed var(--line)}
+@media(max-width:1180px){.story-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:560px){.story-grid{grid-template-columns:1fr}}
 
 @media(max-width:560px){
   main{padding:22px 14px 48px}
@@ -563,7 +579,7 @@ canvas{display:block;width:100%;max-width:100%;height:auto;cursor:crosshair}
       <button class="tab" data-tab="funnels">Воронки</button>
       <button class="tab" data-tab="jtbd">JTBD</button>
       <button class="tab" data-tab="ai">AI/SOS</button>
-      <button class="tab" data-tab="routing">Маршрутизация</button>
+      <button class="tab" data-tab="routing">CJM</button>
       <button class="tab" data-tab="retention">Повторные продажи</button>
       <button class="tab" data-tab="unit">Юнит-экономика</button>
     </nav>
@@ -719,13 +735,16 @@ canvas{display:block;width:100%;max-width:100%;height:auto;cursor:crosshair}
 
     <section id="tab-routing" class="panel">
       <div class="card route-hero">
-        <div class="card-title"><div><span class="eyebrow">Epic · S2S-интеграция</span><h2>Маршрутизация и кросс-идентификация трафика</h2><p>Центрофинанс ⇄ Выручай.ру. Маркетплейс — агрегатор и прокси-витрина базы ЦФ: забираем лучших лидов в ЦФ, монетизируем отказной и непрофильный трафик через CPA, исключаем перекредитованность и гарантируем безопасность базы.</p></div></div>
+        <div class="card-title"><div><span class="eyebrow">Epic · CJM + S2S-интеграция</span><h2>CJM и Smart Safe Router</h2><p>Центрофинанс ⇄ Выручай.ру. Единая логика: идентификация → статус ЦФ → безопасная витрина → событие в DWH/CRM. Лучших лидов забирает ЦФ, отказной и непрофильный трафик монетизируется через CPA, действующие клиенты не перекредитовываются.</p></div></div>
         <div class="route-goals" id="routeGoals"></div>
       </div>
 
+      <h2 class="divider-title">User story по сегментам</h2>
+      <div class="story-grid" id="routeStories"></div>
+
       <h2 class="divider-title">Блок-схема Smart Safe Router · Единый экран</h2>
-      <p class="route-lead">Один экран закрывает шесть вопросов CEO: история пользователя, боль, обоснование выбора Выручай.ру, схема монетизации с участниками, реальный (внешний) заработок и ёмкость по каждой из четырёх веток (отказники, действующие, целевые, непрофильные). Ниже — интерактивный калькулятор: изменяйте объёмы трафика и цифры в карточках веток обновятся без перезагрузки страницы.</p>
-      <div class="card route-diagram-card"><div class="route-diagram-wrap"><div id="routeDiagram" class="route-diagram"></div></div><p class="rd-caption">Цвет верхней кромки колонки = статус клиента. Бейдж <code>is_external_monetization</code> отличает ветки с внешним доходом (золотой) от внутренней синергии группы (серый). Под веткой <b>CF_REJECTED</b> — мини-сценарий Soft Reject: лоадер «Анализируем резервные фонды…» (2–3 с) → перестроение витрины → клик по CPA → событие <code>safe_router_redirect</code>.</p></div>
+      <p class="route-lead">Один экран закрывает CJM, боль, монетизацию, участников, внешний доход и ёмкость по веткам. Ниже — интерактивный калькулятор: объёмы трафика обновляют цифры в карточках без перезагрузки страницы.</p>
+      <div class="card route-diagram-card"><div class="route-diagram-wrap"><div id="routeDiagram" class="route-diagram"></div></div><p class="rd-caption">Цвет колонки = статус клиента. Бейдж <code>is_external_monetization</code> показывает внешний доход. Для <b>CF_REJECTED</b>: заявка → <code>CF_REJECTED</code> → лоадер 2–3 с → ТОП-3 МФО → <code>safe_router_redirect</code> в DWH. Для <b>CF_ACTIVE</b>: кредитные офферы скрыты, остаются карты, кэшбэк, HR и страхование.</p></div>
 
       <div class="card calc-card" aria-labelledby="calcTitle">
         <div>

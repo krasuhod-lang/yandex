@@ -996,6 +996,12 @@ const ROUTE_GOALS=[
  'Исключить перекредитованность действующих клиентов ЦФ у конкурентов.',
  'Гарантировать безопасность базы ЦФ — никаких прямых сливов конкурентам.'
 ];
+const ROUTE_USER_STORIES=[
+ {cls:'s-new',segment:'Новый · внешний трафик',title:'Быстро получить деньги здесь и сейчас',story:'Как новый клиент, который ищет, где взять деньги «здесь и сейчас» без сложных условий, я хочу быстро подобрать займ/кредит из нескольких вариантов, увидеть реальные ставки и онлайн-одобрение.',outcome:'Цель: не ходить по сайтам и отделениям, получить деньги в течение дня.'},
+ {cls:'s-repeat',segment:'Повторный · база ЦФ',title:'Персональные продукты в один клик',story:'Как действующий клиент Центрофинанс с положительным опытом займа, я хочу видеть персональные предложения: рефинанс, кредитку, страховку, вклад — на основе моей истории.',outcome:'Цель: выгодные условия без повторной анкеты и проверки всех документов.'},
+ {cls:'s-overdue',segment:'Просроченный · база ЦФ',title:'План выхода из просрочки',story:'Как клиент с просрочкой по займу в Центрофинанс, который испытывает стресс из-за долга, я хочу получить понятный план: реструктуризация, рефинанс через партнёров, страховые опции.',outcome:'Цель: снизить нагрузку, восстановить кредитную историю и вернуться к нормальному использованию продуктов.'},
+ {cls:'s-dormant',segment:'Спящий >6 мес · база ЦФ',title:'Вернуться через релевантную подборку',story:'Как бывший клиент Центрофинанс, который больше полугода ничем не пользуется и «забыл» про сервис, я хочу иногда получать подборки ОСАГО, карт с кэшбэком и вкладов на основе прошлых операций.',outcome:'Цель: при новой финансовой задаче быстро выбрать продукт в знакомом интерфейсе.'}
+];
 const ROUTE_STATUSES=[
  {cls:'s-target',code:'CF_TARGET',title:'Подходит для ЦФ',desc:'Идеальный профиль, хорошая КИ.',logic:'Маршрутизация сделки в ЦФ. Оффер ЦФ на 1-м месте или «режим SOS» (эксклюзивная выдача в ЦФ). Остальные МФО скрыты.',out:'Оффер ЦФ №1 или SOS-режим (эксклюзив ЦФ)',
   ui:'Иван, для вашего профиля 100% одобрение в Центрофинансе',allow:['Оффер ЦФ №1','Бейдж «100% одобрение»','SOS-режим'],block:['Сторонние МФО (на время SOS)']},
@@ -1013,7 +1019,7 @@ const VOLUME_CALC_CPA=1500;
 const ROUTE_SEGMENTS=[
  {cls:'s-rejected',code:'CF_REJECTED',title:'Ветка A · Отказники',
   userStory:'Я как заёмщик, получивший отказ у ЦФ, хочу без повторной анкеты найти компанию, чтобы она выдала заём прямо сейчас.',
-  path:'Вводит номер → ЦФ отказывает (или хеш числится в отказниках) → SPA-экран без перезагрузки перестраивается в ТОП-3 проверенных МФО.',
+  path:'Телефон + сумма → S2S API ЦФ → CF_REJECTED → лоадер 2–3 с → SPA-витрина ТОП-3 МФО → safe_router_redirect в DWH.',
   pain:'Срочно нужны деньги, отказ вызывает стресс, не хочет заново заполнять длинные анкеты на других сайтах.',
   whyUs:'Бережём нервы и время: даём 100% гарантию подбора компании, готовой кредитовать с текущей КИ. Клиент не уходит к конкурентам — остаётся у нас.',
   scheme:'Стороннее МФО-партнёр платит маркетплейсу комиссию за выданный заём (≈ 1 500–2 500 ₽).',
@@ -1155,6 +1161,11 @@ function initVolumeCalculator(){
  });
  updateVolumeCalculator();
 }
+function renderRouteStories(){
+ const host=document.getElementById('routeStories');
+ if(!host)return;
+ host.innerHTML=ROUTE_USER_STORIES.map(s=>`<article class="story-card ${escapeHtml(s.cls)}"><span class="story-segment">${escapeHtml(s.segment)}</span><h3 class="story-title">${escapeHtml(s.title)}</h3><p class="story-text">${escapeHtml(s.story)}</p><p class="story-outcome">${escapeHtml(s.outcome)}</p></article>`).join('');
+}
 function renderRoutingDiagram(){
  const host=document.getElementById('routeDiagram');
  if(!host)return;
@@ -1163,11 +1174,11 @@ function renderRoutingDiagram(){
  const edge=(d,extra='')=>`<path class="rd-edge${extra?' '+extra:''}" d="${d}" marker-end="url(#rdArrow)"/>`;
  const elabel=(x,y,t,extra='')=>`<text class="rd-elabel${extra?' '+extra:''}" x="${x}" y="${y}" text-anchor="middle">${escapeHtml(t)}</text>`;
  const outCls={'s-target':'c-target','s-active':'c-active','s-rejected':'c-rejected','s-noncore':'c-noncore'};
- // ---- Layout constants (viewBox 1800 x 2400) ----
+ // ---- Layout constants (viewBox 1800 x 3000) ----
  const COL_W=420,COL_GAP=16;
  const colX=[20,20+COL_W+COL_GAP,20+(COL_W+COL_GAP)*2,20+(COL_W+COL_GAP)*3]; // 20, 456, 892, 1328
- const HEADER_Y=600,HEADER_H=120;
- const MINI_Y0=736,MINI_H=150,MINI_GAP=14;
+ const HEADER_Y=600,HEADER_H=156;
+ const MINI_Y0=776,MINI_H=178,MINI_GAP=16;
  // ---- Top entry nodes ----
  let nodes='';
  nodes+=fo(320,30,360,80,'rd-entry','<span class="rd-t">Платный трафик Маркетплейса</span><span class="rd-s">PPC, SEO, CPA-сети — холодная органика и закупка трафика</span>');
@@ -1202,14 +1213,14 @@ function renderRoutingDiagram(){
   const mini=[
    ['1 · История пользователя',`<div class="rd-mini-b">${escapeHtml(b.userStory||b.path)}</div>`],
    ['2 · Боль клиента',`<div class="rd-mini-b">${escapeHtml(b.pain)}</div>`],
-   ['3 · Почему Выручай.ру',`<div class="rd-mini-b">${escapeHtml(b.whyUs)}</div>`],
+   ['3 · Почему Выручай.ру',`<div class="rd-mini-b">${escapeHtml(b.whyUs)}</div><div class="rd-flow-note">Связка: пользовательский интент → статус ЦФ → витрина → CRM/DWH → дожим.</div>`],
    ['4 · Схема монетизации · участники и потоки',moneyInner],
    ['5 · Реальный заработок',realInner],
    ['6 · Ёмкость сегмента',capInner]
   ];
   // Mini #4 (actors) needs extra height for list items, Mini #6 (capacity) needs extra height for padding
-  const MINI_H_ACTOR_EXTRA=82;
-  const MINI_H_CAPACITY_EXTRA=10;
+  const MINI_H_ACTOR_EXTRA=128;
+  const MINI_H_CAPACITY_EXTRA=34;
   const heights=[MINI_H,MINI_H,MINI_H,MINI_H+MINI_H_ACTOR_EXTRA,MINI_H,MINI_H+MINI_H_CAPACITY_EXTRA];
   let curY=MINI_Y0;
   mini.forEach((m,j)=>{
@@ -1223,22 +1234,22 @@ function renderRoutingDiagram(){
     const stripInner=`<span class="rd-soft-pill">Soft Reject Flow · сценарий мягкого отказа</span>`+
      `<div class="rd-soft-strip">${b.softReject.map(s=>`<div class="rd-soft-step"><span class="rd-soft-n">${escapeHtml(s[0])}</span><span class="rd-soft-tx">${escapeHtml(s[1])}</span></div>`).join('')}</div>`+
      `<span class="rd-s" style="margin-top:4px">Без перезагрузки страницы (SPA), CAC = 0 ₽, событие <code>safe_router_redirect</code> в DWH.</span>`;
-    branchSvg+=fo(x,curY+8,COL_W,170,'rd-soft',stripInner);
-    curY+=170+12;
+    branchSvg+=fo(x,curY+8,COL_W,188,'rd-soft',stripInner);
+    curY+=188+12;
    }
    if(Array.isArray(b.abandonedCart)){
     const stripInner=`<span class="rd-soft-pill c-orange">Брошенная корзина (дожим)</span>`+
      `<div class="rd-soft-strip">${b.abandonedCart.map(s=>`<div class="rd-soft-step c-orange"><span class="rd-soft-n c-orange">${escapeHtml(s[0])}</span><span class="rd-soft-tx">${escapeHtml(s[1])}</span></div>`).join('')}</div>`+
      `<span class="rd-s" style="margin-top:4px">${escapeHtml(b.abandonedDesc)}</span>`;
-    branchSvg+=fo(x,curY+8,COL_W,210,'rd-soft c-orange-box',stripInner);
-    curY+=210+12;
+    branchSvg+=fo(x,curY+8,COL_W,244,'rd-soft c-orange-box',stripInner);
+    curY+=244+12;
    }
   }
   if(b.code==='CF_ACTIVE' && Array.isArray(b.pushActive)){
    const stripInner=`<span class="rd-soft-pill c-blue">Дожим CF_ACTIVE</span>`+
     `<div class="rd-soft-strip">${b.pushActive.map(s=>`<div class="rd-soft-step c-blue"><span class="rd-soft-n c-blue">${escapeHtml(s[0])}</span><span class="rd-soft-tx">${escapeHtml(s[1])}</span></div>`).join('')}</div>`;
-   branchSvg+=fo(x,curY+8,COL_W,180,'rd-soft c-blue-box',stripInner);
-   curY+=180+12;
+   branchSvg+=fo(x,curY+8,COL_W,214,'rd-soft c-blue-box',stripInner);
+   curY+=214+12;
   }
  });
  // ---- Edges ----
@@ -1257,7 +1268,8 @@ function renderRoutingDiagram(){
  ].join('');
  const labels=elabel(650,128,'JWT-токен (тёплый)')+elabel(1150,128,'SHA-256 хеш (холодный)')+
   elabel(900,414,'Smart Safe Router · перехват отказа','rd-elabel-killer');
- host.innerHTML=`<svg viewBox="0 0 1800 2400" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Блок-схема Smart Safe Router">`+
+ host.innerHTML=`<svg viewBox="0 0 1800 3000" preserveAspectRatio="xMidYMid meet" role="img" aria-labelledby="rdTitle rdDesc">`+
+  `<title id="rdTitle">CJM Smart Safe Router</title><desc id="rdDesc">Блок-схема показывает путь клиента от идентификации до статуса Центрофинанс, витрины офферов, события DWH и CRM-дожима.</desc>`+
   `<defs><marker id="rdArrow" markerWidth="9" markerHeight="9" refX="7" refY="4.5" orient="auto" markerUnits="userSpaceOnUse"><path class="rd-arrow" d="M0,0 L9,4.5 L0,9 Z"/></marker></defs>`+
   edges+labels+nodes+diamond+branchSvg+`</svg>`;
 }
@@ -1265,6 +1277,7 @@ function renderRouting(){
  const goals=document.getElementById('routeGoals');
  if(!goals)return;
  goals.innerHTML=ROUTE_GOALS.map((g,i)=>`<div class="route-goal"><span class="rg-num">${i+1}</span><span class="rg-text">${escapeHtml(g)}</span></div>`).join('');
+ renderRouteStories();
  renderRoutingDiagram();
  initVolumeCalculator();
 }
