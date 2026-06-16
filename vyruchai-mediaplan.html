@@ -454,6 +454,23 @@ canvas{display:block;width:100%;max-width:100%;height:auto;cursor:crosshair}
 .sr-cap{font-size:13px;color:var(--muted);line-height:1.5;text-align:center;max-width:260px}
 .sr-cap b{color:var(--text)}
 .sr-cap code{font-family:var(--font-mono);font-size:11.5px;background:var(--surface-3);padding:1px 6px;border-radius:5px;color:var(--violet)}
+.route-scheme-list{display:grid;gap:18px}
+.route-scheme{border:1px solid var(--line);border-radius:var(--radius-sm);background:var(--surface);padding:18px;box-shadow:var(--shadow-soft)}
+.route-scheme-head{display:flex;justify-content:space-between;gap:16px;align-items:flex-start;margin-bottom:16px}
+.route-scheme-head h3{margin:2px 0 4px;font-size:18px;letter-spacing:-.02em}
+.route-scheme-head p{margin:0;color:var(--muted);font-size:13px;line-height:1.45;max-width:760px}
+.route-scheme-badge{flex:0 0 auto;font-family:var(--font-mono);font-size:11px;font-weight:800;border-radius:980px;padding:4px 10px;background:var(--surface-3);color:var(--muted)}
+.route-scheme.c-rejected{border-left:4px solid var(--red)}
+.route-scheme.c-active{border-left:4px solid var(--blue)}
+.route-scheme.c-target{border-left:4px solid var(--green)}
+.route-scheme.c-rejected .route-scheme-badge{background:color-mix(in srgb,var(--red) 14%,transparent);color:var(--red)}
+.route-scheme.c-active .route-scheme-badge{background:color-mix(in srgb,var(--blue) 14%,transparent);color:var(--blue)}
+.route-scheme.c-target .route-scheme-badge{background:color-mix(in srgb,var(--green) 14%,transparent);color:var(--green)}
+.route-scheme .sr-grid{gap:16px}
+.sr-screen-active .sr-cta{background:linear-gradient(135deg,var(--blue),var(--green))}
+.sr-screen-target .sr-cta{background:linear-gradient(135deg,var(--green),var(--blue))}
+.sr-muted-offer{opacity:.48;text-decoration:line-through}
+@media(max-width:720px){.route-scheme-head{flex-direction:column}.route-scheme-badge{align-self:flex-start}}
 @media(max-width:980px){.sr-grid{grid-template-columns:1fr}.sr-stage:not(:last-child)::after{content:"↓";right:50%;top:auto;bottom:-22px;transform:translateX(50%)}}
 @media(prefers-reduced-motion:reduce){.sr-phone-pulse,.sr-spinner,.sr-progress span,.sr-stage::after{animation:none}}
 @media(max-width:980px){.route-goals{grid-template-columns:1fr 1fr}.route-status-grid{grid-template-columns:1fr}}
@@ -744,7 +761,11 @@ canvas{display:block;width:100%;max-width:100%;height:auto;cursor:crosshair}
 
       <h2 class="divider-title">Блок-схема Smart Safe Router · Единый экран</h2>
       <p class="route-lead">Один экран закрывает CJM, боль, монетизацию, участников, внешний доход и ёмкость по веткам. Ниже — интерактивный калькулятор: объёмы трафика обновляют цифры в карточках без перезагрузки страницы.</p>
-      <div class="card route-diagram-card"><div class="route-diagram-wrap"><div id="routeDiagram" class="route-diagram"></div></div><p class="rd-caption">Цвет колонки = статус клиента. Бейдж <code>is_external_monetization</code> показывает внешний доход. Для <b>CF_REJECTED</b>: заявка → <code>CF_REJECTED</code> → лоадер 2–3 с → ТОП-3 МФО → <code>safe_router_redirect</code> в DWH. Для <b>CF_ACTIVE</b>: кредитные офферы скрыты, остаются карты, кэшбэк, HR и страхование.</p></div>
+      <div class="card route-diagram-card"><div class="route-diagram-wrap"><div id="routeDiagram" class="route-diagram"></div></div></div>
+
+      <h2 class="divider-title">3-шаговые интерфейсные сценарии</h2>
+      <p class="route-lead">Три ключевые ветки показаны как короткие UI-фрагменты: что видит пользователь до статуса, во время решения роутера и на финальной витрине.</p>
+      <div class="route-scheme-list" id="routeStepSchemes"></div>
 
       <div class="card calc-card" aria-labelledby="calcTitle">
         <div>

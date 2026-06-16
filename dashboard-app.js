@@ -1100,6 +1100,26 @@ const ROUTE_SEGMENTS=[
   rule:'include_categories=["CreditCards","CashLoans","Auto","Mortgage"]',
   capacity:'≈ 6 000 чел./мес',defaultVol:6000,payoutHint:'до 10 000 ₽ за выдачу'}
 ];
+const ROUTE_STEP_SCHEMES=[
+{cls:'c-rejected',code:'CF_REJECTED',title:'Soft Reject Flow',desc:'Заявка без повторной анкеты превращается в витрину ТОП-3 МФО после отказа ЦФ.',
+ steps:[
+  {title:'Заявка',subtitle:'Телефон + сумма',screen:'form',cta:'Проверить одобрение'},
+  {title:'Решение роутера',subtitle:'CF_REJECTED · лоадер 2–3 с',screen:'loader',tip:'Подбираем запасные варианты'},
+  {title:'ТОП-3 МФО',subtitle:'Готовы выдать деньги сейчас',screen:'mfo',event:'safe_router_redirect'}
+ ]},
+{cls:'c-active',code:'CF_ACTIVE',title:'Защита действующего клиента',desc:'После определения активного займа кредитные офферы скрываются, остаются безопасные продукты.',
+ steps:[
+  {title:'Вход клиента',subtitle:'Номер найден в базе ЦФ',screen:'form',cta:'Посмотреть предложения'},
+  {title:'Правило безопасности',subtitle:'CF_ACTIVE · скрываем займы',screen:'loader',tip:'Убираем МФО-конкурентов'},
+  {title:'Не-кредитная витрина',subtitle:'Карты, кэшбэк, HR, страхование',screen:'active',event:'non_credit_offers'}
+ ]},
+{cls:'c-target',code:'CF_TARGET',title:'Целевой клиент ЦФ',desc:'Идеальный профиль получает короткий путь к офферу Центрофинанса без инфошума конкурентов.',
+ steps:[
+  {title:'Идентификация',subtitle:'Профиль и запрос совпали',screen:'form',cta:'Получить лучший оффер'},
+  {title:'Приоритет ЦФ',subtitle:'CF_TARGET · конкуренты скрыты',screen:'loader',tip:'Фиксируем эксклюзивный маршрут'},
+  {title:'Оффер ЦФ №1',subtitle:'Прямой переход к оформлению',screen:'target',event:'centrofinance_lead'}
+ ]}
+];
 function calculateExternalRevenue(rejectedVol,activeVol,noncoreVol){
  const r=Math.max(0,Number(rejectedVol)||0);
  const a=Math.max(0,Number(activeVol)||0);
@@ -1165,6 +1185,22 @@ function renderRouteStories(){
  const host=document.getElementById('routeStories');
  if(!host)return;
  host.innerHTML=ROUTE_USER_STORIES.map(s=>`<article class="story-card ${escapeHtml(s.cls)}"><span class="story-segment">${escapeHtml(s.segment)}</span><h3 class="story-title">${escapeHtml(s.title)}</h3><p class="story-text">${escapeHtml(s.story)}</p><p class="story-outcome">${escapeHtml(s.outcome)}</p></article>`).join('');
+}
+function renderRouteStepSchemes(){
+ const host=document.getElementById('routeStepSchemes');
+ if(!host)return;
+ const screen=(step,idx,schemeCls)=>{
+ if(step.screen==='loader')return `<div class="sr-screen sr-screen-load"><div class="sr-spinner"></div><div class="sr-h">${escapeHtml(step.title)}</div><div class="sr-sub">${escapeHtml(step.subtitle)}</div><div class="sr-progress"><span></span></div><div class="sr-tip">${escapeHtml(step.tip||'Проверяем статус')}</div></div>`;
+ if(step.screen==='mfo')return `<div class="sr-screen sr-screen-shop"><div class="sr-h sr-h-win">${escapeHtml(step.title)}</div><div class="sr-sub">${escapeHtml(step.subtitle)}</div>`+
+  [['МФО A','до 30 000 ₽ · 0% первый заём'],['МФО B','одобрение за 3 минуты'],['МФО C','деньги на карту онлайн']].map((o,i)=>`<div class="sr-offer"><span class="sr-logo sr-logo-${i+1}">${i+1}</span><span><span class="sr-name">${escapeHtml(o[0])}</span><span class="sr-rate">${escapeHtml(o[1])}</span></span><span class="sr-go">›</span></div>`).join('')+
+  `<div class="sr-evt"><b>${escapeHtml(step.event)}</b> → DWH</div></div>`;
+ if(step.screen==='active')return `<div class="sr-screen sr-screen-shop sr-screen-active"><div class="sr-h">${escapeHtml(step.title)}</div><div class="sr-sub">${escapeHtml(step.subtitle)}</div>`+
+  [['Карта с кэшбэком','выпуск 0 ₽'],['Подработка','отклик за 1 минуту'],['Страхование','полис онлайн']].map((o,i)=>`<div class="sr-offer"><span class="sr-logo sr-logo-${i+1}">${i+1}</span><span><span class="sr-name">${escapeHtml(o[0])}</span><span class="sr-rate">${escapeHtml(o[1])}</span></span><span class="sr-go">›</span></div>`).join('')+
+  `<div class="sr-evt"><b>${escapeHtml(step.event)}</b> · займы скрыты</div></div>`;
+ if(step.screen==='target')return `<div class="sr-screen sr-screen-shop sr-screen-target"><div class="sr-h sr-h-win">${escapeHtml(step.title)}</div><div class="sr-sub">${escapeHtml(step.subtitle)}</div><div class="sr-offer"><span class="sr-logo sr-logo-2">ЦФ</span><span><span class="sr-name">Центрофинанс</span><span class="sr-rate">персональное одобрение</span></span><span class="sr-go">›</span></div><div class="sr-offer sr-muted-offer"><span class="sr-logo">×</span><span><span class="sr-name">Конкуренты</span><span class="sr-rate">скрыты роутером</span></span><span class="sr-go">—</span></div><div class="sr-cta">${escapeHtml(step.event)}</div></div>`;
+ return `<div class="sr-screen ${schemeCls==='c-active'?'sr-screen-active':''}"><div class="sr-bar"></div><div class="sr-h">${escapeHtml(step.title)}</div><div class="sr-sub">${escapeHtml(step.subtitle)}</div><div class="sr-input">+7 ··· ···-··-··</div><div class="sr-input">Сумма: 15 000 ₽</div><div class="sr-cta ${schemeCls==='c-target'?'sr-cta-blue':''}">${escapeHtml(step.cta||'Продолжить')}</div></div>`;
+ };
+ host.innerHTML=ROUTE_STEP_SCHEMES.map(s=>`<article class="route-scheme ${escapeHtml(s.cls)}"><div class="route-scheme-head"><div><span class="eyebrow">UI-схема · 3 шага</span><h3>${escapeHtml(s.title)}</h3><p>${escapeHtml(s.desc)}</p></div><span class="route-scheme-badge">${escapeHtml(s.code)}</span></div><div class="sr-grid">${s.steps.map((step,i)=>`<div class="sr-stage"><span class="sr-step-num">${i+1}</span><div class="sr-phone ${i===1?'sr-phone-pulse':''}">${screen(step,i,s.cls)}</div><p class="sr-cap"><b>${escapeHtml(step.title)}</b><br>${escapeHtml(step.subtitle)}</p></div>`).join('')}</div></article>`).join('');
 }
 function renderRoutingDiagram(){
  const host=document.getElementById('routeDiagram');
@@ -1279,6 +1315,7 @@ function renderRouting(){
  goals.innerHTML=ROUTE_GOALS.map((g,i)=>`<div class="route-goal"><span class="rg-num">${i+1}</span><span class="rg-text">${escapeHtml(g)}</span></div>`).join('');
  renderRouteStories();
  renderRoutingDiagram();
+ renderRouteStepSchemes();
  initVolumeCalculator();
 }
 // Drag-to-scroll для широкой PNL-таблицы: зажатая левая кнопка мыши тянет таблицу влево/вправо.
