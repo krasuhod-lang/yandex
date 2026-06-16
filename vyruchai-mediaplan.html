@@ -785,18 +785,18 @@ canvas{display:block;width:100%;max-width:100%;height:auto;cursor:crosshair}
 
       <div class="card calc-card" aria-labelledby="calcTitle">
         <div>
-          <div class="card-title"><div><span class="eyebrow">Аналитика · Калькулятор ёмкости</span><h3 id="calcTitle">Калькулятор ёмкости сегментов</h3><p>Ручной ввод прогнозируемых объёмов в месяц. Целевые клиенты (CF_TARGET) не участвуют — там <b>внутренняя синергия</b>, а не внешний доход.</p></div></div>
+          <div class="card-title"><div><span class="eyebrow">Аналитика · Калькулятор ёмкости</span><h3 id="calcTitle">Калькулятор ёмкости сегментов</h3><p>Ручной ввод прогнозируемых объёмов в месяц. Целевые клиенты не участвуют — там <b>внутренняя синергия</b>, а не внешний доход.</p></div></div>
           <div class="calc-inputs">
-            <div class="calc-field"><label for="calcRejected">Отказники <span class="calc-sub">CF_REJECTED · чел./мес</span></label><input id="calcRejected" type="number" min="0" step="100" inputmode="numeric" autocomplete="off"></div>
-            <div class="calc-field"><label for="calcActive">Действующие <span class="calc-sub">CF_ACTIVE · чел./мес</span></label><input id="calcActive" type="number" min="0" step="100" inputmode="numeric" autocomplete="off"></div>
-            <div class="calc-field"><label for="calcNoncore">Непрофильные <span class="calc-sub">CF_NON_CORE · чел./мес</span></label><input id="calcNoncore" type="number" min="0" step="100" inputmode="numeric" autocomplete="off"></div>
+            <div class="calc-field"><label for="calcRejected">Отказники <span class="calc-sub">чел./мес</span></label><input id="calcRejected" type="number" min="0" step="100" inputmode="numeric" autocomplete="off"></div>
+            <div class="calc-field"><label for="calcActive">Действующие <span class="calc-sub">чел./мес</span></label><input id="calcActive" type="number" min="0" step="100" inputmode="numeric" autocomplete="off"></div>
+            <div class="calc-field"><label for="calcNoncore">Непрофильные <span class="calc-sub">чел./мес</span></label><input id="calcNoncore" type="number" min="0" step="100" inputmode="numeric" autocomplete="off"></div>
           </div>
           <div class="calc-meta">
-            <span>Конверсия в выдачу: <b id="calcCR">8%</b></span>
+            <span>Конверсия в выдачу: <b id="calcCR">2%</b></span>
             <span>Средний CPA: <b id="calcCPA">1 500 ₽</b></span>
             <span>Внешний трафик: <b id="calcSum">0 чел.</b></span>
           </div>
-          <div class="calc-formula">expectedRevenue = (rejected + active + noncore) × <b>0.08</b> × <b>1 500</b> ₽</div>
+          <div class="calc-formula">expectedRevenue = (rejected + active + noncore) × <b>0.02</b> × <b>1 500</b> ₽</div>
         </div>
         <div class="calc-out" role="status" aria-live="polite">
           <span class="calc-out-label">Прогноз внешней выручки в месяц</span>
