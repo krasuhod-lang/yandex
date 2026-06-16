@@ -280,7 +280,7 @@ canvas{display:block;width:100%;max-width:100%;height:auto;cursor:crosshair}
 .route-diagram .rd-edge{fill:none;stroke:var(--line-strong);stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
 .route-diagram .rd-arrow{fill:var(--line-strong)}
 .route-diagram .rd-elabel{fill:var(--muted);font-family:var(--font);font-size:11px;font-weight:700}
-.route-diagram .rd-box{height:100%;box-sizing:border-box;border:1px solid var(--line-strong);border-radius:14px;background:var(--surface);box-shadow:var(--shadow-soft);padding:9px 13px;display:flex;flex-direction:column;justify-content:center;gap:3px;overflow:hidden}
+.route-diagram .rd-box{height:100%;box-sizing:border-box;border:1px solid var(--line-strong);border-radius:14px;background:var(--surface);box-shadow:var(--shadow-soft);padding:9px 13px;display:flex;flex-direction:column;justify-content:center;gap:3px;overflow:visible}
 .route-diagram .rd-box .rd-t{font-size:14px;font-weight:650;letter-spacing:-.01em;line-height:1.2}
 .route-diagram .rd-box .rd-s{font-size:12px;color:var(--muted);line-height:1.32}
 .route-diagram .rd-box .rd-tag{align-self:flex-start;font-size:12.5px;font-weight:700;letter-spacing:-.01em;border-radius:980px;padding:2px 9px;background:var(--surface-3);color:var(--ink)}
@@ -350,7 +350,7 @@ canvas{display:block;width:100%;max-width:100%;height:auto;cursor:crosshair}
 .route-diagram .rd-box.rd-branch .rd-bh-top{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
 .route-diagram .rd-box.rd-branch .rd-t{font-size:16px;font-weight:700;line-height:1.25}
 .route-diagram .rd-box.rd-branch .rd-s{font-size:13px;color:var(--muted);line-height:1.35}
-.route-diagram .rd-mon-flag{font-size:11px;font-weight:700;letter-spacing:.02em;padding:2px 8px;border-radius:980px;font-family:"SF Mono",ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+.route-diagram .rd-mon-flag{font-size:10px;font-weight:700;letter-spacing:.01em;padding:2px 7px;border-radius:980px;font-family:"SF Mono",ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;line-height:1.25}
 .route-diagram .rd-mon-flag b{font-weight:800}
 .route-diagram .rd-mon-ext{background:color-mix(in srgb,#d4a017 18%,transparent);color:#a87800;border:1px solid color-mix(in srgb,#d4a017 30%,transparent)}
 .route-diagram .rd-mon-int{background:color-mix(in srgb,var(--faint) 18%,transparent);color:var(--muted);border:1px solid var(--line)}
@@ -371,6 +371,7 @@ canvas{display:block;width:100%;max-width:100%;height:auto;cursor:crosshair}
 .route-diagram .rd-soft-strip .rd-soft-step{flex:1;background:color-mix(in srgb,var(--violet) 6%,var(--surface));border:1px dashed var(--violet);border-radius:10px;padding:6px 8px;display:flex;flex-direction:column;gap:2px}
 .route-diagram .rd-soft-strip .rd-soft-step .rd-soft-n{font-size:10.5px;font-weight:800;color:var(--violet);letter-spacing:.06em;text-transform:uppercase}
 .route-diagram .rd-soft-strip .rd-soft-step .rd-soft-tx{font-size:12px;line-height:1.35;color:var(--text)}
+.route-diagram .rd-flow-note{font-size:11px;color:var(--muted);line-height:1.35;padding:5px 8px;border-radius:8px;background:var(--surface-3)}
 
 .route-diagram .rd-soft-pill.c-orange{color:var(--orange);border-color:color-mix(in srgb,var(--orange) 30%,transparent);background:color-mix(in srgb,var(--orange) 8%,var(--surface))}
 .route-diagram .rd-soft-strip .rd-soft-step.c-orange{border-color:var(--orange);background:color-mix(in srgb,var(--orange) 6%,var(--surface))}
@@ -532,6 +533,20 @@ canvas{display:block;width:100%;max-width:100%;height:auto;cursor:crosshair}
 .calc-breakdown div b{display:block;color:var(--text);font-size:13px;font-weight:650;font-variant-numeric:tabular-nums}
 @media(max-width:960px){.calc-card{grid-template-columns:1fr}.calc-inputs{grid-template-columns:1fr}.calc-breakdown{grid-template-columns:1fr 1fr}}
 
+/* CJM segment user stories */
+.story-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:var(--gap)}
+.story-card{border:1px solid var(--line);border-top-width:4px;border-radius:var(--radius-sm);background:linear-gradient(180deg,var(--surface),var(--surface-2));box-shadow:var(--shadow-soft);padding:18px;display:flex;flex-direction:column;gap:10px;min-height:230px}
+.story-card.s-new{border-top-color:var(--green)}
+.story-card.s-repeat{border-top-color:var(--blue)}
+.story-card.s-overdue{border-top-color:var(--red)}
+.story-card.s-dormant{border-top-color:var(--orange)}
+.story-card .story-segment{font-size:11px;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);font-weight:800}
+.story-card .story-title{margin:0;font-size:15px;letter-spacing:-.01em;line-height:1.25}
+.story-card .story-text{margin:0;color:var(--text);font-size:13px;line-height:1.5}
+.story-card .story-outcome{margin-top:auto;color:var(--muted);font-size:12px;line-height:1.4;padding-top:10px;border-top:1px dashed var(--line)}
+@media(max-width:1180px){.story-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:560px){.story-grid{grid-template-columns:1fr}}
+
 @media(max-width:560px){
   main{padding:22px 14px 48px}
   .tabs,.topbar-inner{padding-left:14px;padding-right:14px}
@@ -563,7 +578,7 @@ canvas{display:block;width:100%;max-width:100%;height:auto;cursor:crosshair}
       <button class="tab" data-tab="funnels">Воронки</button>
       <button class="tab" data-tab="jtbd">JTBD</button>
       <button class="tab" data-tab="ai">AI/SOS</button>
-      <button class="tab" data-tab="routing">Маршрутизация</button>
+      <button class="tab" data-tab="routing">CJM</button>
       <button class="tab" data-tab="retention">Повторные продажи</button>
       <button class="tab" data-tab="unit">Юнит-экономика</button>
     </nav>
@@ -719,13 +734,16 @@ canvas{display:block;width:100%;max-width:100%;height:auto;cursor:crosshair}
 
     <section id="tab-routing" class="panel">
       <div class="card route-hero">
-        <div class="card-title"><div><span class="eyebrow">Epic · S2S-интеграция</span><h2>Маршрутизация и кросс-идентификация трафика</h2><p>Центрофинанс ⇄ Выручай.ру. Маркетплейс — агрегатор и прокси-витрина базы ЦФ: забираем лучших лидов в ЦФ, монетизируем отказной и непрофильный трафик через CPA, исключаем перекредитованность и гарантируем безопасность базы.</p></div></div>
+        <div class="card-title"><div><span class="eyebrow">Epic · CJM + S2S-интеграция</span><h2>CJM и Smart Safe Router</h2><p>Центрофинанс ⇄ Выручай.ру. Единая логика: идентификация → статус ЦФ → безопасная витрина → событие в DWH/CRM. Лучших лидов забирает ЦФ, отказной и непрофильный трафик монетизируется через CPA, действующие клиенты не перекредитовываются.</p></div></div>
         <div class="route-goals" id="routeGoals"></div>
       </div>
 
+      <h2 class="divider-title">User story по сегментам</h2>
+      <div class="story-grid" id="routeStories"></div>
+
       <h2 class="divider-title">Блок-схема Smart Safe Router · Единый экран</h2>
-      <p class="route-lead">Один экран закрывает шесть вопросов CEO: история пользователя, боль, обоснование выбора Выручай.ру, схема монетизации с участниками, реальный (внешний) заработок и ёмкость по каждой из четырёх веток (отказники, действующие, целевые, непрофильные). Ниже — интерактивный калькулятор: изменяйте объёмы трафика и цифры в карточках веток обновятся без перезагрузки страницы.</p>
-      <div class="card route-diagram-card"><div class="route-diagram-wrap"><div id="routeDiagram" class="route-diagram"></div></div><p class="rd-caption">Цвет верхней кромки колонки = статус клиента. Бейдж <code>is_external_monetization</code> отличает ветки с внешним доходом (золотой) от внутренней синергии группы (серый). Под веткой <b>CF_REJECTED</b> — мини-сценарий Soft Reject: лоадер «Анализируем резервные фонды…» (2–3 с) → перестроение витрины → клик по CPA → событие <code>safe_router_redirect</code>.</p></div>
+      <p class="route-lead">Один экран закрывает CJM, боль, монетизацию, участников, внешний доход и ёмкость по веткам. Ниже — интерактивный калькулятор: объёмы трафика обновляют цифры в карточках без перезагрузки страницы.</p>
+      <div class="card route-diagram-card"><div class="route-diagram-wrap"><div id="routeDiagram" class="route-diagram"></div></div><p class="rd-caption">Цвет колонки = статус клиента. Бейдж <code>is_external_monetization</code> показывает внешний доход. Для <b>CF_REJECTED</b>: заявка → <code>CF_REJECTED</code> → лоадер 2–3 с → ТОП-3 МФО → <code>safe_router_redirect</code> в DWH. Для <b>CF_ACTIVE</b>: кредитные офферы скрыты, остаются карты, кэшбэк, HR и страхование.</p></div>
 
       <div class="card calc-card" aria-labelledby="calcTitle">
         <div>
