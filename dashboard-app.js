@@ -1225,17 +1225,17 @@ function renderRoutingDiagram(){
     curY+=170+12;
    }
    if(Array.isArray(b.abandonedCart)){
-    const stripInner=`<span class="rd-soft-pill" style="color:var(--orange);border-color:color-mix(in srgb,var(--orange) 30%,transparent);background:color-mix(in srgb,var(--orange) 8%,var(--surface))">Брошенная корзина (дожим)</span>`+
-     `<div class="rd-soft-strip">${b.abandonedCart.map(s=>`<div class="rd-soft-step" style="border-color:var(--orange);background:color-mix(in srgb,var(--orange) 6%,var(--surface))"><span class="rd-soft-n" style="color:var(--orange)">${escapeHtml(s[0])}</span><span class="rd-soft-tx">${escapeHtml(s[1])}</span></div>`).join('')}</div>`+
+    const stripInner=`<span class="rd-soft-pill c-orange">Брошенная корзина (дожим)</span>`+
+     `<div class="rd-soft-strip">${b.abandonedCart.map(s=>`<div class="rd-soft-step c-orange"><span class="rd-soft-n c-orange">${escapeHtml(s[0])}</span><span class="rd-soft-tx">${escapeHtml(s[1])}</span></div>`).join('')}</div>`+
      `<span class="rd-s" style="margin-top:4px">${escapeHtml(b.abandonedDesc)}</span>`;
-    branchSvg+=fo(x,curY+8,COL_W,210,'rd-soft',stripInner);
+    branchSvg+=fo(x,curY+8,COL_W,210,'rd-soft c-orange-box',stripInner);
     curY+=210+12;
    }
   }
   if(b.code==='CF_ACTIVE' && Array.isArray(b.pushActive)){
-   const stripInner=`<span class="rd-soft-pill" style="color:var(--blue);border-color:color-mix(in srgb,var(--blue) 30%,transparent);background:color-mix(in srgb,var(--blue) 8%,var(--surface))">Дожим CF_ACTIVE</span>`+
-    `<div class="rd-soft-strip">${b.pushActive.map(s=>`<div class="rd-soft-step" style="border-color:var(--blue);background:color-mix(in srgb,var(--blue) 6%,var(--surface))"><span class="rd-soft-n" style="color:var(--blue)">${escapeHtml(s[0])}</span><span class="rd-soft-tx">${escapeHtml(s[1])}</span></div>`).join('')}</div>`;
-   branchSvg+=fo(x,curY+8,COL_W,180,'rd-soft',stripInner);
+   const stripInner=`<span class="rd-soft-pill c-blue">Дожим CF_ACTIVE</span>`+
+    `<div class="rd-soft-strip">${b.pushActive.map(s=>`<div class="rd-soft-step c-blue"><span class="rd-soft-n c-blue">${escapeHtml(s[0])}</span><span class="rd-soft-tx">${escapeHtml(s[1])}</span></div>`).join('')}</div>`;
+   branchSvg+=fo(x,curY+8,COL_W,180,'rd-soft c-blue-box',stripInner);
    curY+=180+12;
   }
  });
