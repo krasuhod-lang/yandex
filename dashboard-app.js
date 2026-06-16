@@ -1210,11 +1210,10 @@ function renderRoutingDiagram(){
    (b.payoutHint?`<div class="rd-cap-grid" style="margin-top:4px"><div>CPA-выплата: <b>${escapeHtml(b.payoutHint)}</b></div></div>`:'');
   // For CF_REJECTED — shorten softReject inline
   const moneyInner=`<div class="rd-mini-b">${escapeHtml(b.scheme)}</div>${actorsHtml?`<div class="rd-mini-b" style="margin-top:4px">${actorsHtml}</div>`:''}`;
-  const flowNote=`<div class="rd-flow-note">Связка: пользовательский интент → статус ЦФ → витрина → CRM/DWH → дожим.</div>`;
   const mini=[
    ['1 · История пользователя',`<div class="rd-mini-b">${escapeHtml(b.userStory||b.path)}</div>`],
    ['2 · Боль клиента',`<div class="rd-mini-b">${escapeHtml(b.pain)}</div>`],
-   ['3 · Почему Выручай.ру',`<div class="rd-mini-b">${escapeHtml(b.whyUs)}</div>${flowNote}`],
+   ['3 · Почему Выручай.ру',`<div class="rd-mini-b">${escapeHtml(b.whyUs)}</div><div class="rd-flow-note">Связка: пользовательский интент → статус ЦФ → витрина → CRM/DWH → дожим.</div>`],
    ['4 · Схема монетизации · участники и потоки',moneyInner],
    ['5 · Реальный заработок',realInner],
    ['6 · Ёмкость сегмента',capInner]
@@ -1269,8 +1268,8 @@ function renderRoutingDiagram(){
  ].join('');
  const labels=elabel(650,128,'JWT-токен (тёплый)')+elabel(1150,128,'SHA-256 хеш (холодный)')+
   elabel(900,414,'Smart Safe Router · перехват отказа','rd-elabel-killer');
- host.innerHTML=`<svg viewBox="0 0 1800 3000" preserveAspectRatio="xMidYMid meet" role="img" aria-label="CJM Smart Safe Router: статус клиента, витрина, событие DWH и CRM-дожим">`+
-  `<title>CJM Smart Safe Router</title><desc>Блок-схема показывает путь клиента от идентификации до статуса Центрофинанс, витрины офферов, события DWH и CRM-дожима.</desc>`+
+ host.innerHTML=`<svg viewBox="0 0 1800 3000" preserveAspectRatio="xMidYMid meet" role="img" aria-labelledby="rdTitle rdDesc">`+
+  `<title id="rdTitle">CJM Smart Safe Router</title><desc id="rdDesc">Блок-схема показывает путь клиента от идентификации до статуса Центрофинанс, витрины офферов, события DWH и CRM-дожима.</desc>`+
   `<defs><marker id="rdArrow" markerWidth="9" markerHeight="9" refX="7" refY="4.5" orient="auto" markerUnits="userSpaceOnUse"><path class="rd-arrow" d="M0,0 L9,4.5 L0,9 Z"/></marker></defs>`+
   edges+labels+nodes+diamond+branchSvg+`</svg>`;
 }
