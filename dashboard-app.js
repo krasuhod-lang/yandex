@@ -1032,18 +1032,7 @@ const ROUTE_SEGMENTS=[
   realIncome:'Внешний доход от МФО-партнёров. CAC = 0 ₽ для базы ЦФ — вся CPA-маржа в чистый PnL.',
   monLabel:'Внешний доход',isExternal:true,
   rule:'exclude_partners=["Centrofinance"], include_categories=["PDL"], sort=EPC_desc',
-  capacity:'≈ 18 000 чел./мес',defaultVol:18000,payoutHint:'1 500 ₽ (средний CPA)',
-  softReject:[
-   ['Шаг 1','Иван оформляет заявку: телефон + сумма.'],
-   ['Шаг 2','API ЦФ возвращает CF_REJECTED → лоадер 2–3 с.'],
-   ['Шаг 3','Витрина ТОП-3 МФО, событие safe_router_redirect.']
-  ],
-  abandonedCart:[
-   ['+15 мин','Push-уведомление'],
-   ['+2 часа','SMS через шлюз P1 «Ваши 3 одобренных займа ждут вас»'],
-   ['+24 часа','Email с персональной подборкой']
-  ],
-  abandonedDesc:'Пользователь ушёл с витрины после получения статуса CF_REJECTED, не кликнув на CPA-оффер. Возврат 15% ушедшего отказного трафика на витрину. Монетизация базы (тест на 10 000 контактов).'
+  capacity:'≈ 18 000 чел./мес',defaultVol:18000,payoutHint:'1 500 ₽ (средний CPA)'
  },
  {cls:'s-active',code:'CF_ACTIVE',title:'Ветка B · Действующие клиенты',
   userStory:'Я как действующий клиент ЦФ хочу безопасные не-кредитные продукты (карты, страхование, подработку), чтобы не усугублять свою долговую нагрузку.',
@@ -1060,12 +1049,7 @@ const ROUTE_SEGMENTS=[
   realIncome:'Внешний доход от банков, HR- и страховых партнёров. Параллельно — защита базы ЦФ от перекредитования.',
   monLabel:'Внешний доход + защита базы',isExternal:true,
   rule:'exclude_categories=["PDL","Installment"], include_categories=["DebitCards","HR","Insurance"]',
-  capacity:'≈ 24 000 чел./мес',defaultVol:24000,payoutHint:'1 200 ₽ (средний CPA)',
-  pushActive:[
-   ['Действие','Действующий клиент посмотрел витрину, но не оставил заявку'],
-   ['Коммуникация','Email: «Дополнительный доход и бесплатные карты для клиентов ЦФ»'],
-   ['Эффект','Дополнительный LTV с действующей базы без кредитного риска (HR/Банки)']
-  ]
+  capacity:'≈ 24 000 чел./мес',defaultVol:24000,payoutHint:'1 200 ₽ (средний CPA)'
  },
  {cls:'s-target',code:'CF_TARGET',title:'Ветка C · Целевые / идеальный профиль',
   userStory:'Я как идеальный заёмщик хочу сразу получить лучший оффер от проверенной компании, чтобы не сравнивать десятки предложений.',
@@ -1227,6 +1211,7 @@ function renderRoutingDiagram(){
  // Branch headers + 6 mini-blocks each
  const branches=ROUTE_SEGMENTS;
  let branchSvg='';
+ let diagramBottom=0;
  branches.forEach((b,i)=>{
   const x=colX[i],cls=outCls[b.cls]||'';
   const monBadge=b.isExternal
@@ -1244,7 +1229,6 @@ function renderRoutingDiagram(){
    :`<div class="rd-cap-grid"><div>Прогноз: <b><span data-cap-vol="${escapeHtml(b.code)}">${(b.defaultVol||0).toLocaleString('ru-RU')}</span></b> чел./мес</div><div>Внешний доход/мес: <b><span data-cap-rev="${escapeHtml(b.code)}">${formatRub((b.defaultVol||0)*VOLUME_CALC_CR*VOLUME_CALC_CPA)}</span></b></div><div style="font-size:10.5px">Формула: объём × <b>${(VOLUME_CALC_CR*100).toFixed(0)}%</b> × <b>${VOLUME_CALC_CPA.toLocaleString('ru-RU')} ₽</b></div></div>`;
   const realInner=`<div class="rd-mini-b">${escapeHtml(b.realIncome||'')}</div>`+
    (b.payoutHint?`<div class="rd-cap-grid" style="margin-top:4px"><div>CPA-выплата: <b>${escapeHtml(b.payoutHint)}</b></div></div>`:'');
-  // For CF_REJECTED — shorten softReject inline
   const moneyInner=`<div class="rd-mini-b">${escapeHtml(b.scheme)}</div>${actorsHtml?`<div class="rd-mini-b" style="margin-top:4px">${actorsHtml}</div>`:''}`;
   const mini=[
    ['1 · История пользователя',`<div class="rd-mini-b">${escapeHtml(b.userStory||b.path)}</div>`],
@@ -1264,30 +1248,12 @@ function renderRoutingDiagram(){
    branchSvg+=`<foreignObject x="${x}" y="${curY}" width="${COL_W}" height="${h}"><div xmlns="${NS}" class="rd-box rd-mini ${cls}"><span class="rd-mini-h">${escapeHtml(m[0])}</span>${m[1]}</div></foreignObject>`;
    curY+=h+MINI_GAP;
   });
-  // Soft Reject and Abandoned Cart strips under the rejected branch
-  if(b.code==='CF_REJECTED'){
-   if(Array.isArray(b.softReject)){
-    const stripInner=`<span class="rd-soft-pill">Soft Reject Flow · сценарий мягкого отказа</span>`+
-     `<div class="rd-soft-strip">${b.softReject.map(s=>`<div class="rd-soft-step"><span class="rd-soft-n">${escapeHtml(s[0])}</span><span class="rd-soft-tx">${escapeHtml(s[1])}</span></div>`).join('')}</div>`+
-     `<span class="rd-s" style="margin-top:4px">Без перезагрузки страницы (SPA), CAC = 0 ₽, событие <code>safe_router_redirect</code> в DWH.</span>`;
-    branchSvg+=fo(x,curY+8,COL_W,188,'rd-soft',stripInner);
-    curY+=188+12;
-   }
-   if(Array.isArray(b.abandonedCart)){
-    const stripInner=`<span class="rd-soft-pill c-orange">Брошенная корзина (дожим)</span>`+
-     `<div class="rd-soft-strip">${b.abandonedCart.map(s=>`<div class="rd-soft-step c-orange"><span class="rd-soft-n c-orange">${escapeHtml(s[0])}</span><span class="rd-soft-tx">${escapeHtml(s[1])}</span></div>`).join('')}</div>`+
-     `<span class="rd-s" style="margin-top:4px">${escapeHtml(b.abandonedDesc)}</span>`;
-    branchSvg+=fo(x,curY+8,COL_W,244,'rd-soft c-orange-box',stripInner);
-    curY+=244+12;
-   }
-  }
-  if(b.code==='CF_ACTIVE' && Array.isArray(b.pushActive)){
-   const stripInner=`<span class="rd-soft-pill c-blue">Дожим CF_ACTIVE</span>`+
-    `<div class="rd-soft-strip">${b.pushActive.map(s=>`<div class="rd-soft-step c-blue"><span class="rd-soft-n c-blue">${escapeHtml(s[0])}</span><span class="rd-soft-tx">${escapeHtml(s[1])}</span></div>`).join('')}</div>`;
-   branchSvg+=fo(x,curY+8,COL_W,214,'rd-soft c-blue-box',stripInner);
-   curY+=214+12;
-  }
+  // Track the lowest point across all branches so the viewBox fits the content
+  // without leaving an empty gap. Step-by-step scenarios (Soft Reject Flow и т.п.)
+  // живут отдельным блоком «3-шаговые интерфейсные сценарии», поэтому здесь не дублируются.
+  diagramBottom=Math.max(diagramBottom,curY);
  });
+ const VIEW_H=Math.round(diagramBottom+40);
  // ---- Edges ----
  const sourceArrowY=110;
  const edges=[
@@ -1304,7 +1270,7 @@ function renderRoutingDiagram(){
  ].join('');
  const labels=elabel(650,128,'JWT-токен (тёплый)')+elabel(1150,128,'SHA-256 хеш (холодный)')+
   elabel(900,414,'Smart Safe Router · перехват отказа','rd-elabel-killer');
- host.innerHTML=`<svg viewBox="0 0 1800 3000" preserveAspectRatio="xMidYMid meet" role="img" aria-labelledby="rdTitle rdDesc">`+
+ host.innerHTML=`<svg viewBox="0 0 1800 ${VIEW_H}" preserveAspectRatio="xMidYMid meet" role="img" aria-labelledby="rdTitle rdDesc">`+
   `<title id="rdTitle">CJM Smart Safe Router</title><desc id="rdDesc">Блок-схема показывает путь клиента от идентификации до статуса Центрофинанс, витрины офферов, события DWH и CRM-дожима.</desc>`+
   `<defs><marker id="rdArrow" markerWidth="9" markerHeight="9" refX="7" refY="4.5" orient="auto" markerUnits="userSpaceOnUse"><path class="rd-arrow" d="M0,0 L9,4.5 L0,9 Z"/></marker></defs>`+
   edges+labels+nodes+diamond+branchSvg+`</svg>`;
