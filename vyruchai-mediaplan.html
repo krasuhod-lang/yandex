@@ -338,9 +338,6 @@ canvas{display:block;width:100%;max-width:100%;height:auto;cursor:crosshair}
 .route-diagram .rd-killer-badge{align-self:flex-start;font-size:10px;font-weight:800;letter-spacing:.04em;text-transform:uppercase;padding:2px 8px;border-radius:980px;color:#fff;background:linear-gradient(120deg,var(--violet),var(--blue));margin-bottom:2px}
 .route-diagram .rd-edge.rd-edge-killer{stroke:var(--violet);stroke-width:2.5;stroke-dasharray:5 5;animation-duration:.85s}
 .route-diagram .rd-elabel.rd-elabel-killer{fill:var(--violet);font-size:11px;font-weight:800;letter-spacing:.03em;text-transform:uppercase}
-.route-diagram .rd-box.rd-soft{border:1px dashed var(--violet);background:color-mix(in srgb,var(--violet) 6%,var(--surface));padding:9px 13px;gap:4px}
-.route-diagram .rd-soft-pill{align-self:flex-start;font-size:11.5px;font-weight:800;letter-spacing:-.01em;padding:2px 9px;border-radius:980px;background:color-mix(in srgb,var(--violet) 18%,transparent);color:var(--violet)}
-.route-diagram .rd-box.rd-soft .rd-s code,.route-diagram .rd-box.rd-soft .rd-s b{font-family:var(--font-mono);font-size:11.5px;color:var(--ink)}
 /* ---------- Big four-branch layout (CEO single screen) ---------- */
 .route-diagram-card{padding:18px}
 .route-diagram .rd-box.rd-branch{border-top-width:5px;background:linear-gradient(180deg,var(--surface),color-mix(in srgb,var(--surface-2) 70%,var(--surface)));padding:12px 14px;gap:8px;justify-content:flex-start}
@@ -368,21 +365,7 @@ canvas{display:block;width:100%;max-width:100%;height:auto;cursor:crosshair}
 .route-diagram .rd-cap-grid b{color:var(--ink);font-variant-numeric:tabular-nums;font-weight:700}
 .route-diagram .rd-mini-chips{display:flex;flex-wrap:wrap;gap:4px;align-items:center}
 .route-diagram .rd-mini-chips .rd-mini-chip-h{font-size:10px;font-weight:800;letter-spacing:.04em;color:var(--muted);text-transform:uppercase;margin-right:2px}
-.route-diagram .rd-soft-strip{display:flex;gap:6px;align-items:stretch}
-.route-diagram .rd-soft-strip .rd-soft-step{flex:1;background:color-mix(in srgb,var(--violet) 6%,var(--surface));border:1px dashed var(--violet);border-radius:10px;padding:6px 8px;display:flex;flex-direction:column;gap:2px}
-.route-diagram .rd-soft-strip .rd-soft-step .rd-soft-n{font-size:10.5px;font-weight:800;color:var(--violet);letter-spacing:.06em;text-transform:uppercase}
-.route-diagram .rd-soft-strip .rd-soft-step .rd-soft-tx{font-size:12px;line-height:1.35;color:var(--text)}
 .route-diagram .rd-flow-note{font-size:11px;color:var(--muted);line-height:1.35;padding:5px 8px;border-radius:8px;background:var(--surface-3)}
-
-.route-diagram .rd-soft-pill.c-orange{color:var(--orange);border-color:color-mix(in srgb,var(--orange) 30%,transparent);background:color-mix(in srgb,var(--orange) 8%,var(--surface))}
-.route-diagram .rd-soft-strip .rd-soft-step.c-orange{border-color:var(--orange);background:color-mix(in srgb,var(--orange) 6%,var(--surface))}
-.route-diagram .rd-soft-strip .rd-soft-step .rd-soft-n.c-orange{color:var(--orange)}
-.route-diagram .rd-box.rd-soft.c-orange-box{border-color:var(--orange);background:color-mix(in srgb,var(--orange) 4%,var(--surface))}
-
-.route-diagram .rd-soft-pill.c-blue{color:var(--blue);border-color:color-mix(in srgb,var(--blue) 30%,transparent);background:color-mix(in srgb,var(--blue) 8%,var(--surface))}
-.route-diagram .rd-soft-strip .rd-soft-step.c-blue{border-color:var(--blue);background:color-mix(in srgb,var(--blue) 6%,var(--surface))}
-.route-diagram .rd-soft-strip .rd-soft-step .rd-soft-n.c-blue{color:var(--blue)}
-.route-diagram .rd-box.rd-soft.c-blue-box{border-color:var(--blue);background:color-mix(in srgb,var(--blue) 4%,var(--surface))}
 
 /* ---------- Decision Tree table ---------- */
 .dt-table{display:grid;gap:8px}
