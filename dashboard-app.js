@@ -1000,9 +1000,9 @@ const ROUTE_STATUSES=[
  {cls:'s-target',code:'CF_TARGET',title:'Подходит для ЦФ',desc:'Идеальный профиль, хорошая КИ.',logic:'Маршрутизация сделки в ЦФ. Оффер ЦФ на 1-м месте или «режим SOS» (эксклюзивная выдача в ЦФ). Остальные МФО скрыты.',out:'Оффер ЦФ №1 или SOS-режим (эксклюзив ЦФ)',
   ui:'Иван, для вашего профиля 100% одобрение в Центрофинансе',allow:['Оффер ЦФ №1','Бейдж «100% одобрение»','SOS-режим'],block:['Сторонние МФО (на время SOS)']},
  {cls:'s-active',code:'CF_ACTIVE',title:'Действующий клиент ЦФ',desc:'Уже есть активный заём / долг.',logic:'Запрет на конкуренцию: все МФО-конкуренты (займы) полностью скрыты. Первым показываем Кредитную линию (продукт ЦФ), далее — иные предложения, кроме займов: РКО, карты, страхование, рефинансирование в банках.',out:'Кредитная линия ЦФ №1, далее иные продукты (кроме займов)',
-  ui:'Специальные предложения для клиентов Центрофинанса',allow:['Кредитная линия ЦФ','Дебетовые карты','РКО','HR-офферы','Страхование'],block:['МФО-конкуренты','Любые сторонние займы']},
+  ui:'Специальные предложения для клиентов Центрофинанса',allow:['Кредитная линия ЦФ','Дебетовые карты','РКО','HR-офферы','Страхование','Дожим (Email)'],block:['МФО-конкуренты','Любые сторонние займы']},
  {cls:'s-rejected',code:'CF_REJECTED',title:'Отказник ЦФ · киллер-сегмент',desc:'ЦФ отклонил заявку по скорингу / КИ.',logic:'Полная свобода монетизации. Оффер ЦФ скрыт. Витрина из МФО-партнёров, готовых кредитовать с плохой КИ. Сделка уходит по CPA. Активируется Soft Reject Flow — экран без перезагрузки перестраивается в новую витрину.',out:'CPA-витрина ТОП-3 МФО, оффер ЦФ скрыт',
-  ui:'У нас есть 3 компании, готовые выдать вам деньги прямо сейчас',allow:['ТОП-3 МФО (CPA)','Сорт. по EPC × Approval Rate','Soft Reject Flow'],block:['Оффер ЦФ']},
+  ui:'У нас есть 3 компании, готовые выдать вам деньги прямо сейчас',allow:['ТОП-3 МФО (CPA)','Сорт. по EPC × Approval Rate','Soft Reject Flow','Брошенная корзина'],block:['Оффер ЦФ']},
  {cls:'s-noncore',code:'CF_NON_CORE',title:'Непрофильный для ЦФ',desc:'Продукт / сумма / срок вне профиля ЦФ (ипотека, авто, крупная сумма).',logic:'Лид не подходит ЦФ — продаём его другим игрокам рынка. Оффер ЦФ скрыт, показываем витрину крупных банков и залоговых продуктов.',out:'Витрина банков и залоговых продуктов',
   ui:'Подобрали для вас банковские продукты под вашу задачу',allow:['Потребкредиты банков','Автокредиты','Займы под залог','Ипотека'],block:['МФО (PDL)','Оффер ЦФ']},
  {cls:'s-notfound',code:'NOT_FOUND',title:'Новый (органический) трафик',desc:'В базе ЦФ не числится.',logic:'Смешанная витрина. ЦФ на 1-м месте + 2-3 партнёрских МФО для сравнения, конкуренты также доступны.',out:'Смешанная витрина: ЦФ №1 + 2-3 МФО',
@@ -1031,7 +1031,14 @@ const ROUTE_SEGMENTS=[
    ['Шаг 1','Иван оформляет заявку: телефон + сумма.'],
    ['Шаг 2','API ЦФ возвращает CF_REJECTED → лоадер 2–3 с.'],
    ['Шаг 3','Витрина ТОП-3 МФО, событие safe_router_redirect.']
-  ]},
+  ],
+  abandonedCart:[
+   ['+15 мин','Push-уведомление'],
+   ['+2 часа','SMS через шлюз P1 «Ваши 3 одобренных займа ждут вас»'],
+   ['+24 часа','Email с персональной подборкой']
+  ],
+  abandonedDesc:'Пользователь ушёл с витрины после получения статуса CF_REJECTED, не кликнув на CPA-оффер. Возврат 15% ушедшего отказного трафика на витрину. Монетизация базы (тест на 10 000 контактов).'
+ },
  {cls:'s-active',code:'CF_ACTIVE',title:'Ветка B · Действующие клиенты',
   userStory:'Я как действующий клиент ЦФ хочу безопасные не-кредитные продукты (карты, страхование, подработку), чтобы не усугублять свою долговую нагрузку.',
   path:'Вводит номер → есть активный заём в ЦФ → скрываем все кредитные предложения → показываем дебетовые карты, кэшбэк-сервисы, вакансии (HR), страхование.',
@@ -1047,7 +1054,13 @@ const ROUTE_SEGMENTS=[
   realIncome:'Внешний доход от банков, HR- и страховых партнёров. Параллельно — защита базы ЦФ от перекредитования.',
   monLabel:'Внешний доход + защита базы',isExternal:true,
   rule:'exclude_categories=["PDL","Installment"], include_categories=["DebitCards","HR","Insurance"]',
-  capacity:'≈ 24 000 чел./мес',defaultVol:24000,payoutHint:'1 200 ₽ (средний CPA)'},
+  capacity:'≈ 24 000 чел./мес',defaultVol:24000,payoutHint:'1 200 ₽ (средний CPA)',
+  pushActive:[
+   ['Действие','Действующий клиент посмотрел витрину, но не оставил заявку'],
+   ['Коммуникация','Email: «Дополнительный доход и бесплатные карты для клиентов ЦФ»'],
+   ['Эффект','Дополнительный LTV с действующей базы без кредитного риска (HR/Банки)']
+  ]
+ },
  {cls:'s-target',code:'CF_TARGET',title:'Ветка C · Целевые / идеальный профиль',
   userStory:'Я как идеальный заёмщик хочу сразу получить лучший оффер от проверенной компании, чтобы не сравнивать десятки предложений.',
   path:'Вводит номер → система видит идеального заёмщика → блокирует всех конкурентов → показывает только Центрофинанс.',
@@ -1150,20 +1163,20 @@ function renderRoutingDiagram(){
  const edge=(d,extra='')=>`<path class="rd-edge${extra?' '+extra:''}" d="${d}" marker-end="url(#rdArrow)"/>`;
  const elabel=(x,y,t,extra='')=>`<text class="rd-elabel${extra?' '+extra:''}" x="${x}" y="${y}" text-anchor="middle">${escapeHtml(t)}</text>`;
  const outCls={'s-target':'c-target','s-active':'c-active','s-rejected':'c-rejected','s-noncore':'c-noncore'};
- // ---- Layout constants (viewBox 1600 x 1800) ----
- const COL_W=380,COL_GAP=12;
- const colX=[40,40+COL_W+COL_GAP,40+(COL_W+COL_GAP)*2,40+(COL_W+COL_GAP)*3]; // 40, 432, 824, 1216
- const HEADER_Y=540,HEADER_H=106;
- const MINI_Y0=662,MINI_H=138,MINI_GAP=10;
+ // ---- Layout constants (viewBox 1800 x 2400) ----
+ const COL_W=420,COL_GAP=16;
+ const colX=[20,20+COL_W+COL_GAP,20+(COL_W+COL_GAP)*2,20+(COL_W+COL_GAP)*3]; // 20, 456, 892, 1328
+ const HEADER_Y=600,HEADER_H=120;
+ const MINI_Y0=736,MINI_H=150,MINI_GAP=14;
  // ---- Top entry nodes ----
  let nodes='';
- nodes+=fo(220,30,360,80,'rd-entry','<span class="rd-t">Платный трафик Маркетплейса</span><span class="rd-s">PPC, SEO, CPA-сети — холодная органика и закупка трафика</span>');
- nodes+=fo(1020,30,360,80,'rd-entry','<span class="rd-t">База Центрофинанса</span><span class="rd-s">SMS-приглашение, подписанный одноразовый JWT (TTL 24 ч), флаг <b>is_cf_base = true</b></span>');
- nodes+=fo(530,160,540,72,'rd-hub','<span class="rd-t">Маркетплейс Выручай.ру · Идентификация</span><span class="rd-s">Резолв одноразового JWT (тёплый сценарий) или SHA-256 хеш телефона (холодный сценарий)</span>');
- nodes+=fo(530,272,540,84,'rd-hub rd-killer','<span class="rd-killer-badge">★ Smart Safe Router · S2S API ЦФ</span><span class="rd-t">Решающий узел · POST check-hash / get-profile</span><span class="rd-s">Только Server-to-Server, только хеши, подписанные токены — 100% отказного трафика в выручку</span>');
+ nodes+=fo(320,30,360,80,'rd-entry','<span class="rd-t">Платный трафик Маркетплейса</span><span class="rd-s">PPC, SEO, CPA-сети — холодная органика и закупка трафика</span>');
+ nodes+=fo(1120,30,360,80,'rd-entry','<span class="rd-t">База Центрофинанса</span><span class="rd-s">SMS-приглашение, подписанный одноразовый JWT (TTL 24 ч), флаг <b>is_cf_base = true</b></span>');
+ nodes+=fo(630,160,540,110,'rd-hub','<span class="rd-t">Маркетплейс Выручай.ру · Сбор согласий и Идентификация</span><span class="rd-s">Ввод номера телефона. Обязательный чекбокс (152-ФЗ): <em>«Согласен на обработку ПД и передачу партнерам»</em>. Юридическая защита Smart Safe Router перед отправкой лида в CPA. Разрешение одноразового JWT (тёплый) или SHA-256 хеша.</span>');
+ nodes+=fo(630,300,540,84,'rd-hub rd-killer','<span class="rd-killer-badge">★ Smart Safe Router · S2S API ЦФ</span><span class="rd-t">Решающий узел · POST check-hash / get-profile</span><span class="rd-s">Только Server-to-Server, только хеши, подписанные токены — 100% отказного трафика в выручку</span>');
  // Diamond decision
- const diamond=`<polygon class="rd-diamond" points="800,396 944,464 800,532 656,464"/>`+
-  `<foreignObject x="662" y="406" width="276" height="116"><div xmlns="${NS}" class="rd-decision-label"><span class="rd-t">Какой статус клиента?</span><span class="rd-s">Offers Engine применяет правила маршрутизации</span></div></foreignObject>`;
+ const diamond=`<polygon class="rd-diamond" points="900,424 1044,492 900,560 756,492"/>`+
+  `<foreignObject x="762" y="434" width="276" height="116"><div xmlns="${NS}" class="rd-decision-label"><span class="rd-t">Какой статус клиента?</span><span class="rd-s">Offers Engine применяет правила маршрутизации</span></div></foreignObject>`;
  // Branch headers + 6 mini-blocks each
  const branches=ROUTE_SEGMENTS;
  let branchSvg='';
@@ -1194,39 +1207,57 @@ function renderRoutingDiagram(){
    ['5 · Реальный заработок',realInner],
    ['6 · Ёмкость сегмента',capInner]
   ];
-  // Mini #4 (actors) needs more height
-  const heights=[MINI_H,MINI_H,MINI_H,MINI_H+72,MINI_H,MINI_H];
+  // Mini #4 (actors) needs extra height for list items, Mini #6 (capacity) needs extra height for padding
+  const MINI_H_ACTOR_EXTRA=82;
+  const MINI_H_CAPACITY_EXTRA=10;
+  const heights=[MINI_H,MINI_H,MINI_H,MINI_H+MINI_H_ACTOR_EXTRA,MINI_H,MINI_H+MINI_H_CAPACITY_EXTRA];
   let curY=MINI_Y0;
   mini.forEach((m,j)=>{
    const h=heights[j];
    branchSvg+=`<foreignObject x="${x}" y="${curY}" width="${COL_W}" height="${h}"><div xmlns="${NS}" class="rd-box rd-mini ${cls}"><span class="rd-mini-h">${escapeHtml(m[0])}</span>${m[1]}</div></foreignObject>`;
    curY+=h+MINI_GAP;
   });
-  // Soft Reject strip under the rejected branch only
-  if(b.code==='CF_REJECTED' && Array.isArray(b.softReject)){
-   const stripInner=`<span class="rd-soft-pill">Soft Reject Flow · сценарий мягкого отказа</span>`+
-    `<div class="rd-soft-strip">${b.softReject.map(s=>`<div class="rd-soft-step"><span class="rd-soft-n">${escapeHtml(s[0])}</span><span class="rd-soft-tx">${escapeHtml(s[1])}</span></div>`).join('')}</div>`+
-    `<span class="rd-s" style="margin-top:4px">Без перезагрузки страницы (SPA), CAC = 0 ₽, событие <code>safe_router_redirect</code> в DWH.</span>`;
-   branchSvg+=fo(x,curY+8,COL_W,158,'rd-soft',stripInner);
+  // Soft Reject and Abandoned Cart strips under the rejected branch
+  if(b.code==='CF_REJECTED'){
+   if(Array.isArray(b.softReject)){
+    const stripInner=`<span class="rd-soft-pill">Soft Reject Flow · сценарий мягкого отказа</span>`+
+     `<div class="rd-soft-strip">${b.softReject.map(s=>`<div class="rd-soft-step"><span class="rd-soft-n">${escapeHtml(s[0])}</span><span class="rd-soft-tx">${escapeHtml(s[1])}</span></div>`).join('')}</div>`+
+     `<span class="rd-s" style="margin-top:4px">Без перезагрузки страницы (SPA), CAC = 0 ₽, событие <code>safe_router_redirect</code> в DWH.</span>`;
+    branchSvg+=fo(x,curY+8,COL_W,170,'rd-soft',stripInner);
+    curY+=170+12;
+   }
+   if(Array.isArray(b.abandonedCart)){
+    const stripInner=`<span class="rd-soft-pill c-orange">Брошенная корзина (дожим)</span>`+
+     `<div class="rd-soft-strip">${b.abandonedCart.map(s=>`<div class="rd-soft-step c-orange"><span class="rd-soft-n c-orange">${escapeHtml(s[0])}</span><span class="rd-soft-tx">${escapeHtml(s[1])}</span></div>`).join('')}</div>`+
+     `<span class="rd-s" style="margin-top:4px">${escapeHtml(b.abandonedDesc)}</span>`;
+    branchSvg+=fo(x,curY+8,COL_W,210,'rd-soft c-orange-box',stripInner);
+    curY+=210+12;
+   }
+  }
+  if(b.code==='CF_ACTIVE' && Array.isArray(b.pushActive)){
+   const stripInner=`<span class="rd-soft-pill c-blue">Дожим CF_ACTIVE</span>`+
+    `<div class="rd-soft-strip">${b.pushActive.map(s=>`<div class="rd-soft-step c-blue"><span class="rd-soft-n c-blue">${escapeHtml(s[0])}</span><span class="rd-soft-tx">${escapeHtml(s[1])}</span></div>`).join('')}</div>`;
+   branchSvg+=fo(x,curY+8,COL_W,180,'rd-soft c-blue-box',stripInner);
+   curY+=180+12;
   }
  });
  // ---- Edges ----
  const sourceArrowY=110;
  const edges=[
-  edge(`M400,${sourceArrowY} V134 H800 V160`),
-  edge(`M1200,${sourceArrowY} V134 H800 V160`),
-  edge('M800,232 V272'),
-  edge('M800,356 V396'),
-  `<path class="rd-edge" d="M800,532 V568"/>`,
+  edge(`M500,${sourceArrowY} V134 H900 V160`),
+  edge(`M1300,${sourceArrowY} V134 H900 V160`),
+  edge('M900,270 V300'),
+  edge('M900,384 V424'),
+  `<path class="rd-edge" d="M900,560 V600"/>`,
   // diamond → 4 branch header centers
-  edge(`M800,568 H${colX[0]+COL_W/2} V${HEADER_Y}`),
-  edge(`M800,568 H${colX[1]+COL_W/2} V${HEADER_Y}`),
-  edge(`M800,568 H${colX[2]+COL_W/2} V${HEADER_Y}`),
-  edge(`M800,568 H${colX[3]+COL_W/2} V${HEADER_Y}`)
+  edge(`M900,580 H${colX[0]+COL_W/2} V${HEADER_Y}`),
+  edge(`M900,580 H${colX[1]+COL_W/2} V${HEADER_Y}`),
+  edge(`M900,580 H${colX[2]+COL_W/2} V${HEADER_Y}`),
+  edge(`M900,580 H${colX[3]+COL_W/2} V${HEADER_Y}`)
  ].join('');
- const labels=elabel(550,128,'JWT-токен (тёплый)')+elabel(1050,128,'SHA-256 хеш (холодный)')+
-  elabel(800,386,'Smart Safe Router · перехват отказа','rd-elabel-killer');
- host.innerHTML=`<svg viewBox="0 0 1600 1800" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Блок-схема Smart Safe Router: два источника трафика (Маркетплейс и База ЦФ), идентификация по JWT или SHA-256 хешу, S2S API Центрофинанса, ромб решения по статусу клиента и четыре ветки сегментов — Отказники CF_REJECTED, Действующие CF_ACTIVE, Целевые CF_TARGET, Непрофильные CF_NON_CORE — с шестью мини-блоками в каждой: история пользователя, боль клиента, почему Выручай.ру, схема монетизации с участниками, реальный внешний заработок и ёмкость сегмента; под веткой отказников — Soft Reject Flow.">`+
+ const labels=elabel(650,128,'JWT-токен (тёплый)')+elabel(1150,128,'SHA-256 хеш (холодный)')+
+  elabel(900,414,'Smart Safe Router · перехват отказа','rd-elabel-killer');
+ host.innerHTML=`<svg viewBox="0 0 1800 2400" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Блок-схема Smart Safe Router">`+
   `<defs><marker id="rdArrow" markerWidth="9" markerHeight="9" refX="7" refY="4.5" orient="auto" markerUnits="userSpaceOnUse"><path class="rd-arrow" d="M0,0 L9,4.5 L0,9 Z"/></marker></defs>`+
   edges+labels+nodes+diamond+branchSvg+`</svg>`;
 }
