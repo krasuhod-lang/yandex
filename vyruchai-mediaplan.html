@@ -562,7 +562,7 @@ canvas{display:block;width:100%;max-width:100%;height:auto;cursor:crosshair}
 @media(max-width:960px){.calc-card{grid-template-columns:1fr}.calc-inputs{grid-template-columns:1fr}.calc-breakdown{grid-template-columns:1fr 1fr}}
 
 .cjm-unit-lead{margin:-6px 0 0;color:var(--muted);font-size:14px;max-width:980px;line-height:1.5}
-.cjm-unit-card{border-top:4px solid var(--line-strong);gap:12px}
+.cjm-unit-card{border-top:4px solid var(--line-strong);gap:10px}
 .cjm-unit-card.s-target{border-top-color:var(--green)}
 .cjm-unit-card.s-active,.cjm-unit-card.s-repeat{border-top-color:var(--blue)}
 .cjm-unit-card.s-dormant,.cjm-unit-card.s-noncore{border-top-color:var(--orange)}
@@ -578,7 +578,54 @@ canvas{display:block;width:100%;max-width:100%;height:auto;cursor:crosshair}
 .cjm-unit-note{font-size:12.5px;color:var(--muted);line-height:1.45}
 .cjm-unit-formula{margin-top:auto;padding:10px 12px;border-radius:var(--radius-xs);background:var(--surface-3);border:1px solid var(--line);font-family:var(--font-mono);font-size:11.5px;color:var(--muted);line-height:1.45}
 .cjm-unit-formula b{color:var(--text)}
-@media(max-width:560px){.cjm-unit-grid{grid-template-columns:1fr}}
+/* CJM type tags & dynamic badge */
+.cjm-unit-tags{display:flex;gap:6px;flex-wrap:wrap;margin-top:4px}
+.cjm-type-tag{font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;border-radius:980px;padding:3px 10px;white-space:nowrap}
+.cjm-tag-core{background:color-mix(in srgb,var(--green) 14%,transparent);color:var(--green)}
+.cjm-tag-external{background:color-mix(in srgb,var(--violet) 14%,transparent);color:var(--violet)}
+.cjm-tag-organic{background:color-mix(in srgb,var(--muted) 12%,transparent);color:var(--muted)}
+.cjm-dynamic-badge{font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;border-radius:980px;padding:3px 10px;background:color-mix(in srgb,var(--orange) 16%,transparent);color:var(--orange);white-space:nowrap}
+/* Primary metric block */
+.cjm-primary-metric{background:linear-gradient(135deg,color-mix(in srgb,var(--blue) 5%,var(--surface)),color-mix(in srgb,var(--green) 4%,var(--surface)));border-radius:var(--radius-xs);padding:14px 16px;border:1px solid var(--line)}
+.cjm-primary-metric .metric-label{font-size:11px}
+.cjm-primary-metric .metric-value{font-size:26px;margin-top:2px}
+/* Secondary metrics row */
+.cjm-secondary-row{display:flex;flex-direction:column;gap:0}
+.cjm-secondary-row .mini-row{padding:6px 0;border-bottom:1px solid var(--line);font-size:13px}
+.cjm-secondary-row .mini-row:last-child{border-bottom:0}
+/* Conversion progress bar */
+.cjm-conv-bar{display:flex;flex-direction:column;gap:4px}
+.cjm-conv-bar-label{display:flex;justify-content:space-between;font-size:11px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.06em}
+.cjm-conv-bar-track{height:6px;border-radius:6px;background:var(--surface-3);overflow:hidden}
+.cjm-conv-bar-fill{height:100%;border-radius:6px;background:var(--blue);transition:width .4s var(--ease)}
+.cjm-unit-card.s-target .cjm-conv-bar-fill{background:var(--green)}
+.cjm-unit-card.s-rejected .cjm-conv-bar-fill,.cjm-unit-card.s-overdue .cjm-conv-bar-fill{background:var(--red)}
+.cjm-unit-card.s-noncore .cjm-conv-bar-fill,.cjm-unit-card.s-dormant .cjm-conv-bar-fill{background:var(--orange)}
+/* PnL Waterfall */
+.cjm-waterfall-wrap{margin-bottom:var(--gap)}
+.waterfall-host{padding:10px 0}
+.waterfall-bars{display:flex;align-items:flex-end;justify-content:space-around;gap:12px;min-height:220px;padding:20px 10px 0}
+.wf-col{display:flex;flex-direction:column;align-items:center;gap:6px;flex:1;min-width:0}
+.wf-value{font-size:12px;font-weight:700;color:var(--text);white-space:nowrap;font-variant-numeric:tabular-nums}
+.wf-bar{border-radius:6px 6px 0 0;min-width:32px;width:100%;max-width:72px;transition:height .5s var(--ease)}
+.wf-label{font-size:11px;color:var(--muted);text-align:center;font-weight:600;line-height:1.25;word-break:break-word}
+/* LTV/CAC Simulator */
+.cjm-ltv-cac-wrap{margin-bottom:var(--gap)}
+.ltv-cac-row{display:flex;align-items:center;justify-content:center;gap:20px;flex-wrap:wrap;padding:10px 0}
+.ltv-cac-block{flex:1;min-width:200px;max-width:320px;border-radius:var(--radius-sm);padding:20px;text-align:center;border:2px solid var(--line)}
+.ltv-cac-block.ltv-red{border-color:var(--red);background:color-mix(in srgb,var(--red) 6%,var(--surface))}
+.ltv-cac-block.ltv-orange{border-color:var(--orange);background:color-mix(in srgb,var(--orange) 6%,var(--surface))}
+.ltv-cac-block.ltv-green{border-color:var(--green);background:color-mix(in srgb,var(--green) 6%,var(--surface))}
+.ltv-cac-label{font-size:12px;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);font-weight:700}
+.ltv-cac-value{font-size:42px;font-weight:700;letter-spacing:-.04em;line-height:1.1;margin:6px 0 4px}
+.ltv-cac-block.ltv-red .ltv-cac-value{color:var(--red)}
+.ltv-cac-block.ltv-orange .ltv-cac-value{color:var(--orange)}
+.ltv-cac-block.ltv-green .ltv-cac-value{color:var(--green)}
+.ltv-cac-sub{font-size:12px;color:var(--muted)}
+.ltv-cac-arrow{font-size:32px;font-weight:700;color:var(--muted)}
+.ltv-cac-formula{margin-top:10px;padding:10px 14px;border-radius:var(--radius-xs);background:var(--surface-3);border:1px solid var(--line);font-size:12px;color:var(--muted);line-height:1.5}
+.ltv-cac-formula b{color:var(--text)}
+@media(max-width:560px){.cjm-unit-grid{grid-template-columns:1fr}.waterfall-bars{flex-wrap:wrap}.ltv-cac-row{flex-direction:column}.ltv-cac-arrow{transform:rotate(90deg)}}
 
 /* CJM segment user stories */
 .story-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:var(--gap)}
@@ -847,7 +894,9 @@ canvas{display:block;width:100%;max-width:100%;height:auto;cursor:crosshair}
       <h2 class="divider-title">Юнит-экономика по каналам</h2>
       <div class="table-wrap"><table id="unitTable"></table></div>
       <h2 class="divider-title">CJM → юнит-экономика по путям</h2>
-      <p class="cjm-unit-lead">Каждая ветка Smart Safe Router переведена в цифры из текущих вводных модели: используем фактическую воронку, CAC, match-rate, payout партнёра и LTV без ручных коэффициентов «с потолка».</p>
+      <p class="cjm-unit-lead">Каждая ветка Smart Safe Router переведена в цифры из текущих вводных модели: используем фактическую воронку, CAC, match-rate, динамические тарифы партнёров и LTV без ручных коэффициентов «с потолка».</p>
+      <div class="card cjm-waterfall-wrap"><div class="card-title"><div><h2>PnL Waterfall</h2><p>Маржинальная прибыль: вклад каждой CJM-ветки в итоговый PnL</p></div></div><div id="pnlWaterfallChart" class="waterfall-host"></div></div>
+      <div class="card cjm-ltv-cac-wrap"><div class="card-title"><div><h2>Влияние роутера на окупаемость</h2><p>Эффективный LTV/CAC: монетизация отказного трафика снижает стоимость привлечения</p></div></div><div id="ltvCacSimulator"></div></div>
       <div class="grid four cjm-unit-grid" id="cjmUnitGrid"></div>
     </section>
 

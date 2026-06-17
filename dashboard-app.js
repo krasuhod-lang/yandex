@@ -365,6 +365,8 @@ const STORAGE_KEYS={prefs:`vyruchai-dashboard-prefs-${STORAGE_VERSION}`,model:`v
 // фиксированная выплата партнёра за оформление ≈ 2400 ₽ (годовых ставок в модели нет — оплата за факт сделки), цель repeat-share — 6%.
 // Размер базы Центрофинанса и match-rate — вводимые менеджером оценки (нет публичного бенчмарка).
 const DEFAULT_MODEL_INPUTS={issuedToApprovalRate:0.76,ltvFactor:1.34,partnerPayout:2400,targetRepeatShare:0.06,centrofinansBaseSize:1.5,centrofinansMatchRate:0.42};
+// Dynamic CPA payouts per external branch type (differentiated rates instead of single partnerPayout)
+const DYNAMIC_PAYOUTS={CF_REJECTED:2400,CF_OVERDUE:3500,CF_NON_CORE:4500};
 // Храним 6 последних действий: этого хватает, чтобы показать недавние изменения без перегрузки control card.
 const MAX_RECENT_ACTIONS=6;
 let modelInputs={...DEFAULT_MODEL_INPUTS};
@@ -670,6 +672,7 @@ function calculateUnitEconomics(){
   ltvPerIssue,
   cacPerIssue,
   partnerPayout:partnerPayoutValue(),
+  dynamicPayouts:{...DYNAMIC_PAYOUTS},
   matchedVisits,
   unmatchedVisits,
   clicksPerVisit,
@@ -730,23 +733,111 @@ function renderCjmUnitEconomics(){
  const routeVolumes=routeScenarioVolumes();
  const repeatLift=unit.ltvPerIssue-unit.revenuePerIssue;
  const protectedValue=unit.ltvPerIssue*modelInputs.targetRepeatShare;
- const externalMargin=unit.partnerPayout-unit.cacPerIssue;
  const visitRevenuePer1000=ratio(totals.revenue,totals.visits)*1000;
+ // Dynamic payouts for external branches
+ const payRejected=DYNAMIC_PAYOUTS.CF_REJECTED;
+ const payOverdue=DYNAMIC_PAYOUTS.CF_OVERDUE;
+ const payNonCore=DYNAMIC_PAYOUTS.CF_NON_CORE;
+ const marginRejected=payRejected-unit.cacPerIssue;
+ const marginOverdue=payOverdue-unit.cacPerIssue;
+ const marginNonCore=payNonCore-unit.cacPerIssue;
+ // Branch type classification
+ const BRANCH_TYPE={CF_TARGET:'core',CF_ACTIVE:'core',CF_REPEAT:'core',CF_DORMANT:'core',CF_REJECTED:'external',CF_OVERDUE:'external',CF_NON_CORE:'external',NOT_FOUND:'organic'};
+ const BRANCH_TYPE_LABEL={core:'Core: Центрофинанс',external:'External: CPA Сеть',organic:'Organic: Витрина'};
+ const BRANCH_TYPE_CLS={core:'cjm-tag-core',external:'cjm-tag-external',organic:'cjm-tag-organic'};
+ // Conversion rates per branch for progress bars
+ const totalVisits=Math.max(totals.visits,1);
+ const rejectedVol=Math.max(0,totals.applications-totals.approvals);
+ const BRANCH_CONV={CF_TARGET:modelInputs.centrofinansMatchRate*modelInputs.issuedToApprovalRate,CF_ACTIVE:modelInputs.centrofinansMatchRate,CF_REPEAT:ratio(totals.repeat,totalVisits),CF_DORMANT:modelInputs.centrofinansMatchRate*(1-modelInputs.targetRepeatShare),CF_REJECTED:ratio(rejectedVol,totals.applications||1),CF_OVERDUE:0.18,CF_NON_CORE:0.19,NOT_FOUND:1-modelInputs.centrofinansMatchRate};
  const cards=[
-  {code:'CF_TARGET',value:money(unit.revenuePerIssue),label:'Выручка / выдачу ЦФ',note:'Новый целевой лид уходит в якорный оффер ЦФ, поэтому считаем прямую выручку на одну выдачу без внешнего CPA.',rows:[['База потока',fmt(unit.matchedVisits)+' матчированных визитов'],['Маржа после CAC',signedMoney(unit.revenuePerIssue-unit.cacPerIssue)],['Экономика на 1000 входов',money(unit.issuePer1000*unit.revenuePerIssue)]],formula:'(выручка ÷ выданные сделки) × routed issues'},
-  {code:'CF_ACTIVE',value:money(protectedValue),label:'Защищаемый LTV / клиента',note:'Ветка не продаёт новый займ: её задача — не потерять ценность базы и монетизировать безопасные офферы поверх защищённого клиента.',rows:[['База потока',fmt(unit.matchedVisits)+' матчированных визитов'],['Цель repeat-share',pct(modelInputs.targetRepeatShare*100)],['Сохранённая ценность на 1000 входов',money(unit.issuePer1000*protectedValue)]],formula:'LTV × targetRepeatShare'},
-  {code:'CF_REPEAT',value:money(unit.ltvPerIssue),label:'LTV / повторную выдачу',note:'Повторный клиент должен приносить уже не первую выдачу, а полный LTV с CRM и кросс-продажами.',rows:[['База потока',fmt(totals.repeat)+' повторных визитов'],['Инкремент к первой выдаче',signedMoney(repeatLift)],['Экономика на 1000 входов',money(unit.issuePer1000*unit.ltvPerIssue)]],formula:'(выручка ÷ выданные сделки) × LTV factor'},
-  {code:'CF_DORMANT',value:money(unit.ltvPerIssue),label:'LTV / реактивацию',note:'Для «спящих» клиентов используем ту же LTV-модель, но база реактивации строится от матчированного пула и CRM-повторов.',rows:[['База потока',fmt(Math.max(0,unit.matchedVisits-totals.repeat))+' неактивных профилей'],['Match-rate',pct(modelInputs.centrofinansMatchRate*100)],['Экономика на 1000 входов',money(unit.issuePer1000*unit.ltvPerIssue)]],formula:'matched pool × repeat LTV'},
-  {code:'CF_OVERDUE',value:money(unit.partnerPayout),label:'CPA / безопасное действие',note:'Для токсичного трафика берём текущий payout партнёра из модели: до обновления отдельных тарифов это единый unit на безопасную монетизацию.',rows:[['База потока',fmt(routeVolumes.overdue)+' сценариев «Перегруженный клиент»'],['Маржа после CAC',signedMoney(externalMargin)],['Экономика на 1000 входов',money(unit.issuePer1000*unit.partnerPayout)]],formula:'routed issues × partner payout'},
-  {code:'CF_REJECTED',value:money(unit.partnerPayout),label:'CPA / soft reject',note:'Отказники должны окупать закупку трафика единым payout из текущих вводных модели — без ручного fixed CPA.',rows:[['База потока',fmt(Math.max(0,totals.applications-totals.approvals))+' неапрувленных заявок'],['Маржа после CAC',signedMoney(externalMargin)],['Экономика на 1000 входов',money(unit.issuePer1000*unit.partnerPayout)]],formula:'(визит→заявка→апрув→выдача) × payout'},
-  {code:'CF_NON_CORE',value:money(unit.partnerPayout),label:'CPA / банковскую выдачу',note:'Непрофильный спрос пакуем в ту же unit-механику: пока в модели один payout, поэтому ветка живёт на текущем фактическом тарифе партнёра.',rows:[['База потока',fmt(routeVolumes.noncore)+' сценариев «Хочу машину»'],['Маржа после CAC',signedMoney(externalMargin)],['Экономика на 1000 входов',money(unit.issuePer1000*unit.partnerPayout)]],formula:'non-core routed issues × partner payout'},
-  {code:'NOT_FOUND',value:money(unit.epcValue),label:'EPC смешанной витрины',note:'Новый трафик без матча в базе ЦФ оцениваем по реальному EPC смешанной витрины: это честная unit-метрика без предположений о статусе.',rows:[['База потока',fmt(unit.unmatchedVisits)+' unmatched визитов'],['Кликов на 1000 входов',fmt(unit.clicksPerVisit*1000)],['Выручка на 1000 входов',money(visitRevenuePer1000)]],formula:'(клики ÷ визиты × 1000) × EPC'}
+  {code:'CF_TARGET',value:money(unit.revenuePerIssue),label:'Выручка / выдачу ЦФ',econ1k:money(unit.issuePer1000*unit.revenuePerIssue),note:'Новый целевой лид уходит в якорный оффер ЦФ, поэтому считаем прямую выручку на одну выдачу без внешнего CPA.',rows:[['База потока',fmt(unit.matchedVisits)+' матчированных визитов'],['Выручка/CPA',money(unit.revenuePerIssue)],['Маржа после CAC',signedMoney(unit.revenuePerIssue-unit.cacPerIssue)]],formula:'(выручка ÷ выданные сделки) × routed issues'},
+  {code:'CF_ACTIVE',value:money(protectedValue),label:'Защищаемый LTV / клиента',econ1k:money(unit.issuePer1000*protectedValue),note:'Ветка не продаёт новый займ: её задача — не потерять ценность базы и монетизировать безопасные офферы поверх защищённого клиента.',rows:[['База потока',fmt(unit.matchedVisits)+' матчированных визитов'],['Цель repeat-share',pct(modelInputs.targetRepeatShare*100)],['Маржа',signedMoney(protectedValue)]],formula:'LTV × targetRepeatShare'},
+  {code:'CF_REPEAT',value:money(unit.ltvPerIssue),label:'LTV / повторную выдачу',econ1k:money(unit.issuePer1000*unit.ltvPerIssue),note:'Повторный клиент должен приносить уже не первую выдачу, а полный LTV с CRM и кросс-продажами.',rows:[['База потока',fmt(totals.repeat)+' повторных визитов'],['Выручка/CPA',money(unit.ltvPerIssue)],['Инкремент к первой выдаче',signedMoney(repeatLift)]],formula:'(выручка ÷ выданные сделки) × LTV factor'},
+  {code:'CF_DORMANT',value:money(unit.ltvPerIssue),label:'LTV / реактивацию',econ1k:money(unit.issuePer1000*unit.ltvPerIssue),note:'Для «спящих» клиентов используем ту же LTV-модель, но база реактивации строится от матчированного пула и CRM-повторов.',rows:[['База потока',fmt(Math.max(0,unit.matchedVisits-totals.repeat))+' неактивных профилей'],['Match-rate',pct(modelInputs.centrofinansMatchRate*100)],['Маржа',signedMoney(unit.ltvPerIssue-unit.cacPerIssue)]],formula:'matched pool × repeat LTV'},
+  {code:'CF_OVERDUE',value:money(payOverdue),label:'CPA / БФЛ (банкротство)',econ1k:money(unit.issuePer1000*payOverdue),note:'Токсичный трафик маршрутизируется в БФЛ-офферы по динамическому тарифу «Банкротство» = '+fmt(payOverdue)+' ₽.',rows:[['База потока',fmt(routeVolumes.overdue)+' сценариев «Перегруженный клиент»'],['Выручка/CPA',money(payOverdue)+' (БФЛ)'],['Маржа после CAC',signedMoney(marginOverdue)]],formula:'routed issues × dynamic partner payout (BFL)',dynamicCpa:payOverdue},
+  {code:'CF_REJECTED',value:money(payRejected),label:'CPA / soft reject',econ1k:money(unit.issuePer1000*payRejected),note:'Отказники окупают закупку трафика через CPA-выплату от МФО-партнёров по тарифу «Микрозаймы» = '+fmt(payRejected)+' ₽.',rows:[['База потока',fmt(rejectedVol)+' неапрувленных заявок'],['Выручка/CPA',money(payRejected)+' (МФО)'],['Маржа после CAC',signedMoney(marginRejected)]],formula:'(визит→заявка→апрув→выдача) × eCPA МФО',dynamicCpa:payRejected},
+  {code:'CF_NON_CORE',value:money(payNonCore),label:'CPA / банковский лид',econ1k:money(unit.issuePer1000*payNonCore),note:'Непрофильный спрос (ипотека, залоги) монетизируется по тарифу «Банковский лид» = '+fmt(payNonCore)+' ₽.',rows:[['База потока',fmt(routeVolumes.noncore)+' сценариев «Хочу машину»'],['Выручка/CPA',money(payNonCore)+' (Банк)'],['Маржа после CAC',signedMoney(marginNonCore)]],formula:'non-core routed issues × bank lead payout',dynamicCpa:payNonCore},
+  {code:'NOT_FOUND',value:money(unit.epcValue),label:'EPC смешанной витрины',econ1k:money(visitRevenuePer1000),note:'Новый трафик без матча в базе ЦФ оцениваем по реальному EPC смешанной витрины: это честная unit-метрика без предположений о статусе.',rows:[['База потока',fmt(unit.unmatchedVisits)+' unmatched визитов'],['Кликов на 1000 входов',fmt(unit.clicksPerVisit*1000)],['Выручка/CPA',money(unit.epcValue)]],formula:'(клики ÷ визиты × 1000) × EPC'}
  ];
  host.innerHTML=cards.map(card=>{
   const meta=route[card.code]||{};
+  const bType=BRANCH_TYPE[card.code]||'organic';
+  const tagLabel=BRANCH_TYPE_LABEL[bType];
+  const tagCls=BRANCH_TYPE_CLS[bType];
+  const convRate=BRANCH_CONV[card.code]||0;
+  const convPct=Math.min(100,Math.round(convRate*100));
+  const dynamicBadge=card.dynamicCpa?`<span class="cjm-dynamic-badge">Dynamic CPA</span>`:'';
   const rows=card.rows.map(row=>`<div class="mini-row"><span>${escapeHtml(row[0])}</span><b>${escapeHtml(row[1])}</b></div>`).join('');
-  return `<article class="card cjm-unit-card ${escapeHtml(meta.cls||'s-notfound')}"><div class="cjm-unit-head"><div><h3>${escapeHtml(meta.title||card.code)}</h3><div class="cjm-unit-note">${escapeHtml(card.note)}</div></div><span class="cjm-unit-code">${escapeHtml(card.code)}</span></div><div class="metric-label">${escapeHtml(card.label)}</div><div class="metric-value">${escapeHtml(card.value)}</div><div class="mini-list">${rows}</div><div class="cjm-unit-formula"><b>Формула:</b> ${escapeHtml(card.formula)}</div></article>`;
+  return `<article class="card cjm-unit-card ${escapeHtml(meta.cls||'s-notfound')}">
+   <div class="cjm-unit-head"><div><h3>${escapeHtml(meta.title||card.code)}</h3><div class="cjm-unit-tags"><span class="cjm-type-tag ${tagCls}">${escapeHtml(tagLabel)}</span>${dynamicBadge}</div></div><span class="cjm-unit-code">${escapeHtml(card.code)}</span></div>
+   <div class="cjm-primary-metric"><div class="metric-label">Экономика на 1 000 входов</div><div class="metric-value">${escapeHtml(card.econ1k)}</div></div>
+   <div class="cjm-secondary-row">${rows}</div>
+   <div class="cjm-conv-bar"><div class="cjm-conv-bar-label"><span>Конверсия</span><span>${convPct}%</span></div><div class="cjm-conv-bar-track"><div class="cjm-conv-bar-fill" style="width:${convPct}%"></div></div></div>
+   <div class="cjm-unit-formula"><b>Формула:</b> ${escapeHtml(card.formula)}</div></article>`;
  }).join('');
+ // PnL Waterfall
+ renderPnlWaterfall(unit,routeVolumes,rejectedVol);
+ // LTV/CAC Simulator
+ renderLtvCacSimulator(unit,routeVolumes,rejectedVol);
+}
+function renderPnlWaterfall(unit,routeVolumes,rejectedVol){
+ const host=document.getElementById('pnlWaterfallChart');
+ if(!host)return;
+ const monthCount=Math.max(months.length,1);
+ // Revenue from each branch (annualized from per-month volumes * issue rate * value)
+ const targetRev=unit.matchedVisits*unit.issueRateFromVisit*unit.revenuePerIssue;
+ const repeatRev=totals.repeat*unit.issueRateFromVisit*unit.ltvPerIssue;
+ const dormantRev=Math.max(0,unit.matchedVisits-totals.repeat)*unit.issueRateFromVisit*unit.ltvPerIssue*0.3;
+ const externalRev=(rejectedVol*DYNAMIC_PAYOUTS.CF_REJECTED+routeVolumes.overdue*monthCount*DYNAMIC_PAYOUTS.CF_OVERDUE+routeVolumes.noncore*monthCount*DYNAMIC_PAYOUTS.CF_NON_CORE)*unit.issueRateFromVisit;
+ const opex=totals.expenses;
+ const pnl=targetRev+repeatRev+dormantRev+externalRev-opex;
+ const bars=[
+  {label:'CF_TARGET',value:targetRev,type:'positive'},
+  {label:'CF_REPEAT',value:repeatRev,type:'positive'},
+  {label:'CF_DORMANT',value:dormantRev,type:'positive'},
+  {label:'Внешняя монетизация',value:externalRev,type:'positive'},
+  {label:'Операционные / CAC',value:-opex,type:'negative'},
+  {label:'Итого PnL',value:pnl,type:'total'}
+ ];
+ const maxVal=Math.max(...bars.map(b=>Math.abs(b.value)),1);
+ const c=chartColors();
+ host.innerHTML=`<div class="waterfall-bars">${bars.map(b=>{
+  const h=Math.max(4,Math.round(Math.abs(b.value)/maxVal*160));
+  const color=b.type==='negative'?'var(--red)':b.type==='total'?(b.value>=0?'var(--blue)':'var(--red)'):'var(--green)';
+  return `<div class="wf-col"><div class="wf-value">${shortNum(b.value)} ₽</div><div class="wf-bar" style="height:${h}px;background:${color}"></div><div class="wf-label">${escapeHtml(b.label)}</div></div>`;
+ }).join('')}</div>`;
+}
+function renderLtvCacSimulator(unit,routeVolumes,rejectedVol){
+ const host=document.getElementById('ltvCacSimulator');
+ if(!host)return;
+ const monthCount=Math.max(months.length,1);
+ // Without router: only CF_TARGET revenue
+ const baseLtv=unit.revenuePerIssue*modelInputs.ltvFactor;
+ const baseCac=unit.cacPerIssue;
+ const baseLtvCac=ratio(baseLtv,baseCac);
+ // With router: additional revenue from external monetization effectively reduces CAC
+ const externalRevenuePerIssue=(rejectedVol*DYNAMIC_PAYOUTS.CF_REJECTED+routeVolumes.overdue*monthCount*DYNAMIC_PAYOUTS.CF_OVERDUE+routeVolumes.noncore*monthCount*DYNAMIC_PAYOUTS.CF_NON_CORE)*unit.issueRateFromVisit;
+ const totalIssued=unit.issued||1;
+ const externalPerIssue=externalRevenuePerIssue/totalIssued;
+ const effectiveCac=Math.max(1,baseCac-externalPerIssue);
+ const newLtvCac=ratio(baseLtv,effectiveCac);
+ const baseCls=baseLtvCac>=2?'ltv-green':baseLtvCac>=1.5?'ltv-orange':'ltv-red';
+ const newCls=newLtvCac>=2?'ltv-green':newLtvCac>=1.5?'ltv-orange':'ltv-red';
+ host.innerHTML=`
+  <div class="ltv-cac-row">
+   <div class="ltv-cac-block ${baseCls}">
+    <div class="ltv-cac-label">Без роутера (только CF_TARGET)</div>
+    <div class="ltv-cac-value">${baseLtvCac.toFixed(1)}x</div>
+    <div class="ltv-cac-sub">LTV ${money(baseLtv)} ÷ CAC ${money(baseCac)}</div>
+   </div>
+   <div class="ltv-cac-arrow">→</div>
+   <div class="ltv-cac-block ${newCls}">
+    <div class="ltv-cac-label">С умным роутером</div>
+    <div class="ltv-cac-value">${newLtvCac.toFixed(1)}x</div>
+    <div class="ltv-cac-sub">LTV ${money(baseLtv)} ÷ Эфф. CAC ${money(effectiveCac)}</div>
+   </div>
+  </div>
+  <div class="ltv-cac-formula">Формула: эфф. CAC = CAC − (доход от Rejected + NPL + Non-core) ÷ кол-во выдач → LTV/CAC растёт с <b>${baseLtvCac.toFixed(1)}x</b> до <b>${newLtvCac.toFixed(1)}x</b></div>`;
 }
 function renderDataStatusList(){
  const items=[
@@ -1261,8 +1352,8 @@ function updateVolumeCalculator(opts){
   else subEl.textContent=`${formatPpl(res.total)} × ${pct(res.issueRate*100)} × ${formatRub(res.payout)} = ${formatRub(res.revenue)} в месяц.`;
  }
  if(bdEl){
-  const part=(label,vol)=>`<div>${escapeHtml(label)}<b>${formatRub(vol*res.issueRate*res.payout)}</b></div>`;
-  bdEl.innerHTML=part('Отказники',res.parts.rejected)+part('Действующие',res.parts.active)+part('Непрофильные',res.parts.noncore);
+  const partDyn=(label,vol,code)=>`<div>${escapeHtml(label)}<b>${formatRub(vol*res.issueRate*(DYNAMIC_PAYOUTS[code]||res.payout))}</b></div>`;
+  bdEl.innerHTML=partDyn('Отказники',res.parts.rejected,'CF_REJECTED')+partDyn('Действующие',res.parts.active,'CF_ACTIVE')+partDyn('Непрофильные',res.parts.noncore,'CF_NON_CORE');
  }
  // Sync per-branch capacity numbers in the big diagram
  const capMap={CF_REJECTED:res.parts.rejected,CF_ACTIVE:res.parts.active,CF_NON_CORE:res.parts.noncore};
@@ -1271,8 +1362,9 @@ function updateVolumeCalculator(opts){
   el.textContent=v.toLocaleString('ru-RU');
  });
  document.querySelectorAll('[data-cap-rev]').forEach(el=>{
-  const v=capMap[el.dataset.capRev];if(v==null)return;
-  el.textContent=formatRub(v*res.issueRate*res.payout);
+  const code=el.dataset.capRev;
+  const v=capMap[code];if(v==null)return;
+  el.textContent=formatRub(v*res.issueRate*(DYNAMIC_PAYOUTS[code]||res.payout));
  });
  renderRouteOkrKpis();
 }
@@ -1378,7 +1470,7 @@ function renderRoutingDiagram(){
   const isTarget=b.code==='CF_TARGET';
   const capInner=isTarget
    ?`<div class="rd-cap-grid"><div>${escapeHtml(b.capacity)}</div><div>Внешний доход: <b>0 ₽</b> (внутренняя синергия)</div></div>`
-   :`<div class="rd-cap-grid"><div>Прогноз: <b><span data-cap-vol="${escapeHtml(b.code)}">${(branchVolMap[b.code]||0).toLocaleString('ru-RU')}</span></b> чел./мес</div><div>Внешний доход/мес: <b><span data-cap-rev="${escapeHtml(b.code)}">${formatRub((branchVolMap[b.code]||0)*unit.issueRateFromVisit*unit.partnerPayout)}</span></b></div><div class="rd-cap-formula">Формула: объём × <b>${pct(unit.issueRateFromVisit*100)}</b> × <b>${formatRub(unit.partnerPayout)}</b></div></div>`;
+   :`<div class="rd-cap-grid"><div>Прогноз: <b><span data-cap-vol="${escapeHtml(b.code)}">${(branchVolMap[b.code]||0).toLocaleString('ru-RU')}</span></b> чел./мес</div><div>Внешний доход/мес: <b><span data-cap-rev="${escapeHtml(b.code)}">${formatRub((branchVolMap[b.code]||0)*unit.issueRateFromVisit*(DYNAMIC_PAYOUTS[b.code]||unit.partnerPayout))}</span></b></div><div class="rd-cap-formula">Формула: объём × <b>${pct(unit.issueRateFromVisit*100)}</b> × <b>${formatRub(DYNAMIC_PAYOUTS[b.code]||unit.partnerPayout)}</b></div></div>`;
   const realInner=`<div class="rd-mini-b">${escapeHtml(b.realIncome||'')}</div>`+
    (b.payoutHint?`<div class="rd-cap-grid" style="margin-top:6px"><div>CPA-выплата: <b>${escapeHtml(b.payoutHint)}</b></div></div>`:'');
   const moneyInner=`<div class="rd-mini-b">${escapeHtml(b.scheme)}</div>${actorsHtml}`;
