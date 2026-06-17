@@ -453,6 +453,7 @@ function money(n){return fmt(n)+' ₽'}
 function mln(n){return (n/1000000).toLocaleString('ru-RU',{maximumFractionDigits:1})+' млн ₽'}
 function pct(n){return Number(n).toLocaleString('ru-RU',{maximumFractionDigits:1})+'%'}
 function ratio(a,b){return b? a/b:0}
+function signedMoney(n){const v=Math.round(Number(n)||0);return `${v>=0?'+':''}${v.toLocaleString('ru-RU')} ₽`}
 function cls(v){return v>=0?'positive':'negative'}
 function escapeHtml(value){return String(value).replace(/[&<>"']/g,ch=>HTML_ESCAPE_MAP[ch])}
 function slug(value){return String(value).toLowerCase().replace(/[^a-zа-я0-9]+/gi,'-').replace(/^-+|-+$/g,'')}
@@ -648,6 +649,58 @@ function channelCac(){
   'Повторный':{...make(REPEAT_REVENUE_TOTAL,0),label:'CRM / повторные'}
  };
 }
+function currentUnitEconomics(){
+ const issued=Math.max(1,totals.approvals*modelInputs.issuedToApprovalRate);
+ const visitToApplicationRate=ratio(totals.applications,totals.visits);
+ const applicationToApprovalRate=ratio(totals.approvals,totals.applications);
+ const issueRateFromVisit=visitToApplicationRate*applicationToApprovalRate*modelInputs.issuedToApprovalRate;
+ const revenuePerIssue=ratio(totals.revenue,issued);
+ const ltvPerIssue=revenuePerIssue*modelInputs.ltvFactor;
+ const cacPerIssue=ratio(totals.expenses,issued);
+ const matchedVisits=totals.visits*modelInputs.centrofinansMatchRate;
+ const unmatchedVisits=Math.max(0,totals.visits-matchedVisits);
+ const clicksPerVisit=ratio(totals.clicks,totals.visits);
+ return {
+  issued,
+  visitToApplicationRate,
+  applicationToApprovalRate,
+  issueRateFromVisit,
+  issuePer1000:issueRateFromVisit*1000,
+  revenuePerIssue,
+  ltvPerIssue,
+  cacPerIssue,
+  partnerPayout:partnerPayoutValue(),
+  matchedVisits,
+  unmatchedVisits,
+  clicksPerVisit,
+  epcValue:ratio(totals.revenue,totals.clicks)
+ };
+}
+function routeScenarioVolumes(){
+ const scenarioMap=Object.fromEntries(scenarios.map(item=>[item.name,item.users]));
+ return {
+  rejected:Math.round(Math.max(0,totals.applications-totals.approvals)/Math.max(months.length,1)),
+  active:Math.round(totals.repeat/Math.max(months.length,1)),
+  noncore:Math.round(scenarioMap['Хочу машину']||0),
+  overdue:Math.round(scenarioMap['Перегруженный клиент']||0),
+  target:Math.round(currentUnitEconomics().matchedVisits/Math.max(months.length,1))
+ };
+}
+function currentRouteVolumes(){
+ const defaults=routeScenarioVolumes();
+ const read=(id,fallback)=>{
+  const el=document.getElementById(id);
+  const v=Number(el?.value);
+  return el&&el.value!==''&&Number.isFinite(v)&&v>=0?v:fallback;
+ };
+ return {
+  rejected:read('calcRejected',defaults.rejected),
+  active:read('calcActive',defaults.active),
+  noncore:read('calcNoncore',defaults.noncore),
+  overdue:defaults.overdue,
+  target:defaults.target
+ };
+}
 function buildInputData(ch){
  const comparison=comparePeriods(ch.rev);
  return [
@@ -667,6 +720,32 @@ function renderModelDirtyState(){
 function renderPresetActions(){
  const el=document.getElementById('presetActions');if(!el)return;
  el.innerHTML=MODEL_PRESETS.map(p=>`<button class="action" data-preset-id="${p.id}" type="button">${escapeHtml(p.label)}</button>`).join('');
+}
+function renderCjmUnitEconomics(){
+ const host=document.getElementById('cjmUnitGrid');
+ if(!host)return;
+ const unit=currentUnitEconomics();
+ const route=Object.fromEntries(ROUTE_DECISION_TREE.map(item=>[item.code,item]));
+ const routeVolumes=routeScenarioVolumes();
+ const repeatLift=unit.ltvPerIssue-unit.revenuePerIssue;
+ const protectedValue=unit.ltvPerIssue*modelInputs.targetRepeatShare;
+ const externalMargin=unit.partnerPayout-unit.cacPerIssue;
+ const visitRevenuePer1000=ratio(totals.revenue,totals.visits)*1000;
+ const cards=[
+  {code:'CF_TARGET',value:money(unit.revenuePerIssue),label:'Выручка / выдачу ЦФ',note:'Новый целевой лид уходит в якорный оффер ЦФ, поэтому считаем прямую выручку на одну выдачу без внешнего CPA.',rows:[['База потока',fmt(unit.matchedVisits)+' матчёванных визитов'],['Маржа после CAC',signedMoney(unit.revenuePerIssue-unit.cacPerIssue)],['Экономика на 1000 входов',money(unit.issuePer1000*unit.revenuePerIssue)]],formula:'(выручка ÷ выданные сделки) × routed issues'},
+  {code:'CF_ACTIVE',value:money(protectedValue),label:'Защищаемый LTV / клиента',note:'Ветка не продаёт новый займ: её задача — не потерять ценность базы и монетизировать безопасные офферы поверх защищённого клиента.',rows:[['База потока',fmt(unit.matchedVisits)+' матчёванных визитов'],['Цель repeat-share',pct(modelInputs.targetRepeatShare*100)],['Сохранённая ценность на 1000 входов',money(unit.issuePer1000*protectedValue)]],formula:'LTV × targetRepeatShare'},
+  {code:'CF_REPEAT',value:money(unit.ltvPerIssue),label:'LTV / повторную выдачу',note:'Повторный клиент должен приносить уже не первую выдачу, а полный LTV с CRM и кросс-продажами.',rows:[['База потока',fmt(totals.repeat)+' повторных визитов'],['Инкремент к первой выдаче',signedMoney(repeatLift)],['Экономика на 1000 входов',money(unit.issuePer1000*unit.ltvPerIssue)]],formula:'(выручка ÷ выданные сделки) × LTV factor'},
+  {code:'CF_DORMANT',value:money(unit.ltvPerIssue),label:'LTV / реактивацию',note:'Для «спящих» клиентов используем ту же LTV-модель, но база реактивации строится от матчёванного пула и CRM-повторов.',rows:[['База потока',fmt(Math.max(0,unit.matchedVisits-totals.repeat))+' неактивных профилей'],['Match-rate',pct(modelInputs.centrofinansMatchRate*100)],['Экономика на 1000 входов',money(unit.issuePer1000*unit.ltvPerIssue)]],formula:'matched pool × repeat LTV'},
+  {code:'CF_OVERDUE',value:money(unit.partnerPayout),label:'CPA / безопасное действие',note:'Для токсичного трафика берём текущий payout партнёра из модели: до обновления отдельных тарифов это единый unit на безопасную монетизацию.',rows:[['База потока',fmt(routeVolumes.overdue)+' сценариев «Перегруженный клиент»'],['Маржа после CAC',signedMoney(externalMargin)],['Экономика на 1000 входов',money(unit.issuePer1000*unit.partnerPayout)]],formula:'routed issues × partner payout'},
+  {code:'CF_REJECTED',value:money(unit.partnerPayout),label:'CPA / soft reject',note:'Отказники должны окупать закупку трафика единым payout из текущих вводных модели — без ручного fixed CPA.',rows:[['База потока',fmt(Math.max(0,totals.applications-totals.approvals))+' неапрувленных заявок'],['Маржа после CAC',signedMoney(externalMargin)],['Экономика на 1000 входов',money(unit.issuePer1000*unit.partnerPayout)]],formula:'(визит→заявка→апрув→выдача) × payout'},
+  {code:'CF_NON_CORE',value:money(unit.partnerPayout),label:'CPA / банковскую выдачу',note:'Непрофильный спрос пакуем в ту же unit-механику: пока в модели один payout, поэтому ветка живёт на текущем фактическом тарифе партнёра.',rows:[['База потока',fmt(routeVolumes.noncore)+' сценариев «Хочу машину»'],['Маржа после CAC',signedMoney(externalMargin)],['Экономика на 1000 входов',money(unit.issuePer1000*unit.partnerPayout)]],formula:'non-core routed issues × partner payout'},
+  {code:'NOT_FOUND',value:money(unit.epcValue),label:'EPC смешанной витрины',note:'Новый трафик без матча в базе ЦФ оцениваем по реальному EPC смешанной витрины: это честная unit-метрика без предположений о статусе.',rows:[['База потока',fmt(unit.unmatchedVisits)+' unmatched визитов'],['Кликов на 1000 входов',fmt(unit.clicksPerVisit*1000)],['Выручка на 1000 входов',money(visitRevenuePer1000)]],formula:'(клики ÷ визиты × 1000) × EPC'}
+ ];
+ host.innerHTML=cards.map(card=>{
+  const meta=route[card.code]||{};
+  const rows=card.rows.map(row=>`<div class="mini-row"><span>${escapeHtml(row[0])}</span><b>${escapeHtml(row[1])}</b></div>`).join('');
+  return `<article class="card cjm-unit-card ${escapeHtml(meta.cls||'s-notfound')}"><div class="cjm-unit-head"><div><h3>${escapeHtml(meta.title||card.code)}</h3><div class="cjm-unit-note">${escapeHtml(card.note)}</div></div><span class="cjm-unit-code">${escapeHtml(card.code)}</span></div><div class="metric-label">${escapeHtml(card.label)}</div><div class="metric-value">${escapeHtml(card.value)}</div><div class="mini-list">${rows}</div><div class="cjm-unit-formula"><b>Формула:</b> ${escapeHtml(card.formula)}</div></article>`;
+ }).join('');
 }
 function renderDataStatusList(){
  const items=[
@@ -886,6 +965,7 @@ function renderContextualViews(){
  if(experimentsGridEl)experimentsGridEl.innerHTML=(filteredExperiments.length?filteredExperiments:experimentCatalog).slice(0,3).map(e=>`<div class="card" ${drillAttrs('experiment',e.id)}><div class="card-title"><div><h3>${escapeHtml(e.name)}</h3><p>${escapeHtml(e.id)}</p></div><span class="pill">${escapeHtml(e.status)}</span></div><div class="mini-row"><span>Главная метрика</span><b>${escapeHtml(e.primary)}</b></div><div class="mini-row"><span>Уверенность</span><b>${escapeHtml(e.confidence)}</b></div><div class="mini-row"><span>Результат</span><b>${escapeHtml(e.result)}</b></div></div>`).join('');
  table('experimentsTable',['Эксперимент','Главная метрика','Ограничение','Сегмент','Уверенность','Снимок','Решение'],(filteredExperiments.length?filteredExperiments:experimentCatalog).map(e=>[e.name,e.primary,e.guardrail,e.segment,e.confidence,e.result,e.status]));
  table('unitTable',['Канал','Микс интеграций','Выручка','Расходы','Валовая прибыль','EPC','CAC одобрения','LTV/CAC','Окупаемость','Маркетинговый PnL'],channelRows(filterByRole(UNIT_ROWS)).map(r=>r.build(totals)));
+ renderCjmUnitEconomics();
  renderDataStatusList();
  renderPriorityList();
 }
@@ -1046,8 +1126,6 @@ function renderRouteDecisionTree(){
  const chips=(arr,kind)=>arr.length?arr.map(x=>`<span class="dt-chip dt-${kind}">${escapeHtml(x)}</span>`).join(''):`<span class="dt-chip dt-none">—</span>`;
  host.innerHTML=ROUTE_DECISION_TREE.map(r=>`<div class="dt-row ${escapeHtml(r.cls)}"><div class="dt-status"><span class="dt-code">${escapeHtml(r.code)}</span><span class="dt-title">${escapeHtml(r.title)}</span><span class="dt-ui">${escapeHtml(r.ui)}</span><span class="dt-ui" style="font-style:normal;color:var(--text);font-size:12.5px;margin-top:4px">${escapeHtml(r.logic)}</span></div><div class="dt-cell dt-cell-allow"><span class="dt-cell-h">Show · разрешено</span><div class="dt-cell-chips">${chips(r.allow,'allow')}</div></div><div class="dt-cell dt-cell-block"><span class="dt-cell-h">Hide · блокируется</span><div class="dt-cell-chips">${chips(r.block,'block')}</div></div></div>`).join('');
 }
-const VOLUME_CALC_CR=0.02;
-const VOLUME_CALC_CPA=1500;
 const ROUTE_SEGMENTS=[
  {cls:'s-rejected',code:'CF_REJECTED',title:'Ветка A · Отказники',
   userStory:'Я как заёмщик, получивший отказ у ЦФ, хочу без повторной анкеты найти компанию, чтобы она выдала заём прямо сейчас.',
@@ -1143,11 +1221,12 @@ const ROUTE_STEP_SCHEMES=[
  ]}
 ];
 function calculateExternalRevenue(rejectedVol,activeVol,noncoreVol){
+ const unit=currentUnitEconomics();
  const r=Math.max(0,Number(rejectedVol)||0);
  const a=Math.max(0,Number(activeVol)||0);
  const n=Math.max(0,Number(noncoreVol)||0);
  const total=r+a+n;
- return {total,revenue:total*VOLUME_CALC_CR*VOLUME_CALC_CPA,parts:{rejected:r,active:a,noncore:n}};
+ return {total,revenue:total*unit.issueRateFromVisit*unit.partnerPayout,parts:{rejected:r,active:a,noncore:n},issueRate:unit.issueRateFromVisit,payout:unit.partnerPayout};
 }
 function formatRub(v){const n=Math.round(Number(v)||0);return n.toLocaleString('ru-RU')+' ₽'}
 function formatPpl(v){return (Math.round(Number(v)||0)).toLocaleString('ru-RU')+' чел.'}
@@ -1165,17 +1244,23 @@ function updateVolumeCalculator(opts){
  const revEl=document.getElementById('calcRevenue');
  const subEl=document.getElementById('calcRevenueSub');
  const bdEl=document.getElementById('calcBreakdown');
+ const crEl=document.getElementById('calcCR');
+ const cpaEl=document.getElementById('calcCPA');
+ const formulaEl=document.getElementById('calcFormula');
  if(sumEl)sumEl.textContent=formatPpl(res.total);
  if(revEl){
   revEl.textContent=formatRub(res.revenue);
   if(opts&&opts.bump){revEl.classList.add('is-bump');setTimeout(()=>revEl.classList.remove('is-bump'),320)}
  }
+ if(crEl)crEl.textContent=pct(res.issueRate*100);
+ if(cpaEl)cpaEl.textContent=formatRub(res.payout);
+ if(formulaEl)formulaEl.innerHTML=`expectedRevenue = (rejected + active + noncore) × <b>${pct(res.issueRate*100)}</b> × <b>${formatRub(res.payout)}</b>`;
  if(subEl){
   if(res.total===0)subEl.textContent='Введите объёмы трафика — пересчёт идёт без перезагрузки страницы.';
-  else subEl.textContent=`${formatPpl(res.total)} × ${(VOLUME_CALC_CR*100).toFixed(0)}% × ${VOLUME_CALC_CPA.toLocaleString('ru-RU')} ₽ = ${formatRub(res.revenue)} в месяц.`;
+  else subEl.textContent=`${formatPpl(res.total)} × ${pct(res.issueRate*100)} × ${formatRub(res.payout)} = ${formatRub(res.revenue)} в месяц. Конверсию считаем из фактической воронки и текущих вводных модели.`;
  }
  if(bdEl){
-  const part=(label,vol)=>`<div>${escapeHtml(label)}<b>${formatRub(vol*VOLUME_CALC_CR*VOLUME_CALC_CPA)}</b></div>`;
+  const part=(label,vol)=>`<div>${escapeHtml(label)}<b>${formatRub(vol*res.issueRate*res.payout)}</b></div>`;
   bdEl.innerHTML=part('Отказники',res.parts.rejected)+part('Действующие',res.parts.active)+part('Непрофильные',res.parts.noncore);
  }
  // Sync per-branch capacity numbers in the big diagram
@@ -1186,15 +1271,17 @@ function updateVolumeCalculator(opts){
  });
  document.querySelectorAll('[data-cap-rev]').forEach(el=>{
   const v=capMap[el.dataset.capRev];if(v==null)return;
-  el.textContent=formatRub(v*VOLUME_CALC_CR*VOLUME_CALC_CPA);
+  el.textContent=formatRub(v*res.issueRate*res.payout);
  });
+ renderRouteOkrKpis();
 }
 function initVolumeCalculator(){
  const ids=['calcRejected','calcActive','calcNoncore'];
  const inputs=ids.map(id=>document.getElementById(id)).filter(Boolean);
  if(inputs.length!==3)return;
  if(inputs[0].dataset.calcInit==='1'){updateVolumeCalculator();return}
- const defaults={calcRejected:18000,calcActive:24000,calcNoncore:6000};
+ const defaultsRaw=routeScenarioVolumes();
+ const defaults={calcRejected:defaultsRaw.rejected,calcActive:defaultsRaw.active,calcNoncore:defaultsRaw.noncore};
  inputs.forEach(el=>{
   el.dataset.calcInit='1';
   if(el.value==='')el.value=String(defaults[el.id]??0);
@@ -1230,6 +1317,9 @@ function renderRouteStepSchemes(){
 function renderRoutingDiagram(){
  const host=document.getElementById('routeDiagram');
  if(!host)return;
+ const unit=currentUnitEconomics();
+ const defaultVolumes=routeScenarioVolumes();
+ const branchVolMap={CF_REJECTED:defaultVolumes.rejected,CF_ACTIVE:defaultVolumes.active,CF_NON_CORE:defaultVolumes.noncore};
  const NS='http://www.w3.org/1999/xhtml';
  const outCls={'s-target':'c-target','s-active':'c-active','s-rejected':'c-rejected','s-noncore':'c-noncore'};
  // ---- SVG funnel (entry → hub → router → diamond → 4 branch headers).
@@ -1288,7 +1378,7 @@ function renderRoutingDiagram(){
   const isTarget=b.code==='CF_TARGET';
   const capInner=isTarget
    ?`<div class="rd-cap-grid"><div>${escapeHtml(b.capacity)}</div><div>Внешний доход: <b>0 ₽</b> (внутренняя синергия)</div></div>`
-   :`<div class="rd-cap-grid"><div>Прогноз: <b><span data-cap-vol="${escapeHtml(b.code)}">${(b.defaultVol||0).toLocaleString('ru-RU')}</span></b> чел./мес</div><div>Внешний доход/мес: <b><span data-cap-rev="${escapeHtml(b.code)}">${formatRub((b.defaultVol||0)*VOLUME_CALC_CR*VOLUME_CALC_CPA)}</span></b></div><div class="rd-cap-formula">Формула: объём × <b>${(VOLUME_CALC_CR*100).toFixed(0)}%</b> × <b>${VOLUME_CALC_CPA.toLocaleString('ru-RU')} ₽</b></div></div>`;
+   :`<div class="rd-cap-grid"><div>Прогноз: <b><span data-cap-vol="${escapeHtml(b.code)}">${(branchVolMap[b.code]||0).toLocaleString('ru-RU')}</span></b> чел./мес</div><div>Внешний доход/мес: <b><span data-cap-rev="${escapeHtml(b.code)}">${formatRub((branchVolMap[b.code]||0)*unit.issueRateFromVisit*unit.partnerPayout)}</span></b></div><div class="rd-cap-formula">Формула: объём × <b>${pct(unit.issueRateFromVisit*100)}</b> × <b>${formatRub(unit.partnerPayout)}</b></div></div>`;
   const realInner=`<div class="rd-mini-b">${escapeHtml(b.realIncome||'')}</div>`+
    (b.payoutHint?`<div class="rd-cap-grid" style="margin-top:6px"><div>CPA-выплата: <b>${escapeHtml(b.payoutHint)}</b></div></div>`:'');
   const moneyInner=`<div class="rd-mini-b">${escapeHtml(b.scheme)}</div>${actorsHtml}`;
@@ -1308,20 +1398,15 @@ function renderRoutingDiagram(){
 function renderRouteOkrKpis(){
  const host=document.getElementById('routeOkrKpis');
  if(!host)return;
- // CAC Reduction = expected CPA revenue / total external traffic spend, capped at 100%.
- // Используем дефолтные объёмы из ROUTE_SEGMENTS как базовый сценарий: непрофильный поток (REJECTED + NON_CORE) приносит CPA-компенсацию.
- const seg=Object.fromEntries(ROUTE_SEGMENTS.map(s=>[s.code,s]));
- const rejected=(seg.CF_REJECTED?.defaultVol)||0;
- const active  =(seg.CF_ACTIVE?.defaultVol)||0;
- const noncore =(seg.CF_NON_CORE?.defaultVol)||0;
- const target  =Math.max(1,(seg.CF_TARGET?.defaultVol)||12000); // якорный объём ЦФ (целевые лиды)
- const totalExternal=rejected+active+noncore+target;
- const compensated=rejected+noncore;
+ const vols=currentRouteVolumes();
+ const totalExternal=vols.rejected+vols.active+vols.noncore+Math.max(1,vols.target);
+ const compensated=vols.rejected+vols.noncore;
  const cacReductionPct=Math.round(100*compensated/Math.max(1,totalExternal));
- const coreAllocPct  =Math.round(100*target/Math.max(1,totalExternal));
+ const coreAllocPct=Math.round(100*vols.target/Math.max(1,totalExternal));
+ const protectedBasePct=Math.round(100*vols.active/Math.max(1,totalExternal));
  const cards=[
-  {id:'cac',label:'CAC Reduction',value:'−'+cacReductionPct+'%',sub:'CPA-компенсация непрофильного и резервного трафика снижает суммарный CAC закупки',cls:'positive'},
-  {id:'revenue',label:'Zero-Competition Rate',value:'100%',sub:'Сегмент CF_ACTIVE: МФО-конкуренты заблокированы — действующие клиенты ЦФ защищены от перекредитованности',cls:'positive'},
+  {id:'cac',label:'CAC Reduction',value:'−'+cacReductionPct+'%',sub:'Доля потоков, которые уже умеют компенсировать CAC через fallback-монетизацию по текущим вводным модели',cls:'positive'},
+  {id:'revenue',label:'Protected Base Share',value:protectedBasePct+'%',sub:'Часть потока, которую CJM переводит в защиту базы ЦФ вместо каннибализации кредитными офферами',cls:'positive'},
   {id:'revenue',label:'Core Allocation · ЦФ',value:coreAllocPct+'%',sub:'Доля внешнего трафика, переданная якорному партнёру (Центрофинанс) как целевые лиды',cls:'positive'}
  ];
  host.innerHTML=cards.map(x=>{
@@ -1337,8 +1422,8 @@ function renderRouting(){
  renderRouteDecisionTree();
  renderRoutingDiagram();
  renderRouteStepSchemes();
- renderRouteOkrKpis();
  initVolumeCalculator();
+ renderRouteOkrKpis();
 }
 // Drag-to-scroll для широкой PNL-таблицы: зажатая левая кнопка мыши тянет таблицу влево/вправо.
 function initDragScroll(){
