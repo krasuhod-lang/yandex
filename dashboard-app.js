@@ -649,7 +649,7 @@ function channelCac(){
   'Повторный':{...make(REPEAT_REVENUE_TOTAL,0),label:'CRM / повторные'}
  };
 }
-function currentUnitEconomics(){
+function calculateUnitEconomics(){
  const issued=totals.approvals*modelInputs.issuedToApprovalRate;
  const visitToApplicationRate=ratio(totals.applications,totals.visits);
  const applicationToApprovalRate=ratio(totals.approvals,totals.applications);
@@ -677,13 +677,14 @@ function currentUnitEconomics(){
  };
 }
 function routeScenarioVolumes(){
- const scenarioMap=Object.fromEntries(scenarios.map(item=>[item.name,item.users]));
+ const scenarioList=Array.isArray(scenarios)?scenarios:[];
+ const scenarioMap=Object.fromEntries(scenarioList.map(item=>[item.name,item.users]));
  return {
   rejected:Math.round(Math.max(0,totals.applications-totals.approvals)/Math.max(months.length,1)),
   active:Math.round(totals.repeat/Math.max(months.length,1)),
   noncore:Math.round(scenarioMap['Хочу машину']||0),
   overdue:Math.round(scenarioMap['Перегруженный клиент']||0),
-  target:Math.round(currentUnitEconomics().matchedVisits/Math.max(months.length,1))
+  target:Math.round(calculateUnitEconomics().matchedVisits/Math.max(months.length,1))
  };
 }
 function currentRouteVolumes(){
@@ -724,7 +725,7 @@ function renderPresetActions(){
 function renderCjmUnitEconomics(){
  const host=document.getElementById('cjmUnitGrid');
  if(!host)return;
- const unit=currentUnitEconomics();
+ const unit=calculateUnitEconomics();
  const route=Object.fromEntries(ROUTE_DECISION_TREE.map(item=>[item.code,item]));
  const routeVolumes=routeScenarioVolumes();
  const repeatLift=unit.ltvPerIssue-unit.revenuePerIssue;
@@ -732,8 +733,8 @@ function renderCjmUnitEconomics(){
  const externalMargin=unit.partnerPayout-unit.cacPerIssue;
  const visitRevenuePer1000=ratio(totals.revenue,totals.visits)*1000;
  const cards=[
-  {code:'CF_TARGET',value:money(unit.revenuePerIssue),label:'Выручка / выдачу ЦФ',note:'Новый целевой лид уходит в якорный оффер ЦФ, поэтому считаем прямую выручку на одну выдачу без внешнего CPA.',rows:[['База потока',fmt(unit.matchedVisits)+' матчёванных визитов'],['Маржа после CAC',signedMoney(unit.revenuePerIssue-unit.cacPerIssue)],['Экономика на 1000 входов',money(unit.issuePer1000*unit.revenuePerIssue)]],formula:'(выручка ÷ выданные сделки) × routed issues'},
-  {code:'CF_ACTIVE',value:money(protectedValue),label:'Защищаемый LTV / клиента',note:'Ветка не продаёт новый займ: её задача — не потерять ценность базы и монетизировать безопасные офферы поверх защищённого клиента.',rows:[['База потока',fmt(unit.matchedVisits)+' матчёванных визитов'],['Цель repeat-share',pct(modelInputs.targetRepeatShare*100)],['Сохранённая ценность на 1000 входов',money(unit.issuePer1000*protectedValue)]],formula:'LTV × targetRepeatShare'},
+  {code:'CF_TARGET',value:money(unit.revenuePerIssue),label:'Выручка / выдачу ЦФ',note:'Новый целевой лид уходит в якорный оффер ЦФ, поэтому считаем прямую выручку на одну выдачу без внешнего CPA.',rows:[['База потока',fmt(unit.matchedVisits)+' матчированных визитов'],['Маржа после CAC',signedMoney(unit.revenuePerIssue-unit.cacPerIssue)],['Экономика на 1000 входов',money(unit.issuePer1000*unit.revenuePerIssue)]],formula:'(выручка ÷ выданные сделки) × routed issues'},
+  {code:'CF_ACTIVE',value:money(protectedValue),label:'Защищаемый LTV / клиента',note:'Ветка не продаёт новый займ: её задача — не потерять ценность базы и монетизировать безопасные офферы поверх защищённого клиента.',rows:[['База потока',fmt(unit.matchedVisits)+' матчированных визитов'],['Цель repeat-share',pct(modelInputs.targetRepeatShare*100)],['Сохранённая ценность на 1000 входов',money(unit.issuePer1000*protectedValue)]],formula:'LTV × targetRepeatShare'},
   {code:'CF_REPEAT',value:money(unit.ltvPerIssue),label:'LTV / повторную выдачу',note:'Повторный клиент должен приносить уже не первую выдачу, а полный LTV с CRM и кросс-продажами.',rows:[['База потока',fmt(totals.repeat)+' повторных визитов'],['Инкремент к первой выдаче',signedMoney(repeatLift)],['Экономика на 1000 входов',money(unit.issuePer1000*unit.ltvPerIssue)]],formula:'(выручка ÷ выданные сделки) × LTV factor'},
   {code:'CF_DORMANT',value:money(unit.ltvPerIssue),label:'LTV / реактивацию',note:'Для «спящих» клиентов используем ту же LTV-модель, но база реактивации строится от матчёванного пула и CRM-повторов.',rows:[['База потока',fmt(Math.max(0,unit.matchedVisits-totals.repeat))+' неактивных профилей'],['Match-rate',pct(modelInputs.centrofinansMatchRate*100)],['Экономика на 1000 входов',money(unit.issuePer1000*unit.ltvPerIssue)]],formula:'matched pool × repeat LTV'},
   {code:'CF_OVERDUE',value:money(unit.partnerPayout),label:'CPA / безопасное действие',note:'Для токсичного трафика берём текущий payout партнёра из модели: до обновления отдельных тарифов это единый unit на безопасную монетизацию.',rows:[['База потока',fmt(routeVolumes.overdue)+' сценариев «Перегруженный клиент»'],['Маржа после CAC',signedMoney(externalMargin)],['Экономика на 1000 входов',money(unit.issuePer1000*unit.partnerPayout)]],formula:'routed issues × partner payout'},
@@ -1044,7 +1045,7 @@ function renderCentrofinans(){
  kpi('centrofinansKpis',[
   {label:'Размер базы',value:baseSize?fmt(baseSize):'вводится менеджером',sub:'оценка профилей (хеши e-mail/phone/passport)'},
   {label:'Ожидаемый match-rate',value:pct(matchRate*100),sub:'на горячем интент-трафике',cls:'positive'},
-  {label:'Прирост одобрений',value:'+9–14 п.п.',sub:'для матчёванных пользователей',cls:'positive'},
+  {label:'Прирост одобрений',value:'+9–14 п.п.',sub:'для матчированных пользователей',cls:'positive'},
   {label:'PII наружу',value:'0 полей',sub:'партнёру уходит токен и score',cls:'positive'}
  ]);
  const flow=[
@@ -1058,7 +1059,7 @@ function renderCentrofinans(){
  if(flowHost)flowHost.innerHTML=flow.map(p=>`<li>${p}</li>`).join('');
  const effects=[
   '<b>Что защищено.</b> База МФО физически не покидает периметр: ни один партнёр не получает выгрузку клиентов, токены не реверсятся без соли, лог match-запросов хранится и аудируется.',
-  '<b>Что улучшится в воронке.</b> На матчёванных профилях скорость решения снижается с 2:18 до ~1:10, доля одобрений растёт на 9–14 п.п., доля пустых рекомендаций уменьшается за счёт fallback-сценария по истории Центрофинанса.',
+  '<b>Что улучшится в воронке.</b> На матчированных профилях скорость решения снижается с 2:18 до ~1:10, доля одобрений растёт на 9–14 п.п., доля пустых рекомендаций уменьшается за счёт fallback-сценария по истории Центрофинанса.',
   '<b>Эффект на CAC.</b> На матчёванном трафике повторная идентификация сокращает форму на 4 поля и поднимает completion на 6–8 п.п., что эквивалентно снижению CAC выдачи на ~14–17%.',
   '<b>Эффект на LTV.</b> Известная истории клиента позволяет точнее подобрать оффер и сразу включить кросс-продажу; ожидаемый прирост LTV на матче — около 22%.',
   '<b>Юридический контур.</b> Передача partner-у только обезличенных скоринговых признаков соответствует 152-ФЗ при правильно оформленных согласиях; раздельные согласия на профилирование и на передачу третьим лицам — обязательны.'
@@ -1221,7 +1222,7 @@ const ROUTE_STEP_SCHEMES=[
  ]}
 ];
 function calculateExternalRevenue(rejectedVol,activeVol,noncoreVol){
- const unit=currentUnitEconomics();
+ const unit=calculateUnitEconomics();
  const r=Math.max(0,Number(rejectedVol)||0);
  const a=Math.max(0,Number(activeVol)||0);
  const n=Math.max(0,Number(noncoreVol)||0);
@@ -1316,7 +1317,7 @@ function renderRouteStepSchemes(){
 function renderRoutingDiagram(){
  const host=document.getElementById('routeDiagram');
  if(!host)return;
- const unit=currentUnitEconomics();
+ const unit=calculateUnitEconomics();
  const defaultVolumes=routeScenarioVolumes();
  const branchVolMap={CF_REJECTED:defaultVolumes.rejected,CF_ACTIVE:defaultVolumes.active,CF_NON_CORE:defaultVolumes.noncore};
  const NS='http://www.w3.org/1999/xhtml';
