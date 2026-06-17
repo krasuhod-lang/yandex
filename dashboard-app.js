@@ -650,7 +650,7 @@ function channelCac(){
  };
 }
 function currentUnitEconomics(){
- const issued=Math.max(1,totals.approvals*modelInputs.issuedToApprovalRate);
+ const issued=totals.approvals*modelInputs.issuedToApprovalRate;
  const visitToApplicationRate=ratio(totals.applications,totals.visits);
  const applicationToApprovalRate=ratio(totals.approvals,totals.applications);
  const issueRateFromVisit=visitToApplicationRate*applicationToApprovalRate*modelInputs.issuedToApprovalRate;
@@ -1257,7 +1257,7 @@ function updateVolumeCalculator(opts){
  if(formulaEl)formulaEl.innerHTML=`expectedRevenue = (rejected + active + noncore) × <b>${pct(res.issueRate*100)}</b> × <b>${formatRub(res.payout)}</b>`;
  if(subEl){
   if(res.total===0)subEl.textContent='Введите объёмы трафика — пересчёт идёт без перезагрузки страницы.';
-  else subEl.textContent=`${formatPpl(res.total)} × ${pct(res.issueRate*100)} × ${formatRub(res.payout)} = ${formatRub(res.revenue)} в месяц. Конверсию считаем из фактической воронки и текущих вводных модели.`;
+  else subEl.textContent=`${formatPpl(res.total)} × ${pct(res.issueRate*100)} × ${formatRub(res.payout)} = ${formatRub(res.revenue)} в месяц.`;
  }
  if(bdEl){
   const part=(label,vol)=>`<div>${escapeHtml(label)}<b>${formatRub(vol*res.issueRate*res.payout)}</b></div>`;
@@ -1280,8 +1280,7 @@ function initVolumeCalculator(){
  const inputs=ids.map(id=>document.getElementById(id)).filter(Boolean);
  if(inputs.length!==3)return;
  if(inputs[0].dataset.calcInit==='1'){updateVolumeCalculator();return}
- const defaultsRaw=routeScenarioVolumes();
- const defaults={calcRejected:defaultsRaw.rejected,calcActive:defaultsRaw.active,calcNoncore:defaultsRaw.noncore};
+ const defaults=routeScenarioVolumes();
  inputs.forEach(el=>{
   el.dataset.calcInit='1';
   if(el.value==='')el.value=String(defaults[el.id]??0);
