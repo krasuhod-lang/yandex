@@ -745,10 +745,12 @@ function renderCjmUnitEconomics(){
  const BRANCH_TYPE={CF_TARGET:'core',CF_ACTIVE:'core',CF_REPEAT:'core',CF_DORMANT:'core',CF_REJECTED:'external',CF_OVERDUE:'external',CF_NON_CORE:'external',NOT_FOUND:'organic'};
  const BRANCH_TYPE_LABEL={core:'Core: Центрофинанс',external:'External: CPA Сеть',organic:'Organic: Витрина'};
  const BRANCH_TYPE_CLS={core:'cjm-tag-core',external:'cjm-tag-external',organic:'cjm-tag-organic'};
- // Conversion rates per branch for progress bars
+ // Conversion rates per branch for progress bars; overdue/noncore approval rates from scenario data
  const totalVisits=Math.max(totals.visits,1);
  const rejectedVol=Math.max(0,totals.applications-totals.approvals);
- const BRANCH_CONV={CF_TARGET:modelInputs.centrofinansMatchRate*modelInputs.issuedToApprovalRate,CF_ACTIVE:modelInputs.centrofinansMatchRate,CF_REPEAT:ratio(totals.repeat,totalVisits),CF_DORMANT:modelInputs.centrofinansMatchRate*(1-modelInputs.targetRepeatShare),CF_REJECTED:ratio(rejectedVol,totals.applications||1),CF_OVERDUE:0.18,CF_NON_CORE:0.19,NOT_FOUND:1-modelInputs.centrofinansMatchRate};
+ const overdueApprovalRate=ratio((scenarios.find(s=>s.name==='Перегруженный клиент')||{}).approval||18,100);
+ const noncoreApprovalRate=ratio((scenarios.find(s=>s.name==='Хочу машину')||{}).approval||19,100);
+ const BRANCH_CONV={CF_TARGET:modelInputs.centrofinansMatchRate*modelInputs.issuedToApprovalRate,CF_ACTIVE:modelInputs.centrofinansMatchRate,CF_REPEAT:ratio(totals.repeat,totalVisits),CF_DORMANT:modelInputs.centrofinansMatchRate*(1-modelInputs.targetRepeatShare),CF_REJECTED:ratio(rejectedVol,totals.applications||1),CF_OVERDUE:overdueApprovalRate,CF_NON_CORE:noncoreApprovalRate,NOT_FOUND:1-modelInputs.centrofinansMatchRate};
  const cards=[
   {code:'CF_TARGET',value:money(unit.revenuePerIssue),label:'Выручка / выдачу ЦФ',econ1k:money(unit.issuePer1000*unit.revenuePerIssue),note:'Новый целевой лид уходит в якорный оффер ЦФ, поэтому считаем прямую выручку на одну выдачу без внешнего CPA.',rows:[['База потока',fmt(unit.matchedVisits)+' матчированных визитов'],['Выручка/CPA',money(unit.revenuePerIssue)],['Маржа после CAC',signedMoney(unit.revenuePerIssue-unit.cacPerIssue)]],formula:'(выручка ÷ выданные сделки) × routed issues'},
   {code:'CF_ACTIVE',value:money(protectedValue),label:'Защищаемый LTV / клиента',econ1k:money(unit.issuePer1000*protectedValue),note:'Ветка не продаёт новый займ: её задача — не потерять ценность базы и монетизировать безопасные офферы поверх защищённого клиента.',rows:[['База потока',fmt(unit.matchedVisits)+' матчированных визитов'],['Цель repeat-share',pct(modelInputs.targetRepeatShare*100)],['Маржа',signedMoney(protectedValue)]],formula:'LTV × targetRepeatShare'},
@@ -784,10 +786,12 @@ function renderPnlWaterfall(unit,routeVolumes,rejectedVol){
  const host=document.getElementById('pnlWaterfallChart');
  if(!host)return;
  const monthCount=Math.max(months.length,1);
- // Revenue from each branch (annualized from per-month volumes * issue rate * value)
+ // Revenue from each branch over the full plan horizon
+ // rejectedVol is already a total across all months; routeVolumes are per-month, so scale them
+ const DORMANT_REACTIVATION_RATE=0.3; // ~30% of dormant base reactivated over plan horizon
  const targetRev=unit.matchedVisits*unit.issueRateFromVisit*unit.revenuePerIssue;
  const repeatRev=totals.repeat*unit.issueRateFromVisit*unit.ltvPerIssue;
- const dormantRev=Math.max(0,unit.matchedVisits-totals.repeat)*unit.issueRateFromVisit*unit.ltvPerIssue*0.3;
+ const dormantRev=Math.max(0,unit.matchedVisits-totals.repeat)*unit.issueRateFromVisit*unit.ltvPerIssue*DORMANT_REACTIVATION_RATE;
  const externalRev=(rejectedVol*DYNAMIC_PAYOUTS.CF_REJECTED+routeVolumes.overdue*monthCount*DYNAMIC_PAYOUTS.CF_OVERDUE+routeVolumes.noncore*monthCount*DYNAMIC_PAYOUTS.CF_NON_CORE)*unit.issueRateFromVisit;
  const opex=totals.expenses;
  const pnl=targetRev+repeatRev+dormantRev+externalRev-opex;
@@ -816,6 +820,7 @@ function renderLtvCacSimulator(unit,routeVolumes,rejectedVol){
  const baseCac=unit.cacPerIssue;
  const baseLtvCac=ratio(baseLtv,baseCac);
  // With router: additional revenue from external monetization effectively reduces CAC
+ // rejectedVol is total across all months; routeVolumes are per-month, so scale them
  const externalRevenuePerIssue=(rejectedVol*DYNAMIC_PAYOUTS.CF_REJECTED+routeVolumes.overdue*monthCount*DYNAMIC_PAYOUTS.CF_OVERDUE+routeVolumes.noncore*monthCount*DYNAMIC_PAYOUTS.CF_NON_CORE)*unit.issueRateFromVisit;
  const totalIssued=unit.issued||1;
  const externalPerIssue=externalRevenuePerIssue/totalIssued;
