@@ -625,7 +625,54 @@ canvas{display:block;width:100%;max-width:100%;height:auto;cursor:crosshair}
 .ltv-cac-arrow{font-size:32px;font-weight:700;color:var(--muted)}
 .ltv-cac-formula{margin-top:10px;padding:10px 14px;border-radius:var(--radius-xs);background:var(--surface-3);border:1px solid var(--line);font-size:12px;color:var(--muted);line-height:1.5}
 .ltv-cac-formula b{color:var(--text)}
-@media(max-width:560px){.cjm-unit-grid{grid-template-columns:1fr}.waterfall-bars{flex-wrap:wrap}.ltv-cac-row{flex-direction:column}.ltv-cac-arrow{transform:rotate(90deg)}}
+/* LTV/CAC Simulator V3 — sliders + animated result */
+.ltv-sim-layout{display:grid;grid-template-columns:1fr 1fr;gap:24px;padding:10px 0;align-items:center}
+.ltv-sim-sliders{display:flex;flex-direction:column;gap:18px}
+.ltv-sim-slider-group{display:flex;flex-direction:column;gap:6px}
+.ltv-sim-slider-group label{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);display:flex;justify-content:space-between}
+.ltv-sim-slider-group label span{color:var(--text);font-variant-numeric:tabular-nums}
+.ltv-sim-slider-group input[type="range"]{width:100%;height:6px;-webkit-appearance:none;appearance:none;background:var(--surface-3);border-radius:980px;outline:none;cursor:pointer}
+.ltv-sim-slider-group input[type="range"]::-webkit-slider-thumb{-webkit-appearance:none;width:18px;height:18px;border-radius:50%;background:var(--blue);border:2px solid var(--surface);box-shadow:0 2px 6px rgba(0,0,0,.18);cursor:grab}
+.ltv-sim-slider-group input[type="range"]::-moz-range-thumb{width:18px;height:18px;border-radius:50%;background:var(--blue);border:2px solid var(--surface);box-shadow:0 2px 6px rgba(0,0,0,.18);cursor:grab}
+.ltv-sim-result{text-align:center;padding:24px;border-radius:var(--radius-sm);border:2px solid var(--line);background:var(--surface-2);transition:border-color .3s var(--ease),background .3s var(--ease)}
+.ltv-sim-result.ltv-green{border-color:var(--green);background:color-mix(in srgb,var(--green) 6%,var(--surface))}
+.ltv-sim-result.ltv-orange{border-color:var(--orange);background:color-mix(in srgb,var(--orange) 6%,var(--surface))}
+.ltv-sim-result.ltv-red{border-color:var(--red);background:color-mix(in srgb,var(--red) 6%,var(--surface))}
+.ltv-sim-result-label{font-size:12px;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);font-weight:700}
+.ltv-sim-result-value{font-size:56px;font-weight:700;letter-spacing:-.04em;line-height:1.1;margin:8px 0;transition:color .3s var(--ease)}
+.ltv-sim-result.ltv-green .ltv-sim-result-value{color:var(--green)}
+.ltv-sim-result.ltv-orange .ltv-sim-result-value{color:var(--orange)}
+.ltv-sim-result.ltv-red .ltv-sim-result-value{color:var(--red)}
+.ltv-sim-result-sub{font-size:13px;color:var(--muted)}
+/* Waterfall V3 — Core vs External with subtotal */
+.wf-col.wf-subtotal .wf-bar{background:var(--muted)!important;opacity:.7}
+.wf-col.wf-core .wf-bar{background:var(--blue)!important}
+.wf-col.wf-external .wf-bar{background:var(--violet)!important}
+.wf-col.wf-cost .wf-bar{background:var(--red)!important}
+.wf-col.wf-total .wf-bar{background:var(--green)!important}
+.wf-tooltip{font-size:11px;color:var(--faint);margin-top:2px;white-space:nowrap}
+/* Unit table heatmap */
+.ltv-cac-bar{display:inline-flex;align-items:center;gap:8px;width:100%}
+.ltv-cac-bar-track{flex:1;height:8px;border-radius:980px;background:var(--surface-3);overflow:hidden;min-width:40px}
+.ltv-cac-bar-fill{height:100%;border-radius:980px;transition:width .4s var(--ease)}
+.ltv-cac-bar-fill.bar-red{background:var(--red)}
+.ltv-cac-bar-fill.bar-yellow{background:var(--orange)}
+.ltv-cac-bar-fill.bar-green{background:var(--green)}
+.channel-badge{font-size:11px;font-weight:700;border-radius:980px;padding:3px 10px;white-space:nowrap}
+.channel-badge.badge-scale{background:color-mix(in srgb,var(--green) 14%,transparent);color:var(--green)}
+.channel-badge.badge-optimize{background:color-mix(in srgb,var(--orange) 16%,transparent);color:var(--orange)}
+.channel-badge.badge-freeze{background:color-mix(in srgb,var(--red) 13%,transparent);color:var(--red)}
+/* CJM insight cards */
+.cjm-insight{margin-top:auto;padding:9px 12px;border-radius:var(--radius-xs);background:color-mix(in srgb,var(--blue) 6%,var(--surface));border:1px solid color-mix(in srgb,var(--blue) 18%,var(--line));font-size:12px;color:var(--muted);line-height:1.45}
+.cjm-insight b{color:var(--text)}
+/* Formulas accordion */
+.formula-accordion-toggle{display:flex;align-items:center;gap:8px;cursor:pointer;border:none;background:none;padding:0;font:inherit;color:var(--muted);font-size:13px;font-weight:600;transition:color .18s var(--ease)}
+.formula-accordion-toggle:hover{color:var(--blue)}
+.formula-accordion-toggle .fa-icon{display:inline-block;width:18px;height:18px;border-radius:50%;background:var(--surface-3);border:1px solid var(--line);text-align:center;line-height:18px;font-size:11px;font-weight:800;transition:transform .2s var(--ease)}
+.formula-accordion-toggle[aria-expanded="true"] .fa-icon{transform:rotate(45deg)}
+.formula-accordion-body{overflow:hidden;max-height:0;transition:max-height .3s var(--ease);opacity:0}
+.formula-accordion-body.open{max-height:600px;opacity:1;transition:max-height .3s var(--ease),opacity .2s var(--ease) .05s}
+@media(max-width:560px){.cjm-unit-grid{grid-template-columns:1fr}.waterfall-bars{flex-wrap:wrap}.ltv-cac-row{flex-direction:column}.ltv-cac-arrow{transform:rotate(90deg)}.ltv-sim-layout{grid-template-columns:1fr}}
 
 /* CJM segment user stories */
 .story-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:var(--gap)}
@@ -889,7 +936,7 @@ canvas{display:block;width:100%;max-width:100%;height:auto;cursor:crosshair}
       <div class="grid kpis" id="unitKpis"></div>
       <div class="grid two">
         <div class="card chart-card"><div class="card-title"><div><h2>Маркетинговый PnL</h2><p>Маржинальная прибыль, валовая прибыль и окупаемость</p></div></div><div class="chart-box"><canvas id="chartUnit"></canvas></div></div>
-        <div class="card"><div class="card-title"><div><h2>Формулы</h2><p>Единый слой расчётов для прямого API и CPA</p></div></div><div id="formulaList" class="mini-list"></div></div>
+        <div class="card"><div class="card-title"><div><h2>Формулы</h2><p>Единый слой расчётов для прямого API и CPA</p></div><button class="formula-accordion-toggle" id="formulaToggle" aria-expanded="false" type="button"><span class="fa-icon">+</span> Показать</button></div><div id="formulaAccordion" class="formula-accordion-body"><div id="formulaList" class="mini-list"></div></div></div>
       </div>
       <h2 class="divider-title">Юнит-экономика по каналам</h2>
       <div class="table-wrap"><table id="unitTable"></table></div>
