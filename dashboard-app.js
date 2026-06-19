@@ -948,7 +948,7 @@ function unitLtvCacCell(v){
  const display=v>=90?'∞':v.toFixed(1)+'x';
  const pct=Math.min(100,Math.round((v/6)*100));
  const cls=v<1.5?'bar-red':v<2.5?'bar-yellow':'bar-green';
- return `<span class="ltv-cac-bar"><span class="ltv-cac-bar-track"><span class="ltv-cac-bar-fill ${cls}" style="width:${pct}%"></span></span>${display}</span>`;
+ return `<span class="ltv-cac-bar"><span class="ltv-cac-bar-track"><span class="ltv-cac-bar-fill ${cls}" style="width:${pct}%"></span></span>${escapeHtml(display)}</span>`;
 }
 function channelStatusBadge(ltvCac,pnl){
  if(pnl<0)return '<span class="channel-badge badge-freeze">🔴 Заморозить</span>';
