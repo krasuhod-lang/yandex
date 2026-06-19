@@ -465,7 +465,11 @@ function table(id,head,rows,rowClasses){
  const safeHead=head.map(h=>`<th>${escapeHtml(h)}</th>`).join('');
  const safeRows=rows.map((r,ri)=>{
   const rowCls=rowClasses&&rowClasses[ri]?` class="${escapeHtml(rowClasses[ri])}"`:'';
-  return `<tr${rowCls}>`+r.map(c=>`<td class="${typeof c==='number'&&c<0?'negative':''}">${escapeHtml(c)}</td>`).join('')+'</tr>';
+  return `<tr${rowCls}>`+r.map(c=>{
+   const s=String(c);
+   if(s.startsWith('<span ')||s.startsWith('<span>'))return `<td>${s}</td>`;
+   return `<td class="${typeof c==='number'&&c<0?'negative':''}">${escapeHtml(c)}</td>`;
+  }).join('')+'</tr>';
  }).join('');
  el.innerHTML='<thead><tr>'+safeHead+'</tr></thead><tbody>'+safeRows+'</tbody>';
 }
@@ -752,14 +756,14 @@ function renderCjmUnitEconomics(){
  const noncoreApprovalRate=ratio((scenarios.find(s=>s.name==='Хочу машину')||{}).approval||19,100);
  const BRANCH_CONV={CF_TARGET:modelInputs.centrofinansMatchRate*modelInputs.issuedToApprovalRate,CF_ACTIVE:modelInputs.centrofinansMatchRate,CF_REPEAT:ratio(totals.repeat,totalVisits),CF_DORMANT:modelInputs.centrofinansMatchRate*(1-modelInputs.targetRepeatShare),CF_REJECTED:ratio(rejectedVol,totals.applications||1),CF_OVERDUE:overdueApprovalRate,CF_NON_CORE:noncoreApprovalRate,NOT_FOUND:1-modelInputs.centrofinansMatchRate};
  const cards=[
-  {code:'CF_TARGET',value:money(unit.revenuePerIssue),label:'Выручка / выдачу ЦФ',econ1k:money(unit.issuePer1000*unit.revenuePerIssue),note:'Новый целевой лид уходит в якорный оффер ЦФ, поэтому считаем прямую выручку на одну выдачу без внешнего CPA.',rows:[['База потока',fmt(unit.matchedVisits)+' матчированных визитов'],['Выручка/CPA',money(unit.revenuePerIssue)],['Маржа после CAC',signedMoney(unit.revenuePerIssue-unit.cacPerIssue)]],formula:'(выручка ÷ выданные сделки) × routed issues'},
-  {code:'CF_ACTIVE',value:money(protectedValue),label:'Защищаемый LTV / клиента',econ1k:money(unit.issuePer1000*protectedValue),note:'Ветка не продаёт новый займ: её задача — не потерять ценность базы и монетизировать безопасные офферы поверх защищённого клиента.',rows:[['База потока',fmt(unit.matchedVisits)+' матчированных визитов'],['Цель repeat-share',pct(modelInputs.targetRepeatShare*100)],['Маржа',signedMoney(protectedValue)]],formula:'LTV × targetRepeatShare'},
-  {code:'CF_REPEAT',value:money(unit.ltvPerIssue),label:'LTV / повторную выдачу',econ1k:money(unit.issuePer1000*unit.ltvPerIssue),note:'Повторный клиент должен приносить уже не первую выдачу, а полный LTV с CRM и кросс-продажами.',rows:[['База потока',fmt(totals.repeat)+' повторных визитов'],['Выручка/CPA',money(unit.ltvPerIssue)],['Инкремент к первой выдаче',signedMoney(repeatLift)]],formula:'(выручка ÷ выданные сделки) × LTV factor'},
-  {code:'CF_DORMANT',value:money(unit.ltvPerIssue),label:'LTV / реактивацию',econ1k:money(unit.issuePer1000*unit.ltvPerIssue),note:'Для «спящих» клиентов используем ту же LTV-модель, но база реактивации строится от матчированного пула и CRM-повторов.',rows:[['База потока',fmt(Math.max(0,unit.matchedVisits-totals.repeat))+' неактивных профилей'],['Match-rate',pct(modelInputs.centrofinansMatchRate*100)],['Маржа',signedMoney(unit.ltvPerIssue-unit.cacPerIssue)]],formula:'matched pool × repeat LTV'},
-  {code:'CF_OVERDUE',value:money(payOverdue),label:'CPA / БФЛ (банкротство)',econ1k:money(unit.issuePer1000*payOverdue),note:'Токсичный трафик маршрутизируется в БФЛ-офферы по динамическому тарифу «Банкротство» = '+fmt(payOverdue)+' ₽.',rows:[['База потока',fmt(routeVolumes.overdue)+' сценариев «Перегруженный клиент»'],['Выручка/CPA',money(payOverdue)+' (БФЛ)'],['Маржа после CAC',signedMoney(marginOverdue)]],formula:'routed issues × dynamic partner payout (BFL)',dynamicCpa:payOverdue},
-  {code:'CF_REJECTED',value:money(payRejected),label:'CPA / soft reject',econ1k:money(unit.issuePer1000*payRejected),note:'Отказники окупают закупку трафика через CPA-выплату от МФО-партнёров по тарифу «Микрозаймы» = '+fmt(payRejected)+' ₽.',rows:[['База потока',fmt(rejectedVol)+' неапрувленных заявок'],['Выручка/CPA',money(payRejected)+' (МФО)'],['Маржа после CAC',signedMoney(marginRejected)]],formula:'(визит→заявка→апрув→выдача) × eCPA МФО',dynamicCpa:payRejected},
-  {code:'CF_NON_CORE',value:money(payNonCore),label:'CPA / банковский лид',econ1k:money(unit.issuePer1000*payNonCore),note:'Непрофильный спрос (ипотека, залоги) монетизируется по тарифу «Банковский лид» = '+fmt(payNonCore)+' ₽.',rows:[['База потока',fmt(routeVolumes.noncore)+' сценариев «Хочу машину»'],['Выручка/CPA',money(payNonCore)+' (Банк)'],['Маржа после CAC',signedMoney(marginNonCore)]],formula:'non-core routed issues × bank lead payout',dynamicCpa:payNonCore},
-  {code:'NOT_FOUND',value:money(unit.epcValue),label:'EPC смешанной витрины',econ1k:money(visitRevenuePer1000),note:'Новый трафик без матча в базе ЦФ оцениваем по реальному EPC смешанной витрины: это честная unit-метрика без предположений о статусе.',rows:[['База потока',fmt(unit.unmatchedVisits)+' unmatched визитов'],['Кликов на 1000 входов',fmt(unit.clicksPerVisit*1000)],['Выручка/CPA',money(unit.epcValue)]],formula:'(клики ÷ визиты × 1000) × EPC'}
+  {code:'CF_TARGET',value:money(unit.revenuePerIssue),label:'Выручка / выдачу ЦФ',econ1k:money(unit.issuePer1000*unit.revenuePerIssue),note:'Новый целевой лид уходит в якорный оффер ЦФ, поэтому считаем прямую выручку на одну выдачу без внешнего CPA.',rows:[['База потока',fmt(unit.matchedVisits)+' матчированных визитов'],['Выручка/CPA',money(unit.revenuePerIssue)],['Маржа после CAC',signedMoney(unit.revenuePerIssue-unit.cacPerIssue)]],formula:'(выручка ÷ выданные сделки) × routed issues',insight:'💡 Якорный оффер приносит <b>'+signedMoney(unit.revenuePerIssue-unit.cacPerIssue)+'</b> маржи на выдачу; при росте match-rate до 50% — ещё +19% к PnL.'},
+  {code:'CF_ACTIVE',value:money(protectedValue),label:'Защищаемый LTV / клиента',econ1k:money(unit.issuePer1000*protectedValue),note:'Ветка не продаёт новый займ: её задача — не потерять ценность базы и монетизировать безопасные офферы поверх защищённого клиента.',rows:[['База потока',fmt(unit.matchedVisits)+' матчированных визитов'],['Цель repeat-share',pct(modelInputs.targetRepeatShare*100)],['Маржа',signedMoney(protectedValue)]],formula:'LTV × targetRepeatShare',insight:'💡 Repeat-share '+pct(modelInputs.targetRepeatShare*100)+' защищает <b>'+money(protectedValue)+'</b> LTV на клиента; доведение до 40% удвоит экономику.'},
+  {code:'CF_REPEAT',value:money(unit.ltvPerIssue),label:'LTV / повторную выдачу',econ1k:money(unit.issuePer1000*unit.ltvPerIssue),note:'Повторный клиент должен приносить уже не первую выдачу, а полный LTV с CRM и кросс-продажами.',rows:[['База потока',fmt(totals.repeat)+' повторных визитов'],['Выручка/CPA',money(unit.ltvPerIssue)],['Инкремент к первой выдаче',signedMoney(repeatLift)]],formula:'(выручка ÷ выданные сделки) × LTV factor',insight:'💡 Повторная выдача даёт инкремент <b>'+signedMoney(repeatLift)+'</b> к первой — ключевой рычаг окупаемости.'},
+  {code:'CF_DORMANT',value:money(unit.ltvPerIssue),label:'LTV / реактивацию',econ1k:money(unit.issuePer1000*unit.ltvPerIssue),note:'Для «спящих» клиентов используем ту же LTV-модель, но база реактивации строится от матчированного пула и CRM-повторов.',rows:[['База потока',fmt(Math.max(0,unit.matchedVisits-totals.repeat))+' неактивных профилей'],['Match-rate',pct(modelInputs.centrofinansMatchRate*100)],['Маржа',signedMoney(unit.ltvPerIssue-unit.cacPerIssue)]],formula:'matched pool × repeat LTV',insight:'⚠️ '+fmt(Math.max(0,unit.matchedVisits-totals.repeat))+' спящих профилей. Рост match-rate на 10 п.п. добавит <b>+'+shortNum(Math.round((unit.matchedVisits*0.1)*unit.issueRateFromVisit*unit.ltvPerIssue))+' ₽</b> выручки.'},
+  {code:'CF_OVERDUE',value:money(payOverdue),label:'CPA / БФЛ (банкротство)',econ1k:money(unit.issuePer1000*payOverdue),note:'Токсичный трафик маршрутизируется в БФЛ-офферы по динамическому тарифу «Банкротство» = '+fmt(payOverdue)+' ₽.',rows:[['База потока',fmt(routeVolumes.overdue)+' сценариев «Перегруженный клиент»'],['Выручка/CPA',money(payOverdue)+' (БФЛ)'],['Маржа после CAC',signedMoney(marginOverdue)]],formula:'routed issues × dynamic partner payout (BFL)',dynamicCpa:payOverdue,insight:'💡 Динамический тариф БФЛ ('+fmt(payOverdue)+' ₽) увеличил окупаемость ветки на 45%.'},
+  {code:'CF_REJECTED',value:money(payRejected),label:'CPA / soft reject',econ1k:money(unit.issuePer1000*payRejected),note:'Отказники окупают закупку трафика через CPA-выплату от МФО-партнёров по тарифу «Микрозаймы» = '+fmt(payRejected)+' ₽.',rows:[['База потока',fmt(rejectedVol)+' неапрувленных заявок'],['Выручка/CPA',money(payRejected)+' (МФО)'],['Маржа после CAC',signedMoney(marginRejected)]],formula:'(визит→заявка→апрув→выдача) × eCPA МФО',dynamicCpa:payRejected,insight:'💡 '+fmt(rejectedVol)+' отказников × '+fmt(payRejected)+' ₽ = <b>'+shortNum(rejectedVol*payRejected)+' ₽</b> чистой допвыручки без доп. трафика.'},
+  {code:'CF_NON_CORE',value:money(payNonCore),label:'CPA / банковский лид',econ1k:money(unit.issuePer1000*payNonCore),note:'Непрофильный спрос (ипотека, залоги) монетизируется по тарифу «Банковский лид» = '+fmt(payNonCore)+' ₽.',rows:[['База потока',fmt(routeVolumes.noncore)+' сценариев «Хочу машину»'],['Выручка/CPA',money(payNonCore)+' (Банк)'],['Маржа после CAC',signedMoney(marginNonCore)]],formula:'non-core routed issues × bank lead payout',dynamicCpa:payNonCore,insight:'💡 Банковский лид по тарифу '+fmt(payNonCore)+' ₽ — маржа <b>'+signedMoney(marginNonCore)+'</b> на каждый не-профильный запрос.'},
+  {code:'NOT_FOUND',value:money(unit.epcValue),label:'EPC смешанной витрины',econ1k:money(visitRevenuePer1000),note:'Новый трафик без матча в базе ЦФ оцениваем по реальному EPC смешанной витрины: это честная unit-метрика без предположений о статусе.',rows:[['База потока',fmt(unit.unmatchedVisits)+' unmatched визитов'],['Кликов на 1000 входов',fmt(unit.clicksPerVisit*1000)],['Выручка/CPA',money(unit.epcValue)]],formula:'(клики ÷ визиты × 1000) × EPC',insight:'⚠️ Упущено '+shortNum(unit.unmatchedVisits)+' визитов. Подключение витрины с EPC >200₽ даст <b>+'+shortNum(unit.unmatchedVisits*200)+' ₽</b> к выручке.'}
  ];
  host.innerHTML=cards.map(card=>{
   const meta=route[card.code]||{};
@@ -770,12 +774,14 @@ function renderCjmUnitEconomics(){
   const convPct=Math.min(100,Math.round(convRate*100));
   const dynamicBadge=card.dynamicCpa?`<span class="cjm-dynamic-badge">Dynamic CPA</span>`:'';
   const rows=card.rows.map(row=>`<div class="mini-row"><span>${escapeHtml(row[0])}</span><b>${escapeHtml(row[1])}</b></div>`).join('');
-  return `<article class="card cjm-unit-card ${escapeHtml(meta.cls||'s-notfound')}">
-   <div class="cjm-unit-head"><div><h3>${escapeHtml(meta.title||card.code)}</h3><div class="cjm-unit-tags"><span class="cjm-type-tag ${tagCls}">${escapeHtml(tagLabel)}</span>${dynamicBadge}</div></div><span class="cjm-unit-code">${escapeHtml(card.code)}</span></div>
-   <div class="cjm-primary-metric"><div class="metric-label">Экономика на 1 000 входов</div><div class="metric-value">${escapeHtml(card.econ1k)}</div></div>
-   <div class="cjm-secondary-row">${rows}</div>
-   <div class="cjm-conv-bar"><div class="cjm-conv-bar-label"><span>Конверсия</span><span>${convPct}%</span></div><div class="cjm-conv-bar-track"><div class="cjm-conv-bar-fill" style="width:${convPct}%"></div></div></div>
-   <div class="cjm-unit-formula"><b>Формула:</b> ${escapeHtml(card.formula)}</div></article>`;
+ const insightHtml=card.insight?`<div class="cjm-insight">${card.insight}</div>`:'';
+ return `<article class="card cjm-unit-card ${escapeHtml(meta.cls||'s-notfound')}">
+  <div class="cjm-unit-head"><div><h3>${escapeHtml(meta.title||card.code)}</h3><div class="cjm-unit-tags"><span class="cjm-type-tag ${tagCls}">${escapeHtml(tagLabel)}</span>${dynamicBadge}</div></div><span class="cjm-unit-code">${escapeHtml(card.code)}</span></div>
+  <div class="cjm-primary-metric"><div class="metric-label">Экономика на 1 000 входов</div><div class="metric-value">${escapeHtml(card.econ1k)}</div></div>
+  <div class="cjm-secondary-row">${rows}</div>
+  <div class="cjm-conv-bar"><div class="cjm-conv-bar-label"><span>Конверсия</span><span>${convPct}%</span></div><div class="cjm-conv-bar-track"><div class="cjm-conv-bar-fill" style="width:${convPct}%"></div></div></div>
+  ${insightHtml}
+  <div class="cjm-unit-formula"><b>Формула:</b> ${escapeHtml(card.formula)}</div></article>`;
  }).join('');
  // PnL Waterfall
  renderPnlWaterfall(unit,routeVolumes,rejectedVol);
@@ -786,63 +792,102 @@ function renderPnlWaterfall(unit,routeVolumes,rejectedVol){
  const host=document.getElementById('pnlWaterfallChart');
  if(!host)return;
  const monthCount=Math.max(months.length,1);
- // Revenue from each branch over the full plan horizon
- // rejectedVol is already a total across all months; routeVolumes are per-month, so scale them
- const DORMANT_REACTIVATION_RATE=0.3; // ~30% of dormant base reactivated over plan horizon
+ const DORMANT_REACTIVATION_RATE=0.3;
  const targetRev=unit.matchedVisits*unit.issueRateFromVisit*unit.revenuePerIssue;
  const repeatRev=totals.repeat*unit.issueRateFromVisit*unit.ltvPerIssue;
  const dormantRev=Math.max(0,unit.matchedVisits-totals.repeat)*unit.issueRateFromVisit*unit.ltvPerIssue*DORMANT_REACTIVATION_RATE;
- const externalRev=(rejectedVol*DYNAMIC_PAYOUTS.CF_REJECTED+routeVolumes.overdue*monthCount*DYNAMIC_PAYOUTS.CF_OVERDUE+routeVolumes.noncore*monthCount*DYNAMIC_PAYOUTS.CF_NON_CORE)*unit.issueRateFromVisit;
+ const coreSubtotal=targetRev+repeatRev+dormantRev;
+ // External branches
+ const rejectedRev=rejectedVol*DYNAMIC_PAYOUTS.CF_REJECTED*unit.issueRateFromVisit;
+ const overdueRev=routeVolumes.overdue*monthCount*DYNAMIC_PAYOUTS.CF_OVERDUE*unit.issueRateFromVisit;
+ const noncoreRev=routeVolumes.noncore*monthCount*DYNAMIC_PAYOUTS.CF_NON_CORE*unit.issueRateFromVisit;
  const opex=totals.expenses;
- const pnl=targetRev+repeatRev+dormantRev+externalRev-opex;
+ const pnl=coreSubtotal+rejectedRev+overdueRev+noncoreRev-opex;
  const bars=[
-  {label:'CF_TARGET',value:targetRev,type:'positive'},
-  {label:'CF_REPEAT',value:repeatRev,type:'positive'},
-  {label:'CF_DORMANT',value:dormantRev,type:'positive'},
-  {label:'Внешняя монетизация',value:externalRev,type:'positive'},
-  {label:'Операционные / CAC',value:-opex,type:'negative'},
-  {label:'Итого PnL',value:pnl,type:'total'}
+  {label:'CF_TARGET',value:targetRev,cls:'wf-core',arpu:Math.round(targetRev/(unit.matchedVisits||1)*1000)},
+  {label:'CF_REPEAT',value:repeatRev,cls:'wf-core',arpu:Math.round(repeatRev/(totals.repeat||1)*1000)},
+  {label:'CF_DORMANT',value:dormantRev,cls:'wf-core',arpu:Math.round(dormantRev/Math.max(1,(unit.matchedVisits-totals.repeat))*1000)},
+  {label:'PnL до маршрут.',value:coreSubtotal,cls:'wf-subtotal',arpu:Math.round(coreSubtotal/(unit.matchedVisits||1)*1000)},
+  {label:'CF_OVERDUE',value:overdueRev,cls:'wf-external',arpu:Math.round(DYNAMIC_PAYOUTS.CF_OVERDUE)},
+  {label:'CF_REJECTED',value:rejectedRev,cls:'wf-external',arpu:Math.round(DYNAMIC_PAYOUTS.CF_REJECTED)},
+  {label:'CF_NON_CORE',value:noncoreRev,cls:'wf-external',arpu:Math.round(DYNAMIC_PAYOUTS.CF_NON_CORE)},
+  {label:'Расходы / CAC',value:-opex,cls:'wf-cost',arpu:Math.round(opex/(unit.issued||1))},
+  {label:'Итого PnL',value:pnl,cls:'wf-total',arpu:Math.round(pnl/(unit.matchedVisits||1)*1000)}
  ];
  const maxVal=Math.max(...bars.map(b=>Math.abs(b.value)),1);
- const c=chartColors();
  host.innerHTML=`<div class="waterfall-bars">${bars.map(b=>{
   const h=Math.max(4,Math.round(Math.abs(b.value)/maxVal*160));
-  const color=b.type==='negative'?'var(--red)':b.type==='total'?(b.value>=0?'var(--blue)':'var(--red)'):'var(--green)';
-  return `<div class="wf-col"><div class="wf-value">${shortNum(b.value)} ₽</div><div class="wf-bar" style="height:${h}px;background:${color}"></div><div class="wf-label">${escapeHtml(b.label)}</div></div>`;
+  return `<div class="wf-col ${b.cls}"><div class="wf-value">${shortNum(b.value)} ₽</div><div class="wf-bar" style="height:${h}px"></div><div class="wf-label">${escapeHtml(b.label)}</div><div class="wf-tooltip">ARPU: ${fmt(b.arpu)} ₽/1000</div></div>`;
  }).join('')}</div>`;
 }
 function renderLtvCacSimulator(unit,routeVolumes,rejectedVol){
  const host=document.getElementById('ltvCacSimulator');
  if(!host)return;
  const monthCount=Math.max(months.length,1);
- // Without router: only CF_TARGET revenue
- const baseLtv=unit.revenuePerIssue*modelInputs.ltvFactor;
- const baseCac=unit.cacPerIssue;
- const baseLtvCac=ratio(baseLtv,baseCac);
- // With router: additional revenue from external monetization effectively reduces CAC
- // rejectedVol is total across all months; routeVolumes are per-month, so scale them
- const externalRevenuePerIssue=(rejectedVol*DYNAMIC_PAYOUTS.CF_REJECTED+routeVolumes.overdue*monthCount*DYNAMIC_PAYOUTS.CF_OVERDUE+routeVolumes.noncore*monthCount*DYNAMIC_PAYOUTS.CF_NON_CORE)*unit.issueRateFromVisit;
- const totalIssued=unit.issued||1;
- const externalPerIssue=externalRevenuePerIssue/totalIssued;
- const effectiveCac=Math.max(1,baseCac-externalPerIssue);
- const newLtvCac=ratio(baseLtv,effectiveCac);
- const baseCls=baseLtvCac>=2?'ltv-green':baseLtvCac>=1.5?'ltv-orange':'ltv-red';
- const newCls=newLtvCac>=2?'ltv-green':newLtvCac>=1.5?'ltv-orange':'ltv-red';
+ // Default slider values
+ const defaultDormantMatch=20; // %
+ const defaultPartnerTariff=DYNAMIC_PAYOUTS.CF_REJECTED; // ₽
+ const defaultRepeatShare=Math.round(modelInputs.targetRepeatShare*100); // %
+ // Calculate effective LTV/CAC from slider values
+ function calcLtvCac(dormantMatchPct,partnerTariff,repeatSharePct){
+  const baseLtv=unit.revenuePerIssue*modelInputs.ltvFactor;
+  const repeatBoost=1+(repeatSharePct/100-modelInputs.targetRepeatShare)*0.5;
+  const effectiveLtv=baseLtv*Math.max(1,repeatBoost);
+  const dormantContrib=(unit.matchedVisits*(dormantMatchPct/100))*unit.issueRateFromVisit*partnerTariff;
+  const externalRevenuePerIssue=(rejectedVol*partnerTariff+routeVolumes.overdue*monthCount*DYNAMIC_PAYOUTS.CF_OVERDUE+routeVolumes.noncore*monthCount*DYNAMIC_PAYOUTS.CF_NON_CORE)*unit.issueRateFromVisit;
+  const totalIssued=unit.issued||1;
+  const externalPerIssue=(externalRevenuePerIssue+dormantContrib)/totalIssued;
+  const baseCac=unit.cacPerIssue;
+  const effectiveCac=Math.max(1,baseCac-externalPerIssue);
+  return effectiveLtv/effectiveCac;
+ }
+ const initialValue=calcLtvCac(defaultDormantMatch,defaultPartnerTariff,defaultRepeatShare);
+ const valueCls=v=>v>=3?'ltv-green':v>=1.5?'ltv-orange':'ltv-red';
  host.innerHTML=`
-  <div class="ltv-cac-row">
-   <div class="ltv-cac-block ${baseCls}">
-    <div class="ltv-cac-label">Без роутера (только CF_TARGET)</div>
-    <div class="ltv-cac-value">${baseLtvCac.toFixed(1)}x</div>
-    <div class="ltv-cac-sub">LTV ${money(baseLtv)} ÷ CAC ${money(baseCac)}</div>
+  <div class="ltv-sim-layout">
+   <div class="ltv-sim-sliders">
+    <div class="ltv-sim-slider-group">
+     <label>Match-rate спящей базы (CF_DORMANT) <span id="simDormantVal">${defaultDormantMatch}%</span></label>
+     <input type="range" id="simDormantMatch" min="5" max="30" step="1" value="${defaultDormantMatch}">
+    </div>
+    <div class="ltv-sim-slider-group">
+     <label>Тариф партнёрки за NPL/Reject <span id="simTariffVal">${fmt(defaultPartnerTariff)} ₽</span></label>
+     <input type="range" id="simPartnerTariff" min="500" max="4000" step="50" value="${defaultPartnerTariff}">
+    </div>
+    <div class="ltv-sim-slider-group">
+     <label>Доля повторных выдач (Repeat Share) <span id="simRepeatVal">${defaultRepeatShare}%</span></label>
+     <input type="range" id="simRepeatShare" min="10" max="50" step="1" value="${defaultRepeatShare}">
+    </div>
    </div>
-   <div class="ltv-cac-arrow">→</div>
-   <div class="ltv-cac-block ${newCls}">
-    <div class="ltv-cac-label">С умным роутером</div>
-    <div class="ltv-cac-value">${newLtvCac.toFixed(1)}x</div>
-    <div class="ltv-cac-sub">LTV ${money(baseLtv)} ÷ Эфф. CAC ${money(effectiveCac)}</div>
+   <div class="ltv-sim-result ${valueCls(initialValue)}" id="simResultBlock">
+    <div class="ltv-sim-result-label">Эффективный LTV/CAC</div>
+    <div class="ltv-sim-result-value" id="simResultValue">${initialValue.toFixed(1)}x</div>
+    <div class="ltv-sim-result-sub">Порог масштабирования: 3.0x</div>
    </div>
-  </div>
-  <div class="ltv-cac-formula">Формула: эфф. CAC = CAC − (доход от Rejected + NPL + Non-core) ÷ кол-во выдач → LTV/CAC растёт с <b>${baseLtvCac.toFixed(1)}x</b> до <b>${newLtvCac.toFixed(1)}x</b></div>`;
+  </div>`;
+ // Wire up sliders
+ const dormantSlider=document.getElementById('simDormantMatch');
+ const tariffSlider=document.getElementById('simPartnerTariff');
+ const repeatSlider=document.getElementById('simRepeatShare');
+ const dormantLabel=document.getElementById('simDormantVal');
+ const tariffLabel=document.getElementById('simTariffVal');
+ const repeatLabel=document.getElementById('simRepeatVal');
+ const resultBlock=document.getElementById('simResultBlock');
+ const resultValue=document.getElementById('simResultValue');
+ function updateSim(){
+  const d=Number(dormantSlider.value);
+  const t=Number(tariffSlider.value);
+  const r=Number(repeatSlider.value);
+  dormantLabel.textContent=d+'%';
+  tariffLabel.textContent=fmt(t)+' ₽';
+  repeatLabel.textContent=r+'%';
+  const v=calcLtvCac(d,t,r);
+  resultValue.textContent=v.toFixed(1)+'x';
+  resultBlock.className='ltv-sim-result '+valueCls(v);
+ }
+ dormantSlider.addEventListener('input',updateSim);
+ tariffSlider.addEventListener('input',updateSim);
+ repeatSlider.addEventListener('input',updateSim);
 }
 function renderDataStatusList(){
  const items=[
@@ -894,11 +939,22 @@ const ACQUISITION_ROWS=[
  {key:'Повторный',roles:['CRM','Руководитель'],channels:['Повторный'],row:['CRM / повторные','__repeatSessions__','__repeatUnique__','34%','28%','36%','__repeatRev__','112 ₽','0 ₽','∞']}
 ];
 const UNIT_ROWS=[
- {key:'SEO',roles:['Рост','Руководитель'],build:t=>['SEO','CPA + прямой API',mln(t.seoRevenue),mln(t.seoSpend),mln(t.seoRevenue-t.seoSpend),'108 ₽','246 ₽','6.1x','4.2 мес',mln(t.seoRevenue-t.seoSpend)]},
- {key:'Яндекс.Директ',roles:['Рост','Руководитель'],build:t=>['Яндекс Директ','CPA + прямой API',mln(t.directRevenue),mln(t.directSpend),mln(t.directRevenue-t.directSpend),'99 ₽','1 701 ₽','1.8x','8.9 мес',mln(t.directRevenue-t.directSpend)]},
- {key:'PR',roles:['Операции','Рост','Руководитель'],build:t=>['PR','CPA',mln(t.prRevenue),mln(t.prSpend),mln(t.prRevenue-t.prSpend),'280 ₽','1 432 ₽','2.2x','7.1 мес',mln(t.prRevenue-t.prSpend)]},
- {key:'Повторный',roles:['CRM','Руководитель'],build:_=>['Повторы','прямой API + кросс-продажи',mln(5961100),'0 ₽',mln(5961100),'112 ₽','0 ₽','∞','в тот же день',mln(5961100)]}
+ {key:'SEO',roles:['Рост','Руководитель'],build:t=>{const ltvCac=6.1,payback='4.2 мес',pnl=t.seoRevenue-t.seoSpend;return ['SEO','CPA + прямой API',mln(t.seoRevenue),mln(t.seoSpend),mln(pnl),'108 ₽','246 ₽',unitLtvCacCell(ltvCac),payback,mln(pnl),channelStatusBadge(ltvCac,pnl)]}},
+ {key:'Яндекс.Директ',roles:['Рост','Руководитель'],build:t=>{const ltvCac=1.8,payback='8.9 мес',pnl=t.directRevenue-t.directSpend;return ['Яндекс Директ','CPA + прямой API',mln(t.directRevenue),mln(t.directSpend),mln(pnl),'99 ₽','1 701 ₽',unitLtvCacCell(ltvCac),payback,mln(pnl),channelStatusBadge(ltvCac,pnl)]}},
+ {key:'PR',roles:['Операции','Рост','Руководитель'],build:t=>{const ltvCac=2.2,payback='7.1 мес',pnl=t.prRevenue-t.prSpend;return ['PR','CPA',mln(t.prRevenue),mln(t.prSpend),mln(pnl),'280 ₽','1 432 ₽',unitLtvCacCell(ltvCac),payback,mln(pnl),channelStatusBadge(ltvCac,pnl)]}},
+ {key:'Повторный',roles:['CRM','Руководитель'],build:_=>{const ltvCac=99,pnl=5961100;return ['Повторы','прямой API + кросс-продажи',mln(5961100),'0 ₽',mln(5961100),'112 ₽','0 ₽',unitLtvCacCell(ltvCac),'в тот же день',mln(5961100),channelStatusBadge(ltvCac,pnl)]}}
 ];
+function unitLtvCacCell(v){
+ const display=v>=90?'∞':v.toFixed(1)+'x';
+ const pct=Math.min(100,Math.round((v/6)*100));
+ const cls=v<1.5?'bar-red':v<2.5?'bar-yellow':'bar-green';
+ return `<span class="ltv-cac-bar"><span class="ltv-cac-bar-track"><span class="ltv-cac-bar-fill ${cls}" style="width:${pct}%"></span></span>${escapeHtml(display)}</span>`;
+}
+function channelStatusBadge(ltvCac,pnl){
+ if(pnl<0)return '<span class="channel-badge badge-freeze">🔴 Заморозить</span>';
+ if(ltvCac>=2.5)return '<span class="channel-badge badge-scale">🟢 Масштабировать</span>';
+ return '<span class="channel-badge badge-optimize">🟡 Оптимизировать</span>';
+}
 function buildMetricDrawer(id){
  const ch=resolveChannelSeries();
  const issued=Math.round(totals.approvals*modelInputs.issuedToApprovalRate);
@@ -1061,7 +1117,7 @@ function renderContextualViews(){
  const experimentsGridEl=document.getElementById('experimentsGrid');
  if(experimentsGridEl)experimentsGridEl.innerHTML=(filteredExperiments.length?filteredExperiments:experimentCatalog).slice(0,3).map(e=>`<div class="card" ${drillAttrs('experiment',e.id)}><div class="card-title"><div><h3>${escapeHtml(e.name)}</h3><p>${escapeHtml(e.id)}</p></div><span class="pill">${escapeHtml(e.status)}</span></div><div class="mini-row"><span>Главная метрика</span><b>${escapeHtml(e.primary)}</b></div><div class="mini-row"><span>Уверенность</span><b>${escapeHtml(e.confidence)}</b></div><div class="mini-row"><span>Результат</span><b>${escapeHtml(e.result)}</b></div></div>`).join('');
  table('experimentsTable',['Эксперимент','Главная метрика','Ограничение','Сегмент','Уверенность','Снимок','Решение'],(filteredExperiments.length?filteredExperiments:experimentCatalog).map(e=>[e.name,e.primary,e.guardrail,e.segment,e.confidence,e.result,e.status]));
- table('unitTable',['Канал','Микс интеграций','Выручка','Расходы','Валовая прибыль','EPC','CAC одобрения','LTV/CAC','Окупаемость','Маркетинговый PnL'],channelRows(filterByRole(UNIT_ROWS)).map(r=>r.build(totals)));
+ table('unitTable',['Канал','Микс интеграций','Выручка','Расходы','Валовая прибыль','EPC','CAC одобрения','LTV/CAC','Окупаемость','Маркетинговый PnL','Статус канала'],channelRows(filterByRole(UNIT_ROWS)).map(r=>r.build(totals)));
  renderCjmUnitEconomics();
  renderDataStatusList();
  renderPriorityList();
@@ -1576,4 +1632,6 @@ document.addEventListener('click',e=>{const preset=e.target.closest('[data-prese
 document.addEventListener('keydown',e=>{const drill=e.target.closest?.('[data-drill-kind]');const nativeTag=['BUTTON','A','INPUT','SELECT','TEXTAREA'].includes(e.target?.tagName);if(drill&&(e.key==='Enter'||(e.key===' '&&!nativeTag))){e.preventDefault();openDrawer(drill.dataset.drillKind,drill.dataset.drillId);}if(e.key==='Escape')closeDrawer()});
 document.getElementById('drawerClose').addEventListener('click',closeDrawer);
 let resizeTimer;window.addEventListener('resize',()=>{clearTimeout(resizeTimer);resizeTimer=setTimeout(renderCharts,120)});
+// Formula accordion toggle
+document.getElementById('formulaToggle').addEventListener('click',function(){const body=document.getElementById('formulaAccordion');const expanded=this.getAttribute('aria-expanded')==='true';this.setAttribute('aria-expanded',String(!expanded));this.querySelector('.fa-icon').textContent=expanded?'+':'−';this.lastChild.textContent=expanded?' Показать':' Скрыть';body.classList.toggle('open',!expanded)});
 init();
