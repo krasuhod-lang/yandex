@@ -152,31 +152,43 @@
   function get(obj, path) {
     return path.split('.').reduce(function (o, k) { return o == null ? undefined : o[k]; }, obj);
   }
-  var UNSAFE_KEYS = { __proto__: 1, constructor: 1, prototype: 1 };
-  function isSafeKey(k) { return !Object.prototype.hasOwnProperty.call(UNSAFE_KEYS, k); }
+  function isSafeKey(k) {
+    return k !== '__proto__' && k !== 'constructor' && k !== 'prototype'
+      && k !== '__defineGetter__' && k !== '__defineSetter__'
+      && k !== '__lookupGetter__' && k !== '__lookupSetter__';
+  }
   function set(obj, path, value) {
     var keys = path.split('.'); var cur = obj;
     for (var i = 0; i < keys.length - 1; i++) {
-      if (!isSafeKey(keys[i])) return obj;
-      if (cur[keys[i]] == null) cur[keys[i]] = {};
-      cur = cur[keys[i]];
+      var k = keys[i];
+      if (!isSafeKey(k)) return obj;
+      if (!Object.prototype.hasOwnProperty.call(cur, k) || cur[k] == null) {
+        Object.defineProperty(cur, k, { value: {}, writable: true, enumerable: true, configurable: true });
+      }
+      cur = cur[k];
+      if (!cur || typeof cur !== 'object') return obj;
     }
     var last = keys[keys.length - 1];
     if (!isSafeKey(last)) return obj;
-    cur[last] = value;
+    Object.defineProperty(cur, last, { value: value, writable: true, enumerable: true, configurable: true });
     return obj;
   }
   function deepMerge(target, patch) {
-    if (!patch) return target;
-    Object.keys(patch).forEach(function (k) {
-      if (!isSafeKey(k)) return;
+    if (!patch || typeof patch !== 'object') return target;
+    var keys = Object.keys(patch);
+    for (var i = 0; i < keys.length; i++) {
+      var k = keys[i];
+      if (!isSafeKey(k)) continue;
+      if (!Object.prototype.hasOwnProperty.call(patch, k)) continue;
       var v = patch[k];
-      if (v && typeof v === 'object' && !Array.isArray(v) && target[k] && typeof target[k] === 'object') {
+      if (v && typeof v === 'object' && !Array.isArray(v)
+          && Object.prototype.hasOwnProperty.call(target, k)
+          && target[k] && typeof target[k] === 'object') {
         deepMerge(target[k], v);
       } else {
-        target[k] = v;
+        Object.defineProperty(target, k, { value: v, writable: true, enumerable: true, configurable: true });
       }
-    });
+    }
     return target;
   }
   function sum(a) { return a.reduce(function (x, y) { return x + (Number(y) || 0); }, 0); }

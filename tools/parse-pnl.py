@@ -54,7 +54,7 @@ def main():
     ws = wb["Лист1"]
     rows = list(ws.iter_rows(values_only=True))
     header = list(rows[0])
-    # header[0] = "Наименование", header[1..-2] = months, header[-1] = "Итого"
+    # header[0] = "Наименование", header[1:-1] = months, header[-1] = "Итого"
     months_raw = [str(m) for m in header[1:-1] if m]
     months = months_raw[PLAN_START_OFFSET:]
 
