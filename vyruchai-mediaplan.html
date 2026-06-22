@@ -705,7 +705,7 @@ table.sortable thead th[aria-sort="descending"]::after{content:" ▼";font-size:
     <div class="topbar-inner">
       <div class="brand">
         <div class="mark">В</div>
-        <div><div class="brand-title">Выручай.ру</div><div class="brand-sub">Операционный дашборд роста, продукта и руководителя</div></div>
+        <div><div class="brand-title">Выручай.ру</div><div class="brand-sub">Дашборд для инвестиционного комитета: PnL, CJM, юнит-экономика</div></div>
       </div>
       <div class="filters" aria-label="Фильтры верхнего уровня">
         <select aria-label="Канал"><option>Все каналы</option><option>SEO</option><option>Яндекс.Директ</option><option>PR</option><option>Повторный</option></select>
@@ -816,7 +816,7 @@ table.sortable thead th[aria-sort="descending"]::after{content:" ▼";font-size:
       </div>
       <h2 class="divider-title">Сводная таблица PNL</h2>
       <div class="card" style="padding:14px 18px;">
-        <p class="muted" style="margin:0;font-size:13px;">Совет: зажмите <b>левую кнопку мыши</b> и потяните таблицу влево / вправо — все 18 месяцев перелистаются без полосы прокрутки.</p>
+        <p class="muted" style="margin:0;font-size:13px;">Зажмите левую кнопку мыши и потяните таблицу влево/вправо для прокрутки по месяцам.</p>
       </div>
       <div class="table-wrap drag-scroll" data-drag-scroll><table id="pnlTable"></table></div>
       <h2 class="divider-title">Целевой сценарий: 40 млн ₽ выручки в декабре 2027</h2>
@@ -850,11 +850,6 @@ table.sortable thead th[aria-sort="descending"]::after{content:" ▼";font-size:
       </div>
       <h2 class="divider-title">Дашборд привлечения</h2>
       <div class="table-wrap"><table id="acquisitionTable"></table></div>
-      <h2 class="divider-title">SEO-этапы (алгоритм Маркина · «Новая таблица»)</h2>
-      <div class="card">
-        <div class="card-title"><div><h2>Чек-лист SEO-этапов</h2><p>Отметка этапа сдвигает кривую SEO-трафика и CR в апрув в economics-model.</p></div><div class="toolbar-inline"><span class="toolbar-note" id="seoStagesNote">0 / 10 этапов выполнено</span></div></div>
-        <div id="seoStagesList" class="mini-list"></div>
-      </div>
     </section>
 
     <section id="tab-funnels" class="panel">
@@ -901,7 +896,7 @@ table.sortable thead th[aria-sort="descending"]::after{content:" ▼";font-size:
 
     <section id="tab-routing" class="panel">
       <div class="card route-hero">
-        <div class="card-title"><div><span class="eyebrow">Epic · CJM + S2S-интеграция</span><h2>CJM и Smart Safe Router</h2><p>Центрофинанс ⇄ Выручай.ру. Интеллектуальный балансировщик внешнего трафика. Целевые лиды маршрутизируются в ЦФ, а непрофильные пользователи бесшовно переводятся в CPA-витрину. Результат: 100% окупаемость закупаемого трафика (Zero-Waste) без каннибализации базы.</p></div></div>
+        <div class="card-title"><div><span class="eyebrow">CJM · S2S-интеграция</span><h2>CJM и Smart Safe Router</h2><p>Центрофинанс ⇄ Выручай.ру. Балансировщик внешнего трафика: целевые лиды маршрутизируются в ЦФ, непрофильные пользователи направляются в CPA-витрину. Цель — окупаемость закупаемого трафика без каннибализации базы.</p></div></div>
         <div class="route-goals" id="routeGoals"></div>
       </div>
 
@@ -943,8 +938,8 @@ table.sortable thead th[aria-sort="descending"]::after{content:" ▼";font-size:
         </div>
       </div>
 
-      <h2 class="divider-title">Zero-Waste KPI · окупаемость внешнего трафика</h2>
-      <p class="route-lead">Три метрики, которые показывают инвест-комитету, как Smart Safe Router превращает внешнюю закупку трафика в безотходную модель: компенсирует CAC, защищает базу ЦФ и удерживает якорное распределение в пользу Центрофинанса.</p>
+      <h2 class="divider-title">Окупаемость внешнего трафика</h2>
+      <p class="route-lead">Три метрики, которые показывают инвестиционному комитету, как Smart Safe Router компенсирует CAC и защищает базу ЦФ.</p>
       <div class="grid kpis" id="routeOkrKpis"></div>
     </section>
 
@@ -976,7 +971,7 @@ table.sortable thead th[aria-sort="descending"]::after{content:" ▼";font-size:
   </main>
 
   <aside class="drawer" id="drawer" role="dialog" aria-modal="true" aria-labelledby="drawerTitle" tabindex="-1"><button class="drawer-close" id="drawerClose" aria-label="Закрыть панель детализации">Закрыть</button><div id="drawerContent"></div></aside>
-  <footer class="footer">Выручай.ру · Операционный дашборд · Структура обновлена: интерфейс остался статическим, а логика вынесена в отдельный JS-файл с единым слоем фильтров, статусов данных и drill-down.</footer>
+  <footer class="footer">Выручай.ру · Дашборд для инвестиционного комитета · Данные модели: <span id="footerDataSource">PnL baseline</span></footer>
 </div>
 
 <script src="economics-model.js"></script>
