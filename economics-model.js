@@ -152,18 +152,24 @@
   function get(obj, path) {
     return path.split('.').reduce(function (o, k) { return o == null ? undefined : o[k]; }, obj);
   }
+  var UNSAFE_KEYS = { __proto__: 1, constructor: 1, prototype: 1 };
+  function isSafeKey(k) { return !Object.prototype.hasOwnProperty.call(UNSAFE_KEYS, k); }
   function set(obj, path, value) {
     var keys = path.split('.'); var cur = obj;
     for (var i = 0; i < keys.length - 1; i++) {
+      if (!isSafeKey(keys[i])) return obj;
       if (cur[keys[i]] == null) cur[keys[i]] = {};
       cur = cur[keys[i]];
     }
-    cur[keys[keys.length - 1]] = value;
+    var last = keys[keys.length - 1];
+    if (!isSafeKey(last)) return obj;
+    cur[last] = value;
     return obj;
   }
   function deepMerge(target, patch) {
     if (!patch) return target;
     Object.keys(patch).forEach(function (k) {
+      if (!isSafeKey(k)) return;
       var v = patch[k];
       if (v && typeof v === 'object' && !Array.isArray(v) && target[k] && typeof target[k] === 'object') {
         deepMerge(target[k], v);
