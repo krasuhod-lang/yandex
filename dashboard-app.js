@@ -319,7 +319,7 @@ const paybackGrowthStartIndex=(()=>{
  for(let i=1;i<cumulativeProfit.length;i++){if(cumulativeProfit[i]<cumulativeProfit[minIdx])minIdx=i}
  // Первый рост после минимума: следующий индекс с положительной производной.
  for(let i=minIdx+1;i<cumulativeProfit.length;i++){if(cumulativeProfit[i]>cumulativeProfit[i-1])return i}
- return minIdx;
+ return -1;
 })();
 
 // Краткие подписи месяцев в формате "ММ.ГГ" (10.26, 11.26 ...) — компактный таймлайн на горизонт плана.
