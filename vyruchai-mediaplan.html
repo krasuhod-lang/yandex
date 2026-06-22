@@ -101,6 +101,15 @@ main{max-width:var(--max);margin:0 auto;padding:30px 24px 60px;display:flex;flex
 .status.yellow{background:var(--orange);color:var(--orange)}
 .status.red{background:var(--red);color:var(--red)}
 .mini-list{display:grid;gap:2px}
+.validator-row{display:flex;align-items:center;gap:8px;padding:6px 10px;border-radius:8px;font-size:12.5px}
+.validator-row.is-error{background:color-mix(in srgb,var(--red) 12%,transparent);color:var(--red)}
+.validator-row.is-ok{color:var(--green);background:color-mix(in srgb,var(--green) 10%,transparent)}
+.field input.is-corridor-error{border-color:var(--red);box-shadow:0 0 0 2px color-mix(in srgb,var(--red) 18%,transparent)}
+.seo-stage{display:flex;align-items:flex-start;gap:10px;padding:8px 10px;border-radius:10px;border:1px solid var(--line)}
+.seo-stage.is-done{background:color-mix(in srgb,var(--green) 6%,transparent);border-color:color-mix(in srgb,var(--green) 40%,var(--line))}
+.seo-stage label{display:flex;align-items:center;gap:8px;cursor:pointer;flex:1}
+.seo-stage .seo-title{font-weight:600}
+.seo-stage .seo-meta{font-size:12px;color:var(--muted);margin-top:2px}
 .mini-row{display:flex;justify-content:space-between;gap:16px;padding:11px 0;border-bottom:1px solid var(--line)}
 .mini-row:last-child{border-bottom:0}
 .mini-row[data-drill-kind]{cursor:pointer;border-radius:8px;padding-left:8px;padding-right:8px;margin:0 -8px;transition:background .16s var(--ease)}
@@ -748,8 +757,29 @@ table.sortable thead th[aria-sort="descending"]::after{content:" ▼";font-size:
             <label class="field"><span>Размер базы Центрофинанса, млн профилей</span><input id="inputBaseSize" type="number" min="0" max="50" step="0.1" inputmode="decimal"></label>
             <label class="field"><span>Match-rate на интент-трафике, %</span><input id="inputMatchRate" type="number" min="0" max="100" step="0.1" inputmode="decimal"></label>
           </div>
-          <div class="section-note">Пресеты сценария</div>
+          <div class="section-note">Маркетплейс-эффекты (роутер · кросс · повторы · тиры)</div>
+          <div class="assumption-grid">
+            <label class="field"><span>Smart Router · match-rate отказов, %</span><input id="inputRouterMatch" type="number" min="0" max="100" step="0.1" inputmode="decimal" data-corridor="router.matchRate"></label>
+            <label class="field"><span>Smart Router · p(apv) шаг #2, %</span><input id="inputRouterApv2" type="number" min="0" max="100" step="0.1" inputmode="decimal" data-corridor="router.pApprovalStep2"></label>
+            <label class="field"><span>Smart Router · p(apv) шаг #3, %</span><input id="inputRouterApv3" type="number" min="0" max="100" step="0.1" inputmode="decimal" data-corridor="router.pApprovalStep3"></label>
+            <label class="field"><span>Payout роутера, ₽ (шаг #2 / #3)</span><input id="inputRouterPayout2" type="number" min="0" max="100000" step="50" inputmode="decimal" placeholder="шаг #2"></label>
+            <label class="field"><span>&nbsp;</span><input id="inputRouterPayout3" type="number" min="0" max="100000" step="50" inputmode="decimal" placeholder="шаг #3"></label>
+            <label class="field"><span>Кросс-продажа карты, %</span><input id="inputCrossCard" type="number" min="0" max="100" step="0.1" inputmode="decimal" data-corridor="cross.pCard"></label>
+            <label class="field"><span>Кросс-продажа страховки, %</span><input id="inputCrossInsurance" type="number" min="0" max="100" step="0.1" inputmode="decimal" data-corridor="cross.pInsurance"></label>
+            <label class="field"><span>Payout кросс-продажи, ₽</span><input id="inputCrossPayout" type="number" min="0" max="100000" step="50" inputmode="decimal"></label>
+            <label class="field"><span>Repeat-rate за 12 мес., %</span><input id="inputRepeatRate12m" type="number" min="0" max="100" step="0.1" inputmode="decimal" data-corridor="crm.repeatRate12m"></label>
+            <label class="field"><span>Маржа повтора, ₽</span><input id="inputRepeatMargin" type="number" min="0" max="100000" step="50" inputmode="decimal"></label>
+            <label class="field"><span>Месячный отток после сделки, %</span><input id="inputChurnMonthly" type="number" min="0" max="100" step="0.1" inputmode="decimal"></label>
+            <label class="field"><span>Бонус payout за tier, %</span><input id="inputTierBonus" type="number" min="0" max="50" step="0.1" inputmode="decimal" data-corridor="tier.bonusPerTier"></label>
+          </div>
+          <div class="section-note">Сценарии и сохранение</div>
           <div class="actions" id="presetActions"></div>
+          <div class="actions" id="scenarioActions" style="margin-top:8px"></div>
+          <div class="actions" style="margin-top:8px">
+            <button class="action" id="exportScenarioBtn" type="button">Экспорт сценария в JSON</button>
+            <label class="action" for="importScenarioFile" style="cursor:pointer">Импорт сценария…<input id="importScenarioFile" type="file" accept="application/json" hidden></label>
+          </div>
+          <div id="validatorsPanel" class="mini-list" style="margin-top:10px"></div>
         </div>
         <div class="card">
           <div class="card-title"><div><h2>Контур контроля</h2><p>Ключевые драйверы модели и последние сохранённые действия</p></div></div>
@@ -820,6 +850,11 @@ table.sortable thead th[aria-sort="descending"]::after{content:" ▼";font-size:
       </div>
       <h2 class="divider-title">Дашборд привлечения</h2>
       <div class="table-wrap"><table id="acquisitionTable"></table></div>
+      <h2 class="divider-title">SEO-этапы (алгоритм Маркина · «Новая таблица»)</h2>
+      <div class="card">
+        <div class="card-title"><div><h2>Чек-лист SEO-этапов</h2><p>Отметка этапа сдвигает кривую SEO-трафика и CR в апрув в economics-model.</p></div><div class="toolbar-inline"><span class="toolbar-note" id="seoStagesNote">0 / 10 этапов выполнено</span></div></div>
+        <div id="seoStagesList" class="mini-list"></div>
+      </div>
     </section>
 
     <section id="tab-funnels" class="panel">
@@ -944,6 +979,7 @@ table.sortable thead th[aria-sort="descending"]::after{content:" ▼";font-size:
   <footer class="footer">Выручай.ру · Операционный дашборд · Структура обновлена: интерфейс остался статическим, а логика вынесена в отдельный JS-файл с единым слоем фильтров, статусов данных и drill-down.</footer>
 </div>
 
+<script src="economics-model.js"></script>
 <script src="dashboard-app.js"></script>
 </body>
 </html>
