@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Выручай.ру — операционный дашборд</title>
+<script defer src="https://cdn.jsdelivr.net/npm/apexcharts@3.49.1/dist/apexcharts.min.js"></script>
 <style>
 :root{
   color-scheme:light;
@@ -626,6 +627,41 @@ canvas{display:block;width:100%;max-width:100%;height:auto;cursor:crosshair}
 .ltv-cac-formula{margin-top:10px;padding:10px 14px;border-radius:var(--radius-xs);background:var(--surface-3);border:1px solid var(--line);font-size:12px;color:var(--muted);line-height:1.5}
 .ltv-cac-formula b{color:var(--text)}
 @media(max-width:560px){.cjm-unit-grid{grid-template-columns:1fr}.waterfall-bars{flex-wrap:wrap}.ltv-cac-row{flex-direction:column}.ltv-cac-arrow{transform:rotate(90deg)}}
+
+/* ---------- TZ: Светофор / Status helpers (#tab-unit) ---------- */
+.status-dot{display:inline-block;width:9px;height:9px;border-radius:50%;vertical-align:middle;margin-right:6px;flex:0 0 9px}
+.status-dot.status-success{background:var(--green);box-shadow:0 0 0 3px color-mix(in srgb,var(--green) 18%,transparent)}
+.status-dot.status-warning{background:var(--orange);box-shadow:0 0 0 3px color-mix(in srgb,var(--orange) 18%,transparent)}
+.status-dot.status-danger{background:var(--red);box-shadow:0 0 0 3px color-mix(in srgb,var(--red) 18%,transparent)}
+.status-badge{display:inline-flex;align-items:center;gap:6px;font-size:11px;font-weight:800;letter-spacing:.04em;text-transform:uppercase;border-radius:980px;padding:3px 9px;border:1px solid var(--line)}
+.status-badge.status-success{color:var(--green);background:color-mix(in srgb,var(--green) 14%,transparent);border-color:color-mix(in srgb,var(--green) 35%,var(--line))}
+.status-badge.status-warning{color:var(--orange);background:color-mix(in srgb,var(--orange) 14%,transparent);border-color:color-mix(in srgb,var(--orange) 35%,var(--line))}
+.status-badge.status-danger{color:var(--red);background:color-mix(in srgb,var(--red) 14%,transparent);border-color:color-mix(in srgb,var(--red) 35%,var(--line))}
+.status-cell{display:flex;align-items:center;gap:8px;white-space:nowrap}
+tbody tr.row-status-success td{background:color-mix(in srgb,var(--green) 5%,transparent)}
+tbody tr.row-status-success td:first-child{box-shadow:inset 3px 0 0 var(--green)}
+tbody tr.row-status-warning td{background:color-mix(in srgb,var(--orange) 5%,transparent)}
+tbody tr.row-status-warning td:first-child{box-shadow:inset 3px 0 0 var(--orange)}
+tbody tr.row-status-danger td{background:color-mix(in srgb,var(--red) 5%,transparent)}
+tbody tr.row-status-danger td:first-child{box-shadow:inset 3px 0 0 var(--red)}
+table.sortable thead th{cursor:pointer;user-select:none}
+table.sortable thead th:hover{color:var(--blue)}
+table.sortable thead th[aria-sort="ascending"]::after{content:" ▲";font-size:10px;color:var(--blue)}
+table.sortable thead th[aria-sort="descending"]::after{content:" ▼";font-size:10px;color:var(--blue)}
+.kpi-trend{display:inline-flex;align-items:center;gap:3px;font-size:12px;font-weight:700;font-variant-numeric:tabular-nums;border-radius:980px;padding:3px 8px}
+.kpi-trend.up{color:var(--green);background:color-mix(in srgb,var(--green) 12%,transparent)}
+.kpi-trend.down{color:var(--red);background:color-mix(in srgb,var(--red) 12%,transparent)}
+.kpi-trend.flat{color:var(--muted);background:var(--surface-3)}
+.cjm-kill-btn{margin-top:10px;border:1px dashed var(--red);background:color-mix(in srgb,var(--red) 6%,transparent);color:var(--red);border-radius:980px;padding:7px 14px;font-size:12px;font-weight:700;letter-spacing:.02em;cursor:not-allowed;opacity:.85}
+.cjm-kill-btn:hover{opacity:1}
+[data-theme="dark"] .apexcharts-tooltip{background:var(--surface-2)!important;color:var(--text)!important;border-color:var(--line)!important;box-shadow:var(--shadow-soft)}
+[data-theme="dark"] .apexcharts-tooltip-title{background:var(--surface-3)!important;border-color:var(--line)!important;color:var(--text)!important}
+[data-theme="dark"] .apexcharts-xaxistooltip,[data-theme="dark"] .apexcharts-yaxistooltip{background:var(--surface-2)!important;color:var(--text)!important;border-color:var(--line)!important}
+.router-badge{display:inline-flex;align-items:center;gap:8px;background:linear-gradient(135deg,var(--green),color-mix(in srgb,var(--green) 60%,var(--blue)));color:#fff;border-radius:980px;padding:8px 16px;font-size:13px;font-weight:800;letter-spacing:.01em;margin:0 0 14px;box-shadow:0 6px 18px color-mix(in srgb,var(--green) 35%,transparent)}
+.router-badge .rb-num{font-size:18px;letter-spacing:-.01em}
+.ltv-cac-fallback{padding:14px;border-radius:var(--radius-xs);background:var(--surface-3);color:var(--muted);font-size:13px;text-align:center}
+.waterfall-host{min-height:240px}
+.waterfall-host .apexcharts-canvas{margin:0 auto}
 
 /* CJM segment user stories */
 .story-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:var(--gap)}
