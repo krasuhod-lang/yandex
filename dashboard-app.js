@@ -1241,11 +1241,21 @@ function renderContextualViews(){
   return {tone,text:`${arrow} ${Math.abs(value).toFixed(1)}% MoM`};
  };
  const _romiStatus=statusFor(_gm.romi);
+ const _toDelta=(badge,goodWhenUp=true)=>{
+  if(!badge)return undefined;
+  const isGood=goodWhenUp?badge.tone==='up':badge.tone==='down';
+  const isBad=goodWhenUp?badge.tone==='down':badge.tone==='up';
+  return {text:badge.text,tone:isGood?'good':isBad?'bad':'warn'};
+ };
+ const _spendBadge=_trendBadge(_gm.trends.spend,true);
+ const _revenueBadge=_trendBadge(_gm.trends.revenue);
+ const _marginBadge=_trendBadge(_gm.trends.margin);
+ const _romiBadge=_trendBadge(_gm.trends.romi);
  kpi('unitKpis',filterByRole([
-  {id:'cac',roles:['Рост','Руководитель'],label:'Общий расход',value:money(_gm.marketing_spend),sub:'маркетинг + ФОТ + инфраструктура',delta:_trendBadge(_gm.trends.spend,true)?{...{text:_trendBadge(_gm.trends.spend,true).text,tone:_trendBadge(_gm.trends.spend,true).tone==='up'?'bad':_trendBadge(_gm.trends.spend,true).tone==='down'?'good':'warn'}}:undefined},
-  {id:'revenue',roles:['Рост','Руководитель'],label:'Общая выручка',value:money(_gm.total_revenue),sub:'core + внешняя монетизация',cls:'positive',delta:_trendBadge(_gm.trends.revenue)?{...{text:_trendBadge(_gm.trends.revenue).text,tone:_trendBadge(_gm.trends.revenue).tone==='up'?'good':_trendBadge(_gm.trends.revenue).tone==='down'?'bad':'warn'}}:undefined},
-  {id:'revenue',roles:['Рост','Руководитель'],label:'Маржинальная прибыль',value:money(_gm.margin),sub:'выручка − расход',cls:_gm.margin>=0?'positive':'negative',delta:_trendBadge(_gm.trends.margin)?{...{text:_trendBadge(_gm.trends.margin).text,tone:_trendBadge(_gm.trends.margin).tone==='up'?'good':_trendBadge(_gm.trends.margin).tone==='down'?'bad':'warn'}}:undefined},
-  {id:'ltv-cac',roles:['Руководитель'],label:'ROMI',value:_gm.romi.toFixed(1)+'%',sub:`светофор: ${_romiStatus.recommendation}`,cls:_romiStatus.level==='success'?'positive':_romiStatus.level==='danger'?'negative':'',delta:_trendBadge(_gm.trends.romi)?{...{text:_trendBadge(_gm.trends.romi).text,tone:_trendBadge(_gm.trends.romi).tone==='up'?'good':_trendBadge(_gm.trends.romi).tone==='down'?'bad':'warn'}}:undefined}
+  {id:'cac',roles:['Рост','Руководитель'],label:'Общий расход',value:money(_gm.marketing_spend),sub:'маркетинг + ФОТ + инфраструктура',delta:_toDelta(_spendBadge,false)},
+  {id:'revenue',roles:['Рост','Руководитель'],label:'Общая выручка',value:money(_gm.total_revenue),sub:'core + внешняя монетизация',cls:'positive',delta:_toDelta(_revenueBadge)},
+  {id:'revenue',roles:['Рост','Руководитель'],label:'Маржинальная прибыль',value:money(_gm.margin),sub:'выручка − расход',cls:_gm.margin>=0?'positive':'negative',delta:_toDelta(_marginBadge)},
+  {id:'ltv-cac',roles:['Руководитель'],label:'ROMI',value:_gm.romi.toFixed(1)+'%',sub:`светофор: ${_romiStatus.recommendation}`,cls:_romiStatus.level==='success'?'positive':_romiStatus.level==='danger'?'negative':'',delta:_toDelta(_romiBadge)}
  ]));
  document.getElementById('formulaList').innerHTML=filterByRole(formulaCatalog).map(x=>`<div class="mini-row" ${drillAttrs('formula',x.label)}><span>${escapeHtml(x.label)}</span><b>${escapeHtml(x.status)}</b></div>`).join('');
  const filteredAlerts=filterContext(alertCatalog);
