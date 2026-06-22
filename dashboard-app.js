@@ -214,7 +214,8 @@ class Chart{
      if(raw===undefined||raw===null||!Number.isFinite(Number(raw)))return null;
      const swatch=stripAlpha(ds.borderColor||(Array.isArray(ds.backgroundColor)?ds.backgroundColor[idx]:ds.backgroundColor)||colors.blue);
      const label=ds.label||'';
-     return `<div class="tt-row"><span class="tt-label"><span class="tt-sw" style="background:${swatch}"></span>${label}</span><b>${shortNum(Number(raw))}</b></div>`;
+     const shown=typeof ds.tooltipFormat==='function'?ds.tooltipFormat(Number(raw),idx):shortNum(Number(raw));
+     return `<div class="tt-row"><span class="tt-label"><span class="tt-sw" style="background:${swatch}"></span>${label}</span><b>${shown}</b></div>`;
     }).filter(Boolean).join('');
     const title=String(labels[idx]||'');
     this.tooltip.innerHTML=`<div class="tt-title">${title}</div>${rows}`;
@@ -690,6 +691,110 @@ function routeScenarioVolumes(){
   target:Math.round(calculateUnitEconomics().matchedVisits/Math.max(months.length,1))
  };
 }
+// ===== TZ unit-economics model (§3) and светофор helper (§2). Single source of truth for #tab-unit. =====
+// Light wrapper around calculateUnitEconomics + DYNAMIC_PAYOUTS, exposed in the {global_metrics, cjm_branches} shape from the TZ.
+function statusFor(romi,ltvCac){
+ const r=Number(romi);
+ const lc=Number(ltvCac);
+ const hasLtv=Number.isFinite(lc)&&lc>0;
+ const isSuccess=(Number.isFinite(r)&&r>20)||(hasLtv&&lc>3);
+ const isDanger=Number.isFinite(r)&&r<0;
+ if(isSuccess)return {level:'success',badge:'Scale',recommendation:'Масштабировать',rowClass:'row-status-success',dotClass:'status-success',badgeClass:'status-badge status-success'};
+ if(isDanger)return {level:'danger',badge:'Stop',recommendation:'Отключить',rowClass:'row-status-danger',dotClass:'status-danger',badgeClass:'status-badge status-danger'};
+ return {level:'warning',badge:'Optimize',recommendation:'Оптимизировать',rowClass:'row-status-warning',dotClass:'status-warning',badgeClass:'status-badge status-warning'};
+}
+function buildUnitModel(){
+ const unit=calculateUnitEconomics();
+ const monthCount=Math.max(months.length,1);
+ const targetConversions=Math.max(1,unit.matchedVisits*unit.issueRateFromVisit);
+ // Per-branch traffic over the plan horizon.
+ // rejected = неодобренные заявки за весь горизонт; noncore/overdue = пул JTBD-сценариев (трактуем как объём за горизонт,
+ // чтобы они были сопоставимы с rejected/target и светофор показывал разные уровни ROMI).
+ const rejectedTraffic=Math.max(0,totals.applications-totals.approvals);
+ const noncoreTraffic=(scenarios.find(s=>s.name==='Хочу машину')||{}).users||0;
+ const overdueTraffic=(scenarios.find(s=>s.name==='Перегруженный клиент')||{}).users||0;
+ const targetTraffic=unit.matchedVisits;
+ const rejectedTrafficMonthly=rejectedTraffic/monthCount;
+ const noncoreTrafficMonthly=noncoreTraffic/monthCount;
+ const overdueTrafficMonthly=overdueTraffic/monthCount;
+ const targetTrafficMonthly=targetTraffic/monthCount;
+ // Conversion rates per branch.
+ const targetCR=unit.issueRateFromVisit;
+ const noncoreApproval=ratio((scenarios.find(s=>s.name==='Хочу машину')||{}).approval||19,100);
+ const overdueApproval=ratio((scenarios.find(s=>s.name==='Перегруженный клиент')||{}).approval||18,100);
+ const rejectedCR=unit.issueRateFromVisit*0.8;
+ const noncoreCR=unit.issueRateFromVisit*noncoreApproval;
+ const overdueCR=unit.issueRateFromVisit*overdueApproval;
+ // CPA revenue per conversion.
+ const cpaTarget=unit.revenuePerIssue;
+ const cpaRejected=DYNAMIC_PAYOUTS.CF_REJECTED;
+ const cpaNoncore=DYNAMIC_PAYOUTS.CF_NON_CORE;
+ const cpaOverdue=DYNAMIC_PAYOUTS.CF_OVERDUE;
+ // Cost distributed proportionally to traffic share of total marketing spend.
+ const marketingSpend=totals.expenses;
+ const trafficTotal=targetTraffic+rejectedTraffic+noncoreTraffic+overdueTraffic||1;
+ const branch=(id,name,traffic,trafficMonthly,cr,cpa)=>{
+  const conversions=traffic*cr;
+  const revenue=traffic*cr*cpa;
+  const cost=marketingSpend*(traffic/trafficTotal);
+  const arpu=traffic?revenue/traffic:0;
+  const cac=conversions?cost/conversions:0;
+  const romi=cost?(revenue-cost)/cost*100:0;
+  return {id,name,traffic,traffic_monthly:trafficMonthly,cr_to_deal:cr,cpa_revenue:cpa,cost,conversions,revenue,arpu,cac,romi,clicks:Math.round(traffic*unit.clicksPerVisit)};
+ };
+ const branches=[
+  branch('target','Целевые (ЦФ)',targetTraffic,targetTrafficMonthly,targetCR,cpaTarget),
+  branch('rejected','Отказники (Брокер)',rejectedTraffic,rejectedTrafficMonthly,rejectedCR,cpaRejected),
+  branch('noncore','Непрофильные (Банк)',noncoreTraffic,noncoreTrafficMonthly,noncoreCR,cpaNoncore),
+  branch('overdue','Перегруженные (БФЛ)',overdueTraffic,overdueTrafficMonthly,overdueCR,cpaOverdue)
+ ];
+ const totalRevenue=branches.reduce((a,b)=>a+b.revenue,0);
+ const revenueByBranch=Object.fromEntries(branches.map(b=>[b.id,b.revenue]));
+ // Per TZ formula §5: Blended CAC = (spend − rev_rejected − rev_noncore) / target_conversions.
+ const blendedCac=Math.max(1,(marketingSpend-revenueByBranch.rejected-revenueByBranch.noncore-revenueByBranch.overdue)/targetConversions);
+ const baseCac=marketingSpend/targetConversions;
+ const margin=totalRevenue-marketingSpend;
+ const romi=marketingSpend?margin/marketingSpend*100:0;
+ // MoM trend: compare last month vs the prior month.
+ const lastIdx=months.length-1;
+ const prevIdx=Math.max(0,lastIdx-1);
+ const mom=(arr)=>{
+  const cur=Number(arr[lastIdx])||0;
+  const prev=Number(arr[prevIdx])||0;
+  if(!prev)return null;
+  return (cur-prev)/prev*100;
+ };
+ // Blend monthly external revenue into total revenue series proportionally to monthly revenue weight.
+ const revSum=sum(revenue)||1;
+ const monthlyExternal=revenue.map(v=>(totalRevenue-totals.revenue)*(v/revSum));
+ const monthlyRevenue=revenue.map((v,i)=>v+monthlyExternal[i]);
+ const monthlyProfit=monthlyRevenue.map((v,i)=>v-expenses[i]);
+ const monthlyRomi=monthlyProfit.map((p,i)=>expenses[i]?p/expenses[i]*100:0);
+ return {
+  global_metrics:{
+   marketing_spend:marketingSpend,
+   total_revenue:totalRevenue,
+   margin,
+   romi,
+   base_cac:baseCac,
+   blended_cac:blendedCac,
+   target_conversions:targetConversions,
+   trends:{
+    spend:mom(expenses),
+    revenue:mom(monthlyRevenue),
+    margin:mom(monthlyProfit),
+    romi:mom(monthlyRomi)
+   }
+  },
+  cjm_branches:branches,
+  monthly:{
+   labels:shortMonths.slice(),
+   revenue:monthlyRevenue,
+   spend:expenses.slice(),
+   romi:monthlyRomi
+  }
+ };
+}
 function currentRouteVolumes(){
  const defaults=routeScenarioVolumes();
  const read=(id,fallback)=>{
@@ -725,124 +830,182 @@ function renderPresetActions(){
  const el=document.getElementById('presetActions');if(!el)return;
  el.innerHTML=MODEL_PRESETS.map(p=>`<button class="action" data-preset-id="${p.id}" type="button">${escapeHtml(p.label)}</button>`).join('');
 }
+// TZ §4.6 — 4 ветки CJM (Target / Rejected / Non-core / Overdue) со светофором.
 function renderCjmUnitEconomics(){
  const host=document.getElementById('cjmUnitGrid');
  if(!host)return;
- const unit=calculateUnitEconomics();
- const route=Object.fromEntries(ROUTE_DECISION_TREE.map(item=>[item.code,item]));
- const routeVolumes=routeScenarioVolumes();
- const repeatLift=unit.ltvPerIssue-unit.revenuePerIssue;
- const protectedValue=unit.ltvPerIssue*modelInputs.targetRepeatShare;
- const visitRevenuePer1000=ratio(totals.revenue,totals.visits)*1000;
- // Dynamic payouts for external branches
- const payRejected=DYNAMIC_PAYOUTS.CF_REJECTED;
- const payOverdue=DYNAMIC_PAYOUTS.CF_OVERDUE;
- const payNonCore=DYNAMIC_PAYOUTS.CF_NON_CORE;
- const marginRejected=payRejected-unit.cacPerIssue;
- const marginOverdue=payOverdue-unit.cacPerIssue;
- const marginNonCore=payNonCore-unit.cacPerIssue;
- // Branch type classification
- const BRANCH_TYPE={CF_TARGET:'core',CF_ACTIVE:'core',CF_REPEAT:'core',CF_DORMANT:'core',CF_REJECTED:'external',CF_OVERDUE:'external',CF_NON_CORE:'external',NOT_FOUND:'organic'};
- const BRANCH_TYPE_LABEL={core:'Core: Центрофинанс',external:'External: CPA Сеть',organic:'Organic: Витрина'};
- const BRANCH_TYPE_CLS={core:'cjm-tag-core',external:'cjm-tag-external',organic:'cjm-tag-organic'};
- // Conversion rates per branch for progress bars; overdue/noncore approval rates from scenario data
- const totalVisits=Math.max(totals.visits,1);
- const rejectedVol=Math.max(0,totals.applications-totals.approvals);
- const overdueApprovalRate=ratio((scenarios.find(s=>s.name==='Перегруженный клиент')||{}).approval||18,100);
- const noncoreApprovalRate=ratio((scenarios.find(s=>s.name==='Хочу машину')||{}).approval||19,100);
- const BRANCH_CONV={CF_TARGET:modelInputs.centrofinansMatchRate*modelInputs.issuedToApprovalRate,CF_ACTIVE:modelInputs.centrofinansMatchRate,CF_REPEAT:ratio(totals.repeat,totalVisits),CF_DORMANT:modelInputs.centrofinansMatchRate*(1-modelInputs.targetRepeatShare),CF_REJECTED:ratio(rejectedVol,totals.applications||1),CF_OVERDUE:overdueApprovalRate,CF_NON_CORE:noncoreApprovalRate,NOT_FOUND:1-modelInputs.centrofinansMatchRate};
- const cards=[
-  {code:'CF_TARGET',value:money(unit.revenuePerIssue),label:'Выручка / выдачу ЦФ',econ1k:money(unit.issuePer1000*unit.revenuePerIssue),note:'Новый целевой лид уходит в якорный оффер ЦФ, поэтому считаем прямую выручку на одну выдачу без внешнего CPA.',rows:[['База потока',fmt(unit.matchedVisits)+' матчированных визитов'],['Выручка/CPA',money(unit.revenuePerIssue)],['Маржа после CAC',signedMoney(unit.revenuePerIssue-unit.cacPerIssue)]],formula:'(выручка ÷ выданные сделки) × routed issues'},
-  {code:'CF_ACTIVE',value:money(protectedValue),label:'Защищаемый LTV / клиента',econ1k:money(unit.issuePer1000*protectedValue),note:'Ветка не продаёт новый займ: её задача — не потерять ценность базы и монетизировать безопасные офферы поверх защищённого клиента.',rows:[['База потока',fmt(unit.matchedVisits)+' матчированных визитов'],['Цель repeat-share',pct(modelInputs.targetRepeatShare*100)],['Маржа',signedMoney(protectedValue)]],formula:'LTV × targetRepeatShare'},
-  {code:'CF_REPEAT',value:money(unit.ltvPerIssue),label:'LTV / повторную выдачу',econ1k:money(unit.issuePer1000*unit.ltvPerIssue),note:'Повторный клиент должен приносить уже не первую выдачу, а полный LTV с CRM и кросс-продажами.',rows:[['База потока',fmt(totals.repeat)+' повторных визитов'],['Выручка/CPA',money(unit.ltvPerIssue)],['Инкремент к первой выдаче',signedMoney(repeatLift)]],formula:'(выручка ÷ выданные сделки) × LTV factor'},
-  {code:'CF_DORMANT',value:money(unit.ltvPerIssue),label:'LTV / реактивацию',econ1k:money(unit.issuePer1000*unit.ltvPerIssue),note:'Для «спящих» клиентов используем ту же LTV-модель, но база реактивации строится от матчированного пула и CRM-повторов.',rows:[['База потока',fmt(Math.max(0,unit.matchedVisits-totals.repeat))+' неактивных профилей'],['Match-rate',pct(modelInputs.centrofinansMatchRate*100)],['Маржа',signedMoney(unit.ltvPerIssue-unit.cacPerIssue)]],formula:'matched pool × repeat LTV'},
-  {code:'CF_OVERDUE',value:money(payOverdue),label:'CPA / БФЛ (банкротство)',econ1k:money(unit.issuePer1000*payOverdue),note:'Токсичный трафик маршрутизируется в БФЛ-офферы по динамическому тарифу «Банкротство» = '+fmt(payOverdue)+' ₽.',rows:[['База потока',fmt(routeVolumes.overdue)+' сценариев «Перегруженный клиент»'],['Выручка/CPA',money(payOverdue)+' (БФЛ)'],['Маржа после CAC',signedMoney(marginOverdue)]],formula:'routed issues × dynamic partner payout (BFL)',dynamicCpa:payOverdue},
-  {code:'CF_REJECTED',value:money(payRejected),label:'CPA / soft reject',econ1k:money(unit.issuePer1000*payRejected),note:'Отказники окупают закупку трафика через CPA-выплату от МФО-партнёров по тарифу «Микрозаймы» = '+fmt(payRejected)+' ₽.',rows:[['База потока',fmt(rejectedVol)+' неапрувленных заявок'],['Выручка/CPA',money(payRejected)+' (МФО)'],['Маржа после CAC',signedMoney(marginRejected)]],formula:'(визит→заявка→апрув→выдача) × eCPA МФО',dynamicCpa:payRejected},
-  {code:'CF_NON_CORE',value:money(payNonCore),label:'CPA / банковский лид',econ1k:money(unit.issuePer1000*payNonCore),note:'Непрофильный спрос (ипотека, залоги) монетизируется по тарифу «Банковский лид» = '+fmt(payNonCore)+' ₽.',rows:[['База потока',fmt(routeVolumes.noncore)+' сценариев «Хочу машину»'],['Выручка/CPA',money(payNonCore)+' (Банк)'],['Маржа после CAC',signedMoney(marginNonCore)]],formula:'non-core routed issues × bank lead payout',dynamicCpa:payNonCore},
-  {code:'NOT_FOUND',value:money(unit.epcValue),label:'EPC смешанной витрины',econ1k:money(visitRevenuePer1000),note:'Новый трафик без матча в базе ЦФ оцениваем по реальному EPC смешанной витрины: это честная unit-метрика без предположений о статусе.',rows:[['База потока',fmt(unit.unmatchedVisits)+' unmatched визитов'],['Кликов на 1000 входов',fmt(unit.clicksPerVisit*1000)],['Выручка/CPA',money(unit.epcValue)]],formula:'(клики ÷ визиты × 1000) × EPC'}
- ];
- host.innerHTML=cards.map(card=>{
-  const meta=route[card.code]||{};
-  const bType=BRANCH_TYPE[card.code]||'organic';
-  const tagLabel=BRANCH_TYPE_LABEL[bType];
-  const tagCls=BRANCH_TYPE_CLS[bType];
-  const convRate=BRANCH_CONV[card.code]||0;
-  const convPct=Math.min(100,Math.round(convRate*100));
-  const dynamicBadge=card.dynamicCpa?`<span class="cjm-dynamic-badge">Dynamic CPA</span>`:'';
-  const rows=card.rows.map(row=>`<div class="mini-row"><span>${escapeHtml(row[0])}</span><b>${escapeHtml(row[1])}</b></div>`).join('');
-  return `<article class="card cjm-unit-card ${escapeHtml(meta.cls||'s-notfound')}">
-   <div class="cjm-unit-head"><div><h3>${escapeHtml(meta.title||card.code)}</h3><div class="cjm-unit-tags"><span class="cjm-type-tag ${tagCls}">${escapeHtml(tagLabel)}</span>${dynamicBadge}</div></div><span class="cjm-unit-code">${escapeHtml(card.code)}</span></div>
-   <div class="cjm-primary-metric"><div class="metric-label">Экономика на 1 000 входов</div><div class="metric-value">${escapeHtml(card.econ1k)}</div></div>
-   <div class="cjm-secondary-row">${rows}</div>
-   <div class="cjm-conv-bar"><div class="cjm-conv-bar-label"><span>Конверсия</span><span>${convPct}%</span></div><div class="cjm-conv-bar-track"><div class="cjm-conv-bar-fill" style="width:${convPct}%"></div></div></div>
-   <div class="cjm-unit-formula"><b>Формула:</b> ${escapeHtml(card.formula)}</div></article>`;
+ const model=buildUnitModel();
+ const META={
+  target:{title:'Целевые (Выдача ЦФ)',sub:'Прямой оффер Центрофинанса',cls:'s-target'},
+  rejected:{title:'Отказники (Брокер / МФО)',sub:'Soft reject → CPA-сеть',cls:'s-rejected'},
+  noncore:{title:'Непрофильные (Банковский лид)',sub:'Ипотека / автокредит / залоги',cls:'s-noncore'},
+  overdue:{title:'Перегруженные (БФЛ / HR)',sub:'Банкротство и трудоустройство',cls:'s-overdue'}
+ };
+ host.innerHTML=model.cjm_branches.map(b=>{
+  const meta=META[b.id]||{title:b.name,sub:'',cls:'s-notfound'};
+  const st=statusFor(b.romi);
+  const killBtn=st.level==='danger'?`<button class="cjm-kill-btn" type="button" disabled aria-disabled="true" title="UI-заглушка: отключение ветки">Отключить ветку</button>`:'';
+  return `<article class="card cjm-unit-card ${escapeHtml(meta.cls)}" data-status="${escapeHtml(st.level)}">
+   <div class="cjm-unit-head">
+    <div>
+     <h3>${escapeHtml(meta.title)}</h3>
+     <div class="cjm-unit-tags">
+      <span class="${st.badgeClass}"><span class="status-dot ${st.dotClass}"></span>${escapeHtml(st.badge)}</span>
+     </div>
+    </div>
+    <span class="cjm-unit-code">${escapeHtml(b.id.toUpperCase())}</span>
+   </div>
+   <div class="cjm-primary-metric"><div class="metric-label">Выручка ветки</div><div class="metric-value">${escapeHtml(money(b.revenue))}</div></div>
+   <div class="cjm-secondary-row">
+    <div class="mini-row"><span>Трафик</span><b>${escapeHtml(fmt(b.traffic))}</b></div>
+    <div class="mini-row"><span>CR в сделку</span><b>${escapeHtml(pct(b.cr_to_deal*100))}</b></div>
+    <div class="mini-row"><span>ARPU</span><b>${escapeHtml(money(b.arpu))}</b></div>
+    <div class="mini-row"><span>ROMI</span><b class="${b.romi>=0?'positive':'negative'}">${escapeHtml(b.romi.toFixed(1)+'%')}</b></div>
+   </div>
+   <div class="cjm-conv-bar"><div class="cjm-conv-bar-label"><span>Конверсия</span><span>${pct(b.cr_to_deal*100)}</span></div><div class="cjm-conv-bar-track"><div class="cjm-conv-bar-fill" style="width:${Math.min(100,Math.round(b.cr_to_deal*100))}%"></div></div></div>
+   <div class="cjm-unit-formula"><b>Формула:</b> traffic × cr_to_deal × cpa_revenue = ${escapeHtml(fmt(b.traffic))} × ${escapeHtml(pct(b.cr_to_deal*100))} × ${escapeHtml(money(b.cpa_revenue))}</div>
+   ${killBtn}
+  </article>`;
  }).join('');
- // PnL Waterfall
- renderPnlWaterfall(unit,routeVolumes,rejectedVol);
- // LTV/CAC Simulator
- renderLtvCacSimulator(unit,routeVolumes,rejectedVol);
+ renderPnlWaterfall(model);
+ renderLtvCacSimulator(model);
 }
-function renderPnlWaterfall(unit,routeVolumes,rejectedVol){
+// ===== ApexCharts instances (lazy) for the unit tab =====
+const apexInstances={};
+let apexLoadHookInstalled=false;
+function ensureApexReady(callback){
+ if(typeof window.ApexCharts!=='undefined'){callback();return}
+ if(apexLoadHookInstalled)return;
+ apexLoadHookInstalled=true;
+ const tryRender=()=>{if(typeof window.ApexCharts!=='undefined'){callback();return true}return false};
+ // External script is deferred — re-attempt after window load and via a short poll.
+ window.addEventListener('load',tryRender,{once:true});
+ let tries=0;const t=setInterval(()=>{if(tryRender()||++tries>40)clearInterval(t)},150);
+}
+function disposeApex(id){if(apexInstances[id]){try{apexInstances[id].destroy()}catch{}delete apexInstances[id]}}
+function apexThemeMode(){return document.documentElement.dataset.theme==='dark'?'dark':'light'}
+// TZ §4.4 — PnL Waterfall в ApexCharts: −Spend, +Target, +Rejected, +Non-core, =Net margin.
+function renderPnlWaterfall(model){
  const host=document.getElementById('pnlWaterfallChart');
  if(!host)return;
- const monthCount=Math.max(months.length,1);
- // Revenue from each branch over the full plan horizon
- // rejectedVol is already a total across all months; routeVolumes are per-month, so scale them
- const DORMANT_REACTIVATION_RATE=0.3; // ~30% of dormant base reactivated over plan horizon
- const targetRev=unit.matchedVisits*unit.issueRateFromVisit*unit.revenuePerIssue;
- const repeatRev=totals.repeat*unit.issueRateFromVisit*unit.ltvPerIssue;
- const dormantRev=Math.max(0,unit.matchedVisits-totals.repeat)*unit.issueRateFromVisit*unit.ltvPerIssue*DORMANT_REACTIVATION_RATE;
- const externalRev=(rejectedVol*DYNAMIC_PAYOUTS.CF_REJECTED+routeVolumes.overdue*monthCount*DYNAMIC_PAYOUTS.CF_OVERDUE+routeVolumes.noncore*monthCount*DYNAMIC_PAYOUTS.CF_NON_CORE)*unit.issueRateFromVisit;
- const opex=totals.expenses;
- const pnl=targetRev+repeatRev+dormantRev+externalRev-opex;
- const bars=[
-  {label:'CF_TARGET',value:targetRev,type:'positive'},
-  {label:'CF_REPEAT',value:repeatRev,type:'positive'},
-  {label:'CF_DORMANT',value:dormantRev,type:'positive'},
-  {label:'Внешняя монетизация',value:externalRev,type:'positive'},
-  {label:'Операционные / CAC',value:-opex,type:'negative'},
-  {label:'Итого PnL',value:pnl,type:'total'}
- ];
- const maxVal=Math.max(...bars.map(b=>Math.abs(b.value)),1);
+ disposeApex('waterfall');
+ host.innerHTML='';
+ const m=model||buildUnitModel();
+ const branchById=Object.fromEntries(m.cjm_branches.map(b=>[b.id,b]));
+ const spend=m.global_metrics.marketing_spend;
+ const target=branchById.target?.revenue||0;
+ const rejected=branchById.rejected?.revenue||0;
+ const noncore=branchById.noncore?.revenue||0;
+ // Net margin per TZ formula §5 (margin = total_revenue − marketing_spend); включает все ветки в total_revenue из buildUnitModel.
+ const margin=m.global_metrics.margin;
+ // Sanity check: target+rejected+noncore+overdue − spend === margin (within FP rounding).
  const c=chartColors();
- host.innerHTML=`<div class="waterfall-bars">${bars.map(b=>{
-  const h=Math.max(4,Math.round(Math.abs(b.value)/maxVal*160));
-  const color=b.type==='negative'?'var(--red)':b.type==='total'?(b.value>=0?'var(--blue)':'var(--red)'):'var(--green)';
-  return `<div class="wf-col"><div class="wf-value">${shortNum(b.value)} ₽</div><div class="wf-bar" style="height:${h}px;background:${color}"></div><div class="wf-label">${escapeHtml(b.label)}</div></div>`;
- }).join('')}</div>`;
+ if(typeof window.ApexCharts==='undefined'){
+  host.innerHTML=`<div class="ltv-cac-fallback">Загрузка ApexCharts… Маржа: <b>${money(margin)}</b> = выручка (${money(m.global_metrics.total_revenue)}) − расход (${money(spend)}).</div>`;
+  ensureApexReady(()=>renderPnlWaterfall(model));
+  return;
+ }
+ // Build cumulative running totals for a waterfall.
+ const steps=[
+  {label:'− Маркетинг',delta:-spend,color:c.red},
+  {label:'+ Target',delta:target,color:c.green},
+  {label:'+ Rejected',delta:rejected,color:c.green},
+  {label:'+ Non-core',delta:noncore,color:c.green}
+ ];
+ let cum=0;
+ const data=steps.map(s=>{const from=cum;cum+=s.delta;return {x:s.label,y:[from,cum],fillColor:s.color,label:s.label,delta:s.delta}});
+ data.push({x:'= Маржа',y:[0,margin],fillColor:margin>=0?c.blue:c.red,label:'Маржа',delta:margin,isTotal:true});
+ const total=Math.max(Math.abs(spend),Math.abs(m.global_metrics.total_revenue),1);
+ const options={
+  series:[{name:'PnL Waterfall',data}],
+  chart:{type:'rangeBar',height:320,toolbar:{show:false},fontFamily:chartFont(),background:'transparent',animations:{enabled:true}},
+  theme:{mode:apexThemeMode()},
+  plotOptions:{bar:{horizontal:false,borderRadius:6,columnWidth:'55%',colors:{ranges:[]}}},
+  dataLabels:{enabled:true,formatter:(_,o)=>{const d=data[o.dataPointIndex];return (d.delta>=0?'+':'')+shortNum(d.delta)+' ₽'},style:{fontSize:'11px',fontWeight:700,colors:[c.text]},offsetY:-22},
+  xaxis:{type:'category',labels:{style:{colors:c.muted,fontSize:'12px'}}},
+  yaxis:{labels:{style:{colors:c.muted,fontSize:'11px'},formatter:v=>shortNum(v)+' ₽'}},
+  grid:{borderColor:c.line+'55',strokeDashArray:4},
+  legend:{show:false},
+  tooltip:{theme:apexThemeMode(),custom:({dataPointIndex})=>{
+   const d=data[dataPointIndex];
+   const share=total?(Math.abs(d.delta)/total*100).toFixed(1):'0';
+   return `<div style="padding:8px 12px;font-size:12px"><div style="font-weight:800;margin-bottom:4px">${escapeHtml(d.label)}</div><div>${(d.delta>=0?'+':'')+money(d.delta)}</div><div style="color:${c.muted};margin-top:2px">${escapeHtml(share)}% от оборота</div></div>`;
+  }},
+  responsive:[{breakpoint:768,options:{chart:{height:260},plotOptions:{bar:{columnWidth:'80%'}},dataLabels:{style:{fontSize:'10px'},offsetY:-18}}}]
+ };
+ apexInstances.waterfall=new ApexCharts(host,options);
+ apexInstances.waterfall.render();
 }
-function renderLtvCacSimulator(unit,routeVolumes,rejectedVol){
+// TZ §4.5 — Влияние роутера: Base CAC vs Blended CAC horizontal bar + бейдж «Снижение CAC на XX%».
+function renderLtvCacSimulator(model){
  const host=document.getElementById('ltvCacSimulator');
  if(!host)return;
- const monthCount=Math.max(months.length,1);
- // Without router: only CF_TARGET revenue
- const baseLtv=unit.revenuePerIssue*modelInputs.ltvFactor;
- const baseCac=unit.cacPerIssue;
- const baseLtvCac=ratio(baseLtv,baseCac);
- // With router: additional revenue from external monetization effectively reduces CAC
- // rejectedVol is total across all months; routeVolumes are per-month, so scale them
- const externalRevenuePerIssue=(rejectedVol*DYNAMIC_PAYOUTS.CF_REJECTED+routeVolumes.overdue*monthCount*DYNAMIC_PAYOUTS.CF_OVERDUE+routeVolumes.noncore*monthCount*DYNAMIC_PAYOUTS.CF_NON_CORE)*unit.issueRateFromVisit;
- const totalIssued=unit.issued||1;
- const externalPerIssue=externalRevenuePerIssue/totalIssued;
- const effectiveCac=Math.max(1,baseCac-externalPerIssue);
- const newLtvCac=ratio(baseLtv,effectiveCac);
- const baseCls=baseLtvCac>=2?'ltv-green':baseLtvCac>=1.5?'ltv-orange':'ltv-red';
- const newCls=newLtvCac>=2?'ltv-green':newLtvCac>=1.5?'ltv-orange':'ltv-red';
- host.innerHTML=`
-  <div class="ltv-cac-row">
-   <div class="ltv-cac-block ${baseCls}">
-    <div class="ltv-cac-label">Без роутера (только CF_TARGET)</div>
-    <div class="ltv-cac-value">${baseLtvCac.toFixed(1)}x</div>
-    <div class="ltv-cac-sub">LTV ${money(baseLtv)} ÷ CAC ${money(baseCac)}</div>
-   </div>
-   <div class="ltv-cac-arrow">→</div>
-   <div class="ltv-cac-block ${newCls}">
-    <div class="ltv-cac-label">С умным роутером</div>
-    <div class="ltv-cac-value">${newLtvCac.toFixed(1)}x</div>
-    <div class="ltv-cac-sub">LTV ${money(baseLtv)} ÷ Эфф. CAC ${money(effectiveCac)}</div>
-   </div>
-  </div>
-  <div class="ltv-cac-formula">Формула: эфф. CAC = CAC − (доход от Rejected + NPL + Non-core) ÷ кол-во выдач → LTV/CAC растёт с <b>${baseLtvCac.toFixed(1)}x</b> до <b>${newLtvCac.toFixed(1)}x</b></div>`;
+ disposeApex('ltvCac');
+ host.innerHTML='';
+ const m=model||buildUnitModel();
+ const baseCac=m.global_metrics.base_cac;
+ const blendedCac=m.global_metrics.blended_cac;
+ const reductionPct=baseCac>0?(baseCac-blendedCac)/baseCac*100:0;
+ const c=chartColors();
+ const badge=`<div class="router-badge" role="status">⚡ Снижение CAC на <span class="rb-num">${reductionPct.toFixed(1)}%</span> благодаря Smart Safe Router</div>`;
+ if(typeof window.ApexCharts==='undefined'){
+  host.innerHTML=`${badge}<div class="ltv-cac-fallback">Base CAC: <b>${money(baseCac)}</b> → Blended CAC: <b>${money(blendedCac)}</b></div>`;
+  ensureApexReady(()=>renderLtvCacSimulator(model));
+  return;
+ }
+ const chartDiv=document.createElement('div');
+ host.appendChild(Object.assign(document.createElement('div'),{innerHTML:badge}).firstChild);
+ host.appendChild(chartDiv);
+ const data=[
+  {x:'Base CAC (без роутера)',y:Math.round(baseCac),fillColor:c.red},
+  {x:'Blended CAC (с роутером)',y:Math.round(blendedCac),fillColor:c.green}
+ ];
+ const options={
+  series:[{name:'CAC',data}],
+  chart:{type:'bar',height:200,toolbar:{show:false},fontFamily:chartFont(),background:'transparent'},
+  theme:{mode:apexThemeMode()},
+  plotOptions:{bar:{horizontal:true,borderRadius:6,barHeight:'55%',distributed:true}},
+  dataLabels:{enabled:true,formatter:v=>money(v),style:{fontSize:'12px',fontWeight:700,colors:['#fff']}},
+  xaxis:{labels:{style:{colors:c.muted,fontSize:'11px'},formatter:v=>shortNum(v)+' ₽'}},
+  yaxis:{labels:{style:{colors:c.text,fontSize:'12px',fontWeight:600}}},
+  grid:{borderColor:c.line+'55',strokeDashArray:4},
+  legend:{show:false},
+  tooltip:{theme:apexThemeMode(),y:{formatter:v=>money(v),title:{formatter:()=>'CAC'}}},
+  responsive:[{breakpoint:768,options:{chart:{height:180},dataLabels:{style:{fontSize:'11px'}}}}]
+ };
+ apexInstances.ltvCac=new ApexCharts(chartDiv,options);
+ apexInstances.ltvCac.render();
+}
+// TZ §4.3 — Сортируемая таблица юнит-экономики по веткам CJM.
+const unitTableSort={key:'romi',dir:'desc'};
+function renderUnitTable(model){
+ const el=document.getElementById('unitTable');
+ if(!el)return;
+ const m=model||buildUnitModel();
+ const COLS=[
+  {key:'name',label:'Источник',render:b=>escapeHtml(b.name)},
+  {key:'clicks',label:'Клики',numeric:true,render:b=>fmt(b.clicks)},
+  {key:'cac',label:'CAC',numeric:true,render:b=>money(b.cac)},
+  {key:'blended_cac',label:'Blended CAC',numeric:true,render:()=>money(m.global_metrics.blended_cac),getVal:()=>m.global_metrics.blended_cac},
+  {key:'arpu',label:'ARPU',numeric:true,render:b=>money(b.arpu)},
+  {key:'romi',label:'ROMI',numeric:true,render:b=>`<span class="${b.romi>=0?'positive':'negative'}">${b.romi.toFixed(1)}%</span>`},
+  {key:'status',label:'Статус',render:b=>{const s=statusFor(b.romi);return `<span class="status-cell"><span class="status-dot ${s.dotClass}"></span>${escapeHtml(s.recommendation)}</span>`}}
+ ];
+ const rows=m.cjm_branches.slice();
+ const col=COLS.find(c=>c.key===unitTableSort.key)||COLS[5];
+ const getVal=(b)=>col.getVal?col.getVal(b):b[col.key];
+ if(col.numeric)rows.sort((a,b)=>(getVal(a)-getVal(b))*(unitTableSort.dir==='asc'?1:-1));
+ else rows.sort((a,b)=>String(getVal(a)||'').localeCompare(String(getVal(b)||''),'ru')*(unitTableSort.dir==='asc'?1:-1));
+ const head=COLS.map(c=>{
+  const aria=c.key===unitTableSort.key?unitTableSort.dir==='asc'?'ascending':'descending':'none';
+  return `<th data-sort-key="${escapeHtml(c.key)}" aria-sort="${aria}" scope="col">${escapeHtml(c.label)}</th>`;
+ }).join('');
+ const body=rows.map(b=>{
+  const st=statusFor(b.romi);
+  return `<tr class="${st.rowClass}">`+COLS.map(c=>`<td>${c.render(b)}</td>`).join('')+`</tr>`;
+ }).join('');
+ el.classList.add('sortable');
+ el.innerHTML='<thead><tr>'+head+'</tr></thead><tbody>'+body+'</tbody>';
 }
 function renderDataStatusList(){
  const items=[
@@ -879,7 +1042,22 @@ function renderCharts(){
   chartTraffic:isAllChannels?{type:'bar',stacked:true,data:{labels,datasets:[{label:'SEO',data:sliceWindow(trafficSEO),backgroundColor:c.green+'cc'},{label:'Директ',data:sliceWindow(trafficPPC),backgroundColor:c.blue+'cc'},{label:'PR',data:sliceWindow(trafficPR),backgroundColor:c.violet+'cc'},{label:'Повторы',data:sliceWindow(repeat),backgroundColor:c.orange+'cc'}]}}:{type:'bar',data:{labels,datasets:[{label:'Трафик: '+ch.label,data:sliceWindow(ch.traffic),backgroundColor:c.blue+'cc'}]}},
   chartEpc:{type:'line',data:{labels,datasets:[{label:'EPC ('+ch.label+'), ₽',data:sliceWindow(ch.epc),borderColor:c.blue,backgroundColor:c.blue+'22',fill:true,borderWidth:2.5,pointRadius:3}]}},
   chartRetention:{type:'bar',stacked:true,data:{labels,datasets:[{label:'Выручка с первой сделки, тыс. ₽',data:sliceWindow(retFirst).map(v=>v/1000),backgroundColor:c.green+'cc'},{label:'Выручка с повторов / CRM, тыс. ₽',data:sliceWindow(retRepeat).map(v=>v/1000),backgroundColor:c.orange+'cc'},{label:'Повторные визиты',type:'line',data:sliceWindow(repeat),borderColor:c.violet,borderWidth:2}]}},
-  chartUnit:{type:'bar',data:{labels,datasets:[{label:'Маржинальная прибыль ('+ch.label+'), тыс. ₽',data:sliceWindow(fProfit).map(v=>v/1000),backgroundColor:sliceWindow(fProfit).map(v=>v>=0?c.green+'bb':c.red+'99')}]}},
+  chartUnit:(function(){
+   // TZ §4.2: Bar (Revenue + Spend in тыс. ₽) + Line (ROMI %), single Y axis with ROMI normalised to bar magnitude for visibility.
+   const model=buildUnitModel();
+   const labels2=model.monthly.labels.slice();
+   const rev=model.monthly.revenue;
+   const spend=model.monthly.spend;
+   const romi=model.monthly.romi;
+   const barMaxThs=Math.max(1,...rev.map(v=>v/1000),...spend.map(v=>v/1000));
+   const romiMagn=Math.max(...romi.map(v=>Math.abs(v)),1);
+   const lineScale=barMaxThs/romiMagn;
+   return {type:'bar',data:{labels:labels2,datasets:[
+    {label:'Выручка, тыс. ₽',data:rev.map(v=>v/1000),backgroundColor:c.green+'cc',tooltipFormat:v=>shortNum(v*1000)+' ₽'},
+    {label:'Расход, тыс. ₽',data:spend.map(v=>v/1000),backgroundColor:c.red+'99',tooltipFormat:v=>shortNum(v*1000)+' ₽'},
+    {label:'ROMI, %',type:'line',data:romi.map(v=>v*lineScale),borderColor:c.blue,borderWidth:2.5,pointRadius:3,tooltipFormat:(_,i)=>(romi[i]||0).toFixed(1)+'%'}
+   ]}};
+  })(),
   chartCacChannels:(function(){const cc=channelCac();const order=['SEO','Яндекс.Директ','PR','Повторный','Все каналы'];return {type:'bar',data:{labels:order,datasets:[{label:'CAC, ₽',data:order.map(k=>Math.round(cc[k].cac)),backgroundColor:order.map(k=>k==='Все каналы'?c.muted+'aa':k==='SEO'?c.green+'cc':k==='Яндекс.Директ'?c.blue+'cc':k==='PR'?c.violet+'cc':c.orange+'cc')}]}}})(),
   chartCostMix:{type:'bar',stacked:true,data:{labels,datasets:COST_ITEMS.map(item=>({label:item.label,data:sliceWindow(item.data).map(v=>v/1000),backgroundColor:c[item.color]+'cc'}))}},
   chartProducts:{type:'line',data:{labels,datasets:[{label:'Микрозаймы',data:sliceWindow(productSeries.mfo).map(v=>v/1000000),borderColor:c.blue,borderWidth:2.5},{label:'Кредиты',data:sliceWindow(productSeries.loan).map(v=>v/1000000),borderColor:c.green,borderWidth:2.5},{label:'Карты',data:sliceWindow(productSeries.card).map(v=>v/1000000),borderColor:c.violet,borderWidth:2.5},{label:'Страхование',data:sliceWindow(productSeries.insurance).map(v=>v/1000000),borderColor:c.orange,borderWidth:2},{label:'Повторы / кросс',data:sliceWindow(productSeries.repeat).map(v=>v/1000000),borderColor:c.red,borderWidth:2}]}},
@@ -1052,8 +1230,33 @@ function renderContextualViews(){
  table('partnerMethodTable',['Метрика','Тип значения','Источник / бенчмарк','Как пересчитывается'],partnerMethodRows);
  kpi('retentionKpis',filterByRole([{id:'repeat-share',roles:['CRM','Руководитель'],label:'Доля повторов',value:'5.1%',sub:'цель 6%'},{id:'repeat-share',roles:['CRM'],label:'Дней до повтора',value:'21',sub:'медиана дней'},{id:'repeat-share',roles:['CRM','Руководитель'],label:'Реактивация SMS',value:'12.8%',sub:'лучший канал',cls:'positive'},{id:'repeat-share',roles:['CRM','Руководитель'],label:'Выручка после сделки',value:mln(9860000),sub:'повторы + кросс-продажи',cls:'positive'}]));
  table('retentionTable',['Событие','Пользователи / события','Конверсия'],retentionEvents);
- const unitLtv=ratio(totals.revenue,totals.approvals)*modelInputs.ltvFactor;
- kpi('unitKpis',filterByRole([{id:'revenue',roles:['Рост','Руководитель'],label:'EPC',value:Math.round(ratio(totals.revenue,totals.clicks))+' ₽',sub:'выручка / клики'},{id:'cac',roles:['Рост','Руководитель'],label:'CAC выдачи',value:Math.round(cac)+' ₽',sub:'расходы / первые выдачи'},{id:'ltv-cac',roles:['CRM','Руководитель'],label:'LTV',value:Math.round(unitLtv)+' ₽',sub:'чистая выручка с повторами'},{id:'ltv-cac',roles:['Руководитель'],label:'LTV / CAC',value:(unitLtv/Math.max(cac,1)).toFixed(1)+'x',sub:'здорово при > 3x',cls:'positive'}]));
+ // TZ §4.1 — Юнит-экономика: 4 верхние карточки (Расход, Выручка, Маржа, ROMI) с MoM-стрелками.
+ const _um=buildUnitModel();
+ const _gm=_um.global_metrics;
+ const _trendBadge=(value,inverted)=>{
+  if(value===null||!Number.isFinite(value))return null;
+  const positive=inverted?value<0:value>0;
+  const tone=Math.abs(value)<0.5?'flat':(positive?'up':'down');
+  const arrow=tone==='flat'?'•':positive?'▲':'▼';
+  return {tone,text:`${arrow} ${Math.abs(value).toFixed(1)}% MoM`};
+ };
+ const _romiStatus=statusFor(_gm.romi);
+ const _toDelta=(badge,goodWhenUp=true)=>{
+  if(!badge)return undefined;
+  const isGood=goodWhenUp?badge.tone==='up':badge.tone==='down';
+  const isBad=goodWhenUp?badge.tone==='down':badge.tone==='up';
+  return {text:badge.text,tone:isGood?'good':isBad?'bad':'warn'};
+ };
+ const _spendBadge=_trendBadge(_gm.trends.spend,true);
+ const _revenueBadge=_trendBadge(_gm.trends.revenue);
+ const _marginBadge=_trendBadge(_gm.trends.margin);
+ const _romiBadge=_trendBadge(_gm.trends.romi);
+ kpi('unitKpis',filterByRole([
+  {id:'cac',roles:['Рост','Руководитель'],label:'Общий расход',value:money(_gm.marketing_spend),sub:'маркетинг + ФОТ + инфраструктура',delta:_toDelta(_spendBadge,false)},
+  {id:'revenue',roles:['Рост','Руководитель'],label:'Общая выручка',value:money(_gm.total_revenue),sub:'core + внешняя монетизация',cls:'positive',delta:_toDelta(_revenueBadge)},
+  {id:'revenue',roles:['Рост','Руководитель'],label:'Маржинальная прибыль',value:money(_gm.margin),sub:'выручка − расход',cls:_gm.margin>=0?'positive':'negative',delta:_toDelta(_marginBadge)},
+  {id:'ltv-cac',roles:['Руководитель'],label:'ROMI',value:_gm.romi.toFixed(1)+'%',sub:`светофор: ${_romiStatus.recommendation}`,cls:_romiStatus.level==='success'?'positive':_romiStatus.level==='danger'?'negative':'',delta:_toDelta(_romiBadge)}
+ ]));
  document.getElementById('formulaList').innerHTML=filterByRole(formulaCatalog).map(x=>`<div class="mini-row" ${drillAttrs('formula',x.label)}><span>${escapeHtml(x.label)}</span><b>${escapeHtml(x.status)}</b></div>`).join('');
  const filteredAlerts=filterContext(alertCatalog);
  document.getElementById('alertsGrid').innerHTML=(filteredAlerts.length?filteredAlerts:alertCatalog).map(a=>`<div class="card alert-card" ${drillAttrs('alert',a.id)}><div class="alert-head"><h3>${escapeHtml(a.entity)}</h3><span class="delta ${a.severity==='red'?'bad':a.severity==='yellow'?'warn':'good'}">${a.severity==='red'?'критично':a.severity==='yellow'?'внимание':'норма'}</span></div><div class="mini-row"><span>Первое обнаружение</span><b>${DATA_SOURCE.updatedAt}</b></div><p class="muted">${escapeHtml(a.reason)}</p><div class="actions"><button class="action" type="button" ${drillAttrs('alert',a.id)}>Разобрать сигнал</button></div></div>`).join('');
@@ -1061,7 +1264,8 @@ function renderContextualViews(){
  const experimentsGridEl=document.getElementById('experimentsGrid');
  if(experimentsGridEl)experimentsGridEl.innerHTML=(filteredExperiments.length?filteredExperiments:experimentCatalog).slice(0,3).map(e=>`<div class="card" ${drillAttrs('experiment',e.id)}><div class="card-title"><div><h3>${escapeHtml(e.name)}</h3><p>${escapeHtml(e.id)}</p></div><span class="pill">${escapeHtml(e.status)}</span></div><div class="mini-row"><span>Главная метрика</span><b>${escapeHtml(e.primary)}</b></div><div class="mini-row"><span>Уверенность</span><b>${escapeHtml(e.confidence)}</b></div><div class="mini-row"><span>Результат</span><b>${escapeHtml(e.result)}</b></div></div>`).join('');
  table('experimentsTable',['Эксперимент','Главная метрика','Ограничение','Сегмент','Уверенность','Снимок','Решение'],(filteredExperiments.length?filteredExperiments:experimentCatalog).map(e=>[e.name,e.primary,e.guardrail,e.segment,e.confidence,e.result,e.status]));
- table('unitTable',['Канал','Микс интеграций','Выручка','Расходы','Валовая прибыль','EPC','CAC одобрения','LTV/CAC','Окупаемость','Маркетинговый PnL'],channelRows(filterByRole(UNIT_ROWS)).map(r=>r.build(totals)));
+ // TZ §4.3 — Юнит-экономика по каналам (сортируемая, со светофором).
+ renderUnitTable(_um);
  renderCjmUnitEconomics();
  renderDataStatusList();
  renderPriorityList();
@@ -1566,9 +1770,18 @@ function init(){
  initDragScroll();
 }
 const tabs=document.querySelectorAll('.tab'),panels=document.querySelectorAll('.panel');
-tabs.forEach(t=>t.addEventListener('click',()=>{tabs.forEach(x=>x.classList.remove('active'));panels.forEach(x=>x.classList.remove('active'));t.classList.add('active');document.getElementById('tab-'+t.dataset.tab).classList.add('active');state.activeTab=t.dataset.tab;persistPreferences();requestAnimationFrame(renderCharts)}));
+tabs.forEach(t=>t.addEventListener('click',()=>{tabs.forEach(x=>x.classList.remove('active'));panels.forEach(x=>x.classList.remove('active'));t.classList.add('active');document.getElementById('tab-'+t.dataset.tab).classList.add('active');state.activeTab=t.dataset.tab;persistPreferences();requestAnimationFrame(()=>{renderCharts();if(state.activeTab==='unit')renderCjmUnitEconomics();})}));
+// TZ §4.3: клик по заголовку таблицы #unitTable переключает сортировку.
+document.addEventListener('click',e=>{
+ const th=e.target.closest?.('#unitTable thead th[data-sort-key]');
+ if(!th)return;
+ const key=th.dataset.sortKey;
+ if(unitTableSort.key===key)unitTableSort.dir=unitTableSort.dir==='asc'?'desc':'asc';
+ else{unitTableSort.key=key;unitTableSort.dir=key==='name'?'asc':'desc'}
+ renderUnitTable();
+});
 document.querySelectorAll('.filters select').forEach(sel=>{const label=sel.getAttribute('aria-label');sel.addEventListener('change',()=>{const v=sel.value;if(label==='Канал')state.channel=v;else if(label==='Сценарий')state.scenario=v;else if(label==='Роль'){state.role=v;if(state.activeTab==='overview'&&ROLE_PROFILES[v]?.recommendedTab)state.activeTab=ROLE_PROFILES[v].recommendedTab};persistPreferences();renderAll()})});
-document.getElementById('themeToggle').addEventListener('click',()=>{const root=document.documentElement;root.dataset.theme=root.dataset.theme==='dark'?'light':'dark';persistPreferences();requestAnimationFrame(renderCharts)});
+document.getElementById('themeToggle').addEventListener('click',()=>{const root=document.documentElement;root.dataset.theme=root.dataset.theme==='dark'?'light':'dark';persistPreferences();requestAnimationFrame(()=>{renderCharts();if(state.activeTab==='unit')renderCjmUnitEconomics();})});
 document.querySelectorAll('#inputIssuedRate,#inputLtvFactor,#inputPartnerPayout,#inputRepeatTarget,#inputBaseSize,#inputMatchRate').forEach(input=>input.addEventListener('input',renderModelDirtyState));
 document.getElementById('saveModelInputs').addEventListener('click',()=>{modelInputs=currentDraftInputs();recordAction(`Обновлены вводные модели: выдача ${pct(modelInputs.issuedToApprovalRate*100)}, LTV ${modelInputs.ltvFactor.toFixed(2)}x, выплата ${fmt(partnerPayoutValue())} ₽, база ${Number(modelInputs.centrofinansBaseSize).toFixed(1)} млн`);persistModelInputs();renderAll()});
 document.getElementById('resetModelInputs').addEventListener('click',()=>{fillModelInputs(DEFAULT_MODEL_INPUTS);recordAction('Поля модели сброшены к базовому пресету');renderModelDirtyState()});
