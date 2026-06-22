@@ -133,6 +133,30 @@ class Chart{
   const xAxisBottomMax=height-4;
   const rotatedAnchorY=Math.min(xAxisTop+12, xAxisBottomMax-maxLabelWidth*SIN30);
   labels.forEach((label,i)=>{if(i%step!==0&&i!==labels.length-1)return;const x=labels.length===1?pad.l+plotW/2:pad.l+(i/(labels.length-1))*plotW;const s=String(label);ctx.save();if(rotateX){ctx.translate(x,rotatedAnchorY);ctx.rotate(-Math.PI/6);ctx.textAlign='right';ctx.fillText(s,0,0)}else{ctx.translate(x,height-9);ctx.fillText(s,0,0)}ctx.restore()});
+  // Аннотации: вертикальные линии-маркеры с подписями (например, точка перегиба окупаемости).
+  const annotations=Array.isArray(cfg.annotations)?cfg.annotations:[];
+  annotations.forEach(an=>{
+   if(typeof an.index!=='number'||an.index<0||an.index>=labels.length)return;
+   const ax=labels.length===1?pad.l+plotW/2:pad.l+(an.index/(labels.length-1))*plotW;
+   const color=an.color||colors.blue;
+   ctx.save();
+   ctx.strokeStyle=color;ctx.lineWidth=1.4;ctx.setLineDash([5,4]);
+   ctx.beginPath();ctx.moveTo(ax,pad.t);ctx.lineTo(ax,pad.t+plotH);ctx.stroke();
+   if(an.label){
+    ctx.setLineDash([]);
+    ctx.font='600 11px '+chartFont();
+    const text=String(an.label);
+    const tw=ctx.measureText(text).width+12;
+    const th=20;
+    let bx=ax+6, by=pad.t+4;
+    if(bx+tw>width-pad.r)bx=ax-6-tw;
+    ctx.fillStyle=hexToRgba(stripAlpha(color),.92);
+    roundedRect(ctx,bx,by,tw,th,6);ctx.fill();
+    ctx.fillStyle='#ffffff';ctx.textBaseline='middle';ctx.textAlign='left';
+    ctx.fillText(text,bx+6,by+th/2+1);
+   }
+   ctx.restore();
+  });
   const barSets=datasets.filter(ds=>(ds.type||cfg.type)!=='line'), lineSets=datasets.filter(ds=>(ds.type||cfg.type)==='line');
   const stacked=!!cfg.stacked;
   const groupW=plotW/Math.max(labels.length,1);
@@ -287,6 +311,16 @@ const totals={
 const cumulative=a=>a.reduce((acc,v,i)=>{acc.push((acc[i-1]||0)+v);return acc},[]);
 const cumulativeRevenue=cumulative(revenue), cumulativeInvestment=cumulative(expenses), cumulativeProfit=cumulative(profit);
 const firstMonthlyProfitIndex=profit.findIndex(v=>v>0), paybackIndex=cumulativeProfit.findIndex(v=>v>=0);
+// Месяц начала роста накопленной окупаемости: первый индекс, в котором cumulativeProfit[i] > cumulativeProfit[i-1]
+// после достижения исторического минимума. Источник — тот же массив profit, что и в PnL.
+const paybackGrowthStartIndex=(()=>{
+ if(!cumulativeProfit.length)return -1;
+ let minIdx=0;
+ for(let i=1;i<cumulativeProfit.length;i++){if(cumulativeProfit[i]<cumulativeProfit[minIdx])minIdx=i}
+ // Первый рост после минимума: следующий индекс с положительной производной.
+ for(let i=minIdx+1;i<cumulativeProfit.length;i++){if(cumulativeProfit[i]>cumulativeProfit[i-1])return i}
+ return -1;
+})();
 
 // Краткие подписи месяцев в формате "ММ.ГГ" (10.26, 11.26 ...) — компактный таймлайн на горизонт плана.
 const MONTH_NUM={'Январь':'01','Февраль':'02','Март':'03','Апрель':'04','Май':'05','Июнь':'06','Июль':'07','Август':'08','Сентябрь':'09','Октябрь':'10','Ноябрь':'11','Декабрь':'12'};
@@ -1001,7 +1035,7 @@ function renderLtvCacSimulator(model){
  const blendedCac=m.global_metrics.blended_cac;
  const reductionPct=baseCac>0?(baseCac-blendedCac)/baseCac*100:0;
  const c=chartColors();
- const badge=`<div class="router-badge" role="status">⚡ Снижение CAC на <span class="rb-num">${reductionPct.toFixed(1)}%</span> благодаря Smart Safe Router</div>`;
+ const badge=`<div class="router-badge" role="status">Снижение CAC на <span class="rb-num">${reductionPct.toFixed(1)}%</span> благодаря Smart Safe Router</div>`;
  if(typeof window.ApexCharts==='undefined'){
   host.innerHTML=`${badge}<div class="ltv-cac-fallback">Base CAC: <b>${money(baseCac)}</b> → Blended CAC: <b>${money(blendedCac)}</b></div>`;
   ensureApexReady(()=>renderLtvCacSimulator(model));
@@ -1092,7 +1126,7 @@ function renderCharts(){
  else{retFirst=fRev.slice();retRepeat=fRev.map(()=>0)}
  const cfg={
   chartOverview:{type:'bar',data:{labels,datasets:[{label:'Выручка ('+ch.label+')',data:sliceWindow(fRev).map(v=>v/1000),backgroundColor:c.green+'cc'},{label:'Расходы',data:sliceWindow(fCost).map(v=>v/1000),backgroundColor:c.red+'99'},{label:'Прибыль',type:'line',data:sliceWindow(fProfit).map(v=>v/1000),borderColor:c.blue,borderWidth:2.5,pointRadius:3}]}},
-  chartInvestment:{type:'line',data:{labels,datasets:[{label:'Накопленная выручка',data:sliceWindow(fCumRev).map(v=>v/1000000),borderColor:c.green,borderWidth:2.5},{label:'Накопленные инвестиции',data:sliceWindow(fCumCost).map(v=>v/1000000),borderColor:c.red,borderWidth:2.5},{label:'Накопленная прибыль',data:sliceWindow(fCumProfit).map(v=>v/1000000),borderColor:c.blue,backgroundColor:c.blue+'22',fill:true,borderWidth:2.5}]}},
+  chartInvestment:{type:'line',data:{labels,datasets:[{label:'Накопленная выручка',data:sliceWindow(fCumRev).map(v=>v/1000000),borderColor:c.green,borderWidth:2.5},{label:'Накопленные инвестиции',data:sliceWindow(fCumCost).map(v=>v/1000000),borderColor:c.red,borderWidth:2.5},{label:'Накопленная прибыль',data:sliceWindow(fCumProfit).map(v=>v/1000000),borderColor:c.blue,backgroundColor:c.blue+'22',fill:true,borderWidth:2.5}]},annotations:paybackGrowthStartIndex>=0?[{index:paybackGrowthStartIndex,color:c.blue,label:'Начало роста окупаемости · '+(months[paybackGrowthStartIndex]||'')}]:[]},
   chartTraffic:isAllChannels?{type:'bar',stacked:true,data:{labels,datasets:[{label:'SEO',data:sliceWindow(trafficSEO),backgroundColor:c.green+'cc'},{label:'Директ',data:sliceWindow(trafficPPC),backgroundColor:c.blue+'cc'},{label:'PR',data:sliceWindow(trafficPR),backgroundColor:c.violet+'cc'},{label:'Повторы',data:sliceWindow(repeat),backgroundColor:c.orange+'cc'}]}}:{type:'bar',data:{labels,datasets:[{label:'Трафик: '+ch.label,data:sliceWindow(ch.traffic),backgroundColor:c.blue+'cc'}]}},
   chartEpc:{type:'line',data:{labels,datasets:[{label:'EPC ('+ch.label+'), ₽',data:sliceWindow(ch.epc),borderColor:c.blue,backgroundColor:c.blue+'22',fill:true,borderWidth:2.5,pointRadius:3}]}},
   chartRetention:{type:'bar',stacked:true,data:{labels,datasets:[{label:'Выручка с первой сделки, тыс. ₽',data:sliceWindow(retFirst).map(v=>v/1000),backgroundColor:c.green+'cc'},{label:'Выручка с повторов / CRM, тыс. ₽',data:sliceWindow(retRepeat).map(v=>v/1000),backgroundColor:c.orange+'cc'},{label:'Повторные визиты',type:'line',data:sliceWindow(repeat),borderColor:c.violet,borderWidth:2}]}},
@@ -1182,7 +1216,7 @@ function renderContextualViews(){
  document.getElementById('assumptionSummary').innerHTML=[['Выдачи по модели',fmt(issued)],['LTV по модели',Math.round(ltv).toLocaleString('ru-RU')+' ₽'],['CAC = инвестиции / одобрения',Math.round(cacByApproval).toLocaleString('ru-RU')+' ₽'],['Цель по повторам',pct(modelInputs.targetRepeatShare*100)],['Выплата за оформление (фикс)',fmt(partnerPayoutValue())+' ₽']].map(r=>`<div class="mini-row"><span>${r[0]}</span><b>${r[1]}</b></div>`).join('');
  document.getElementById('recentActions').innerHTML=recentActions.length?recentActions.map(item=>`<div class="mini-row"><span>${escapeHtml(item.text)}</span><b>${escapeHtml(item.time)}</b></div>`).join(''):'<div class="mini-row"><span>Изменений ещё не сохраняли</span><b>локально</b></div>';
  const committeeCards=[
-  {id:'revenue',tone:'good',tag:'срез',label:'Фокус роли',value:activeRoleProfile().label,sub:activeRoleProfile().summary},
+  {id:'revenue',tone:'good',tag:'окупаемость',label:'Начало роста окупаемости',value:months[paybackGrowthStartIndex]||'—',sub:'месяц, с которого накопленный PnL растёт по PnL'},
   {id:'ltv-cac',tone:ltv/cac>=3?'good':'warn',tag:'unit',label:'Запас LTV / CAC',value:(ltv/cac).toFixed(1)+'x',sub:'цель выше 3.0x'},
   {id:'repeat-share',tone:repeatShare>=modelInputs.targetRepeatShare?'good':'warn',tag:'retention',label:'Доля повторной выручки',value:pct(repeatShare*100),sub:'цель '+pct(modelInputs.targetRepeatShare*100)},
   {id:'cac',tone:'warn',tag:'capital',label:'Пиковый капитал',value:mln(Math.abs(maxDrawdown)),sub:'максимальная нагрузка на фондирование'}
@@ -1219,7 +1253,7 @@ function renderContextualViews(){
   {id:'revenue',label:'Маржинальность',value:pct(ratio(gross,Math.max(1,sum(sliceWindow(ch.rev))))*100),sub:'маржинальность за весь план',cls:'positive'},
   {id:'revenue',label:'PnL',value:mln(totals.profit),sub:'нарастающим итогом',cls:'positive'}
  ]);
- document.getElementById('paybackList').innerHTML=[['Первая месячная прибыль',months[firstMonthlyProfitIndex]||'—'],['Окупаемость накопленных инвестиций',months[paybackIndex]||'—'],['Максимальный накопленный минус',mln(Math.min(...cumulativeProfit))],['Финальный накопленный PnL',mln(totals.profit)]].map((r,i)=>`<div class="mini-row"><span><span class="status ${i===3?'green':i===2?'red':'yellow'}"></span> ${r[0]}</span><b>${r[1]}</b></div>`).join('');
+ document.getElementById('paybackList').innerHTML=[['Начало роста окупаемости',months[paybackGrowthStartIndex]||'—'],['Первая месячная прибыль',months[firstMonthlyProfitIndex]||'—'],['Окупаемость накопленных инвестиций',months[paybackIndex]||'—'],['Максимальный накопленный минус',mln(Math.min(...cumulativeProfit))],['Финальный накопленный PnL',mln(totals.profit)]].map((r,i,arr)=>`<div class="mini-row"><span><span class="status ${i===arr.length-1?'green':i===arr.length-2?'red':'yellow'}"></span> ${r[0]}</span><b>${r[1]}</b></div>`).join('');
  const priorities=filterContext(priorityCatalog);
  document.getElementById('actionsList').innerHTML=(priorities.length?priorities:priorityCatalog.slice(0,4)).map(item=>`<div class="mini-row" ${drillAttrs('priority',item.id)}><span><span class="status ${item.severity==='bad'?'red':item.severity==='warn'?'yellow':'green'}"></span> ${escapeHtml(item.title)}</span><b>${escapeHtml(item.description)}</b></div>`).join('');
  const pnlRows=[['Выручка — итого',...revenue.map(money),money(totals.revenue)],['  · SEO',...revenueSEO.map(money),money(totals.seoRevenue)],['  · Яндекс.Директ',...revenuePPC.map(money),money(totals.directRevenue)],['  · PR',...revenuePR.map(money),money(totals.prRevenue)],['  · в т.ч. повторы / CRM',...revenueRepeat.map(money),money(REPEAT_REVENUE_TOTAL)],['Расходы — итого',...expenses.map(money),money(totals.expenses)],['  · Яндекс.Директ',...budgetDirect.map(money),money(sum(budgetDirect))],['  · SEO',...budgetSEO.map(money),money(sum(budgetSEO))],['  · PR',...budgetPR.map(money),money(sum(budgetPR))],['  · ФОТ команды',...expensesPayroll.map(money),money(sum(expensesPayroll))],['  · Инфраструктура и прочее',...expensesInfra.map(money),money(sum(expensesInfra))],['Прибыль',...profit.map(v=>money(v)),money(totals.profit)],['Рентабельность (чистая маржа)',...profit.map((v,i)=>pct(ratio(v,revenue[i])*100)),pct(ratio(totals.profit,totals.revenue)*100)],['Визиты',...visits.map(fmt),fmt(totals.visits)],['Клики на офферы',...offerClicks.map(fmt),fmt(totals.clicks)],['Заявки',...applications.map(fmt),fmt(totals.applications)],['Апрувы',...approvals.map(fmt),fmt(totals.approvals)]];
@@ -1691,7 +1725,7 @@ function renderRoutingDiagram(){
  nodes+=fo(300,30,400,110,'rd-entry','<span class="rd-t">Платный трафик Маркетплейса</span><span class="rd-s">PPC, SEO, CPA-сети — холодная органика и закупка трафика</span>');
  nodes+=fo(1100,30,400,110,'rd-entry','<span class="rd-t">База Центрофинанса</span><span class="rd-s">SMS-приглашение, подписанный одноразовый JWT (TTL 24 ч), флаг <b>is_cf_base = true</b></span>');
  nodes+=fo(610,170,580,140,'rd-hub','<span class="rd-t">Маркетплейс Выручай.ру · Сбор согласий и Идентификация</span><span class="rd-s">Ввод номера телефона. Обязательный чекбокс (152-ФЗ): <em>«Согласен на обработку ПД и передачу партнерам»</em>. Юридическая защита Smart Safe Router перед отправкой лида в CPA. Разрешение одноразового JWT (тёплый) или SHA-256 хеша.</span>');
- nodes+=fo(610,340,580,110,'rd-hub rd-killer','<span class="rd-killer-badge">★ Smart Safe Router · S2S API ЦФ</span><span class="rd-t">Решающий узел · POST /api/v1/cf/check-hash</span><span class="rd-s">Только Server-to-Server, только SHA-256-хеши и подписанные токены — 100% непрофильного трафика конвертируем в выручку (Zero-Waste).</span>');
+ nodes+=fo(610,340,580,110,'rd-hub rd-killer','<span class="rd-killer-badge">Smart Safe Router · S2S API ЦФ</span><span class="rd-t">Решающий узел · POST /api/v1/cf/check-hash</span><span class="rd-s">Только Server-to-Server, только SHA-256-хеши и подписанные токены. Непрофильный трафик монетизируется через CPA-витрину, чтобы окупать CAC.</span>');
  // Diamond decision (bigger, easier to read)
  const diamond=`<polygon class="rd-diamond" points="900,478 1064,556 900,634 736,556"/>`+
   `<foreignObject x="744" y="492" width="312" height="128"><div xmlns="${NS}" class="rd-decision-label"><span class="rd-t">Какой статус клиента?</span><span class="rd-s">Offers Engine применяет правила маршрутизации (Decision Tree)</span></div></foreignObject>`;
@@ -1913,54 +1947,24 @@ function renderValidators(){
   input.classList.toggle('is-corridor-error',!!bad);
  });
  if(!warnings.length){
-  host.innerHTML=`<div class="validator-row is-ok">✅ Все вводные в коридоре правдоподобности (PDL CR 18–35%, repeat 25–55%, match 40–70%, tier ≤ 25%)</div>`;
+  host.innerHTML=`<div class="validator-row is-ok">Все вводные в коридоре правдоподобности (PDL CR 18–35%, repeat 25–55%, match 40–70%, tier ≤ 25%)</div>`;
   return;
  }
  host.innerHTML=warnings.map(w=>{
   const valTxt=w.path.startsWith('tier.')||w.path.startsWith('router.payout')?w.value.toFixed(2):pct(w.value*100);
-  return `<div class="validator-row is-error">⚠️ ${escapeHtml(w.label)}: ${escapeHtml(valTxt)} — ${escapeHtml(w.message)}</div>`;
+  return `<div class="validator-row is-error">${escapeHtml(w.label)}: ${escapeHtml(valTxt)} — ${escapeHtml(w.message)}</div>`;
  }).join('');
 }
 // ===================================================================================
-// TZ §D2 — Чек-лист SEO-этапов Маркина. Данные грузим из data/seo-stages.json и
-// храним «выполненные» этапы в localStorage. Каждый отмеченный этап потенциально
-// сдвигает SEO-кривую в economics-model (через EconomicsModel.seoUpliftSeries),
-// что отображается в KPI/payback (рассчитываются заново).
+// SEO-этапы (чек-лист Маркина) удалены из UI инвесткомитета. Файл data/seo-stages.json
+// сохраняется в репозитории как офлайн-материал и больше не подключается к дашборду.
 // ===================================================================================
-const SEO_STAGES_STORAGE_KEY=`vyruchai-seo-stages-${STORAGE_VERSION}`;
-let seoStagesData=null;
-let seoStagesChecked=safeRead(SEO_STAGES_STORAGE_KEY,{});
-function loadSeoStages(){
- if(seoStagesData)return Promise.resolve(seoStagesData);
- return fetch('data/seo-stages.json').then(r=>r.ok?r.json():null).then(j=>{seoStagesData=j;return j}).catch(()=>null);
-}
-function renderSeoStages(){
- const host=document.getElementById('seoStagesList');if(!host)return;
- loadSeoStages().then(data=>{
-  if(!data||!Array.isArray(data.stages)){host.innerHTML='<div class="mini-row"><span>SEO-этапы не найдены (data/seo-stages.json)</span><b>—</b></div>';return}
-  const total=data.stages.length;
-  const done=data.stages.filter(s=>seoStagesChecked[s.id]).length;
-  const note=document.getElementById('seoStagesNote');
-  if(note)note.textContent=`${done} / ${total} этапов выполнено · уплифт SEO на ${pct(estimateSeoUplift()*100)}`;
-  host.innerHTML=data.stages.map(s=>{
-   const checked=!!seoStagesChecked[s.id];
-   return `<div class="seo-stage${checked?' is-done':''}"><label><input type="checkbox" data-seo-stage="${escapeHtml(s.id)}" ${checked?'checked':''}><div><div class="seo-title">№${s.stage_no} · ${escapeHtml(s.title)}</div><div class="seo-meta">Недели ${s.week_start}–${s.week_end} · +${s.traffic_uplift_pct}% к трафику · +${s.approval_uplift_pct} п.п. к CR апрува</div></div></label></div>`;
-  }).join('');
- });
-}
-function estimateSeoUplift(){
- if(!seoStagesData||!window.EconomicsModel)return 0;
- const stages=seoStagesData.stages.map(s=>({...s,checked:!!seoStagesChecked[s.id]}));
- const ups=window.EconomicsModel.seoUpliftSeries(stages,months.length,4);
- // среднее по горизонту: 1 + средний прирост
- const arr=ups.trafficMult||[];if(!arr.length)return 0;
- return arr.reduce((a,b)=>a+(b-1),0)/arr.length;
-}
+function renderSeoStages(){/* удалено: чек-лист SEO-этапов не выводится на дашборде */}
 // ===================================================================================
 // TZ §C3 — Экспорт / Импорт сценария в JSON.
 // ===================================================================================
 function exportScenarioJSON(){
- const payload={version:STORAGE_VERSION,exportedAt:new Date().toISOString(),inputs:modelInputs,seoStages:seoStagesChecked};
+ const payload={version:STORAGE_VERSION,exportedAt:new Date().toISOString(),inputs:modelInputs};
  const blob=new Blob([JSON.stringify(payload,null,2)],{type:'application/json'});
  const url=URL.createObjectURL(blob);
  const a=document.createElement('a');a.href=url;a.download='vyruchai-scenario.json';document.body.appendChild(a);a.click();a.remove();
@@ -1973,7 +1977,6 @@ function importScenarioJSON(file){
   try{
    const p=JSON.parse(String(r.result||'{}'));
    if(p.inputs){modelInputs=normalizeModelInputs(p.inputs);fillModelInputs(modelInputs)}
-   if(p.seoStages){seoStagesChecked=p.seoStages;safeWrite(SEO_STAGES_STORAGE_KEY,seoStagesChecked)}
    ecoInvalidate();persistModelInputs();
    recordAction('Сценарий загружен из JSON');renderAll();
   }catch(e){console.error('Import failed',e);alert('Не удалось прочитать JSON-сценарий')}
@@ -1994,7 +1997,7 @@ function runPnlSmokeCheck(){
   const diff=window.EconomicsModel.comparePnl(m,base);if(!diff)return;
   const worstRev=Math.abs(diff.worst.revenue||0)*100;
   if(worstRev>5)console.warn('[smoke] EconomicsModel vs PNL baseline: worst monthly revenue delta',worstRev.toFixed(1)+'% (порог 5%)');
-  else console.info('[smoke] EconomicsModel vs PNL baseline: worst monthly revenue delta',worstRev.toFixed(1)+'% ✅');
+  else console.info('[smoke] EconomicsModel vs PNL baseline: worst monthly revenue delta',worstRev.toFixed(1)+'% (ok)');
  });
 }
 
@@ -2059,7 +2062,6 @@ document.addEventListener('click',e=>{
  const ecoPreset=e.target.closest('[data-eco-preset]');
  if(ecoPreset){applyEcoPreset(ecoPreset.dataset.ecoPreset);return}
  const preset=e.target.closest('[data-preset-id]');if(preset){const cfg=MODEL_PRESETS.find(x=>x.id===preset.dataset.presetId);if(cfg){fillModelInputs(cfg.values);state.role=cfg.role;state.channel=cfg.channel;state.scenario=cfg.scenario;state.activeTab=ROLE_PROFILES[cfg.role]?.recommendedTab||state.activeTab;persistPreferences();recordAction(`Выбран пресет ${cfg.label}: ${cfg.note}`);renderAll();}return;}
- const seo=e.target.closest('input[data-seo-stage]');if(seo){const id=seo.dataset.seoStage;if(seo.checked)seoStagesChecked[id]=true;else delete seoStagesChecked[id];safeWrite(SEO_STAGES_STORAGE_KEY,seoStagesChecked);ecoInvalidate();renderSeoStages();renderValidators();return}
  const drill=e.target.closest('[data-drill-kind]');if(drill){openDrawer(drill.dataset.drillKind,drill.dataset.drillId);return;}
 });
 document.getElementById('exportScenarioBtn')?.addEventListener('click',exportScenarioJSON);

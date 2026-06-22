@@ -9,7 +9,7 @@
 - `./dashboard-app.js` — логика дашборда, фильтры, рендер, drill-down и встроенные demo-данные
 - `./economics-model.js` — единый расчётный слой `Inputs → CJM → Channel UE → PnL` (без него dashboard-app.js откатывается на старые формулы)
 - `./data/pnl-baseline.json` — распарсенный baseline PNL (smoke-сверка модели против факта)
-- `./data/seo-stages.json` — этапы SEO-плана Маркина (чек-лист, двигающий кривую SEO)
+- `./data/seo-stages.json` — офлайн-материал по SEO-плану (на дашборде не используется)
 - `./tools/parse-pnl.py`, `./tools/parse-seo-plan.py` — offline-парсеры xlsx → JSON (`pip install --user openpyxl`)
 - `./PNL - Выручай.ру.xlsx` — исходный Excel-срез для demo-контекста
 - `./Новая таблица (1).xlsx` — дополнительный Excel-файл в репозитории, вспомогательный материал для сравнения данных
@@ -34,7 +34,7 @@
 `economics-model.js` собирает дерево показателей сверху вниз и отдаёт его дашборду через `window.EconomicsModel.build(inputs, base)`. Любое изменение допущения на «Обзоре» инвалидирует кэш модели и перерисовывает все 8 табов:
 
 - **Обзор** ← `model.pnl` + `model.kpis` (payback вычисляется, а не хардкодится);
-- **Трафик** → отдаёт визиты/CPC в модель ↔ ← EPC считается из выручки модели (`epc=revenue/offerClicks`); чек-лист SEO-этапов Маркина сдвигает кривую через `seoUpliftSeries`;
+- **Трафик** → отдаёт визиты/CPC в модель ↔ ← EPC считается из выручки модели (`epc=revenue/offerClicks`);
 - **Воронки** → отдают CR на каждом шаге, в модели появляется «утечка выручки» по шагам;
 - **JTBD** → доли служат весами для аллокации трафика по продуктовым линиям;
 - **AI/SOS** → корректирует `router.matchRate` и `router.pApprovalStep2/3`;
