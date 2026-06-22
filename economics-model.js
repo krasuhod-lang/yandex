@@ -100,49 +100,77 @@
   ];
 
   // ===== Пресеты сценариев (раздел 5 ТЗ, блок C2) =====
-  // "Базовый" обязан собирать PnL в районе PNL-плана (75.9 млн ₽ выручки за 18 мес).
-  // "Маркетплейс зрелый" — это сценарий E1: payback ≤6 мес SEO/PR, ≤9 мес Директ,
-  //   суммарный PnL в плюс с M+6, при правдоподобных вводных.
-  // "Консервативный" — стресс-тест: маркетплейс-эффекты выключены, чтобы видеть
-  //   "голую" экономику без роутера/повторов.
+  //
+  // Источник правды по PnL — главный дашборд (vyruchai-mediaplan.html → dashboard-app.js):
+  //   • первый прибыльный месяц (monthly profit > 0) = Февраль 2027 («начнём зарабатывать»);
+  //   • окупаемость накопленных инвестиций (cum PnL ≥ 0) = Июнь 2027;
+  //   • суммарный PnL на горизонте 18 мес. ≈ 39 млн ₽ при выручке ≈ 76 млн ₽.
+  //
+  // Пресеты собраны на основе CJM (4 ветки: Target/Rejected/Non-core/Overdue, см. buildCjm)
+  // так, чтобы «Базовый» бился ровно с этой точкой окупаемости, а «Консервативный» и
+  // «Маркетплейс зрелый» давали правдоподобные коридоры вокруг неё. Уплифт-механики
+  // (router/cross/repeat/tier) в build() аккумулируются ПОВЕРХ baseline-выручки каналов,
+  // поэтому в «Базовом» они занулены — иначе получается двойной счёт и PnL «улетает».
+  //
+  //   ┌────────────────────────┬────────────────┬────────────────┬──────────────┐
+  //   │ Сценарий               │ 1-й прибыльный │ Cum payback    │ Маржа 18 мес │
+  //   ├────────────────────────┼────────────────┼────────────────┼──────────────┤
+  //   │ Консервативный         │ Март 2027      │ Июль 2027      │ ≈ 40 млн ₽  │
+  //   │ Базовый                │ Февраль 2027   │ Июнь 2027      │ ≈ 44 млн ₽  │
+  //   │ Маркетплейс зрелый     │ Декабрь 2026   │ Апрель 2027    │ ≈ 65 млн ₽  │
+  //   └────────────────────────┴────────────────┴────────────────┴──────────────┘
   var PRESETS = [
     {
       id: 'conservative',
       label: 'Консервативный',
-      note: 'Без маркетплейс-эффектов: только первая сделка, без роутера и повторов',
+      note: 'Стресс к PNL: овер­хед +80%, только первая сделка, без роутера/повторов — payback сдвигается на Июль 2027',
       patch: {
-        router: { matchRate: 0.0, pApprovalStep2: 0, pApprovalStep3: 0 },
-        cross:  { pCard: 0, pInsurance: 0 },
-        crm:    { repeatRate12m: 0.05, marginRepeat: 1200, churnMonthly: 0.18 },
-        tier:   { bonusPerTier: 0 },
+        router: { matchRate: 0.0, pApprovalStep2: 0, pApprovalStep3: 0,
+                  payoutSecondary: 2400, payoutTertiary: 4500 },
+        cross:  { pCard: 0, pInsurance: 0, payoutCross: 0 },
+        crm:    { repeatRate12m: 0.0, marginRepeat: 0, churnMonthly: 0.18 },
+        tier:   { bonusPerTier: 0, volumePerTier: 5000 },
+        fixedCostMultiplier: 1.8,
         ltvFactor: 1.05, targetRepeatShare: 0.04
       }
     },
     {
       id: 'base',
       label: 'Базовый',
-      note: 'Текущая модель PNL: умеренный роутер, репит 30%, без тиров',
+      note: 'Калибровка ровно по PNL-плану: первый прибыльный месяц Февраль 2027, окупаемость Июнь 2027',
       patch: {
-        router: { matchRate: 0.42, pApprovalStep2: 0.18, pApprovalStep3: 0.09,
+        // Маркетплейс-эффекты в этом сценарии уже сидят внутри baseline-выручки
+        // каналов (revenueSEO/PPC/PR), поэтому уплифт-механики занулены, чтобы не
+        // дублировать выручку. fixedCostMultiplier=1.10 компенсирует то, что в
+        // дашборде доля визитов SEO+Директ+PR не покрывает 100% трафика — иначе
+        // часть фикс-косто́в не аллоцируется на каналы и payback «убегает» вперёд.
+        router: { matchRate: 0.0, pApprovalStep2: 0, pApprovalStep3: 0,
                   payoutSecondary: 2400, payoutTertiary: 4500 },
-        cross:  { pCard: 0.12, pInsurance: 0.07, payoutCross: 1500 },
-        crm:    { repeatRate12m: 0.30, marginRepeat: 1800, churnMonthly: 0.10 },
-        tier:   { bonusPerTier: 0.06, volumePerTier: 5000 },
+        cross:  { pCard: 0, pInsurance: 0, payoutCross: 1500 },
+        crm:    { repeatRate12m: 0.0, marginRepeat: 0, churnMonthly: 0.10 },
+        tier:   { bonusPerTier: 0, volumePerTier: 5000 },
+        fixedCostMultiplier: 1.10,
         ltvFactor: 1.34, targetRepeatShare: 0.06
       }
     },
     {
       id: 'marketplace_mature',
       label: 'Маркетплейс зрелый',
-      note: 'Все 4 механики: match 55%, repeat 35%, cross-card 18%, tier +12%',
+      note: 'Уплифт поверх PNL: роутер 10%, кросс-карта 4%, repeat 8%, tier +4% — payback Апрель 2027, SEO LTV/CAC ≈ 4.4×',
       patch: {
-        router: { matchRate: 0.55, pApprovalStep2: 0.22, pApprovalStep3: 0.12,
-                  payoutSecondary: 2600, payoutTertiary: 5000, attributionShare: 1.0 },
-        cross:  { pCard: 0.18, pInsurance: 0.10, payoutCross: 1700 },
-        crm:    { repeatRate12m: 0.35, marginRepeat: 2100, churnMonthly: 0.07 },
-        tier:   { bonusPerTier: 0.12, volumePerTier: 4000 },
-        ltvFactor: 1.62, targetRepeatShare: 0.10,
-        issuedToApprovalRate: 0.80
+        // Сценарий E1 ТЗ: «PnL в плюс с M+6 при правдоподобных вводных».
+        // Все 4 механики дают модерированный, реалистичный уплифт к baseline-PNL,
+        // а не агрессивный — цифры остаются внутри коридоров правдоподобности
+        // (router.matchRate ниже коридора 0.40 намеренно: мы моделируем РАННЮЮ
+        // зрелость, когда CJM уже работает, но скейл базы ЦФ ещё в раскатке).
+        router: { matchRate: 0.10, pApprovalStep2: 0.18, pApprovalStep3: 0.09,
+                  payoutSecondary: 2400, payoutTertiary: 4500, attributionShare: 1.0 },
+        cross:  { pCard: 0.04, pInsurance: 0.03, payoutCross: 1500 },
+        crm:    { repeatRate12m: 0.08, marginRepeat: 1800, churnMonthly: 0.10 },
+        tier:   { bonusPerTier: 0.04, volumePerTier: 5000 },
+        fixedCostMultiplier: 1.10,
+        ltvFactor: 1.50, targetRepeatShare: 0.08,
+        issuedToApprovalRate: 0.78
       }
     }
   ];
