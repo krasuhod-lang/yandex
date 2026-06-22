@@ -254,7 +254,8 @@ const repeat=_slice([196.701087,242.9130435,379.1365217,484.7119565,651.9303913,
 const offerClicks=_slice([2745.380435,3120.543478,4471.5,5364.684783,6875.157065,9133.879837,11127.85346,15406.68308,16360.39487,18583.39087,21386.54967,28696.46327,34551.18718,42139.74613,51741.60839,59742.10399,69342.6987,78123.71293,88249.97511,103147.5645]);
 const applications=_slice([578.2744565,671.3206522,935.025,1251.552717,1786.739755,2457.727508,3155.618277,4629.2956,4963.094725,5588.534632,6569.64021,8899.196926,10948.3503,13604.34593,16583.47598,19383.64944,22743.85759,25817.21257,29361.40433,34575.56063]);
 const approvals=_slice([132.7866848,159.1179348,218.295,316.548587,483.4146848,676.1645511,892.0285386,1347.89022,1450.396633,1627.718905,1926.346095,2612.430003,3235.079764,4041.362954,4914.200762,5767.910479,6792.36214,8175.127301,9328.149041,11008.00728]);
-const epc=_slice([46.3,51.0,49.4,63.5,77.4,87.0,96.1,114.6,114.7,114.6,114.3,113.4,113.1,112.8,112.7,112.8,112.9,119.0,119.4,119.0]);
+// EPC канала считается из выручки модели и кликов на оффер (раньше был жёсткий массив).
+const epc=revenue.map((v,i)=>{const c=Number(offerClicks[i]||0);return c>0?v/c:0});
 const trafficSEO=_slice([2875,3450,4140,6210,9936,12916.8,18083.52,25316.928,27848.6208,30633.48288,38291.8536,53608.59504,69691.17355,90598.52562,108718.2307,130461.8769,156554.2523,180037.3901,207042.9986,248451.5983]);
 const trafficPPC=_slice([8695.652174,8695.652174,13043.47826,13043.47826,13043.47826,17391.30435,17391.30435,21739.13043,21739.13043,26086.95652,26086.95652,32608.69565,32608.69565,32608.69565,43478.26087,43478.26087,43478.26087,43478.26087,43478.26087,43478.26087]);
 const trafficPR=_slice([0,0,50,135,303.75,589.275,1001.7675,1502.65125,1652.916375,1818.208013,2090.939214,2509.127057,3010.952469,3613.142962,4335.771555,5202.925866,6243.511039,7492.213247,8990.655896,9889.721486]);
@@ -365,9 +366,28 @@ const STORAGE_KEYS={prefs:`vyruchai-dashboard-prefs-${STORAGE_VERSION}`,model:`v
 // Базовые допущения demo-модели: 76% одобрений доходят до выдачи, LTV выше базовой выручки в 1.34x,
 // фиксированная выплата партнёра за оформление ≈ 2400 ₽ (годовых ставок в модели нет — оплата за факт сделки), цель repeat-share — 6%.
 // Размер базы Центрофинанса и match-rate — вводимые менеджером оценки (нет публичного бенчмарка).
-const DEFAULT_MODEL_INPUTS={issuedToApprovalRate:0.76,ltvFactor:1.34,partnerPayout:2400,targetRepeatShare:0.06,centrofinansBaseSize:1.5,centrofinansMatchRate:0.42};
-// Dynamic CPA payouts per external branch type (differentiated rates instead of single partnerPayout)
-const DYNAMIC_PAYOUTS={CF_REJECTED:2400,CF_OVERDUE:3500,CF_NON_CORE:4500};
+// Маркетплейс-блок (router/cross/crm/tier) — вводные TZ Юнит-экономика; источник правды — EconomicsModel.
+const DEFAULT_MARKETPLACE_INPUTS={
+ routerMatch:0.42,routerApv2:0.18,routerApv3:0.09,
+ routerPayout2:2400,routerPayout3:4500,
+ crossCard:0.12,crossInsurance:0.07,crossPayout:1500,
+ repeatRate12m:0.30,repeatMargin:1800,churnMonthly:0.10,
+ tierBonus:0.06
+};
+const DEFAULT_MODEL_INPUTS={issuedToApprovalRate:0.76,ltvFactor:1.34,partnerPayout:2400,targetRepeatShare:0.06,centrofinansBaseSize:1.5,centrofinansMatchRate:0.42,...DEFAULT_MARKETPLACE_INPUTS};
+// Dynamic CPA payouts per external branch type. Источник по умолчанию — DEFAULT_MARKETPLACE_INPUTS,
+// но реально читаются из текущих modelInputs через dynamicPayouts() — это сделано, чтобы CJM
+// waterfall и LTV/CAC simulator пересчитывались на любой ввод формы (TZ Раздел 3, связь Обзор↔CJM).
+const DYNAMIC_PAYOUTS_BASE={CF_REJECTED:2400,CF_OVERDUE:4500,CF_NON_CORE:3500};
+function dynamicPayouts(){
+ return {
+  CF_REJECTED:Number(modelInputs.routerPayout2)||DYNAMIC_PAYOUTS_BASE.CF_REJECTED,
+  CF_OVERDUE:Number(modelInputs.routerPayout3)||DYNAMIC_PAYOUTS_BASE.CF_OVERDUE,
+  CF_NON_CORE:Number(modelInputs.routerPayout3)||DYNAMIC_PAYOUTS_BASE.CF_NON_CORE
+ };
+}
+// Сохраняем имя константы для совместимости с существующими прямыми обращениями.
+const DYNAMIC_PAYOUTS=new Proxy(DYNAMIC_PAYOUTS_BASE,{get(t,k){const d=dynamicPayouts();return d[k]??t[k]}});
 // Храним 6 последних действий: этого хватает, чтобы показать недавние изменения без перегрузки control card.
 const MAX_RECENT_ACTIONS=6;
 let modelInputs={...DEFAULT_MODEL_INPUTS};
@@ -382,7 +402,20 @@ function normalizeModelInputs(raw){
   partnerPayout:clamp(Number(raw?.partnerPayout)||DEFAULT_MODEL_INPUTS.partnerPayout,0,1000000),
   targetRepeatShare:clamp(Number(raw?.targetRepeatShare)||DEFAULT_MODEL_INPUTS.targetRepeatShare,0,1),
   centrofinansBaseSize:clamp(Number(raw?.centrofinansBaseSize)||DEFAULT_MODEL_INPUTS.centrofinansBaseSize,0,50),
-  centrofinansMatchRate:clamp(Number(raw?.centrofinansMatchRate)||DEFAULT_MODEL_INPUTS.centrofinansMatchRate,0,1)
+  centrofinansMatchRate:clamp(Number(raw?.centrofinansMatchRate)||DEFAULT_MODEL_INPUTS.centrofinansMatchRate,0,1),
+  // Маркетплейс-эффекты (TZ §2)
+  routerMatch:clamp(Number(raw?.routerMatch)||DEFAULT_MARKETPLACE_INPUTS.routerMatch,0,1),
+  routerApv2:clamp(Number(raw?.routerApv2)||DEFAULT_MARKETPLACE_INPUTS.routerApv2,0,1),
+  routerApv3:clamp(Number(raw?.routerApv3)||DEFAULT_MARKETPLACE_INPUTS.routerApv3,0,1),
+  routerPayout2:clamp(Number(raw?.routerPayout2)||DEFAULT_MARKETPLACE_INPUTS.routerPayout2,0,100000),
+  routerPayout3:clamp(Number(raw?.routerPayout3)||DEFAULT_MARKETPLACE_INPUTS.routerPayout3,0,100000),
+  crossCard:clamp(Number(raw?.crossCard)||DEFAULT_MARKETPLACE_INPUTS.crossCard,0,1),
+  crossInsurance:clamp(Number(raw?.crossInsurance)||DEFAULT_MARKETPLACE_INPUTS.crossInsurance,0,1),
+  crossPayout:clamp(Number(raw?.crossPayout)||DEFAULT_MARKETPLACE_INPUTS.crossPayout,0,100000),
+  repeatRate12m:clamp(Number(raw?.repeatRate12m)||DEFAULT_MARKETPLACE_INPUTS.repeatRate12m,0,1),
+  repeatMargin:clamp(Number(raw?.repeatMargin)||DEFAULT_MARKETPLACE_INPUTS.repeatMargin,0,100000),
+  churnMonthly:clamp(Number(raw?.churnMonthly)||DEFAULT_MARKETPLACE_INPUTS.churnMonthly,0,1),
+  tierBonus:clamp(Number(raw?.tierBonus)||DEFAULT_MARKETPLACE_INPUTS.tierBonus,0,0.5)
  };
 }
 const scenarios=[
@@ -622,8 +655,29 @@ function matchesScenario(item){if(state.scenario==='Все сценарии')ret
 function matchesChannels(item){const keys=selectedChannelKeys();if(state.channel==='Все каналы')return !item.channels||item.channels.some(ch=>keys.includes(ch)||ch==='Все каналы');return !item.channels||item.channels.includes(state.channel)||item.channels.includes('Все каналы')}
 function filterContext(items){return filterByRole(items).filter(matchesScenario).filter(matchesChannels)}
 function channelRows(rows){const keys=selectedChannelKeys();return rows.filter(r=>state.channel==='Все каналы'?keys.includes(r.key):r.key===state.channel)}
-function currentDraftInputs(){return normalizeModelInputs({issuedToApprovalRate:Number(document.getElementById('inputIssuedRate')?.value||0)/100,ltvFactor:Number(document.getElementById('inputLtvFactor')?.value||0),partnerPayout:Number(document.getElementById('inputPartnerPayout')?.value||0),targetRepeatShare:Number(document.getElementById('inputRepeatTarget')?.value||0)/100,centrofinansBaseSize:Number(document.getElementById('inputBaseSize')?.value||0),centrofinansMatchRate:Number(document.getElementById('inputMatchRate')?.value||0)/100})}
-function sameModelInputs(a,b){return ['issuedToApprovalRate','ltvFactor','partnerPayout','targetRepeatShare','centrofinansBaseSize','centrofinansMatchRate'].every(key=>Math.abs((a[key]||0)-(b[key]||0))<0.0001)}
+function _v(id){return document.getElementById(id)?.value}
+function currentDraftInputs(){return normalizeModelInputs({
+ issuedToApprovalRate:Number(_v('inputIssuedRate')||0)/100,
+ ltvFactor:Number(_v('inputLtvFactor')||0),
+ partnerPayout:Number(_v('inputPartnerPayout')||0),
+ targetRepeatShare:Number(_v('inputRepeatTarget')||0)/100,
+ centrofinansBaseSize:Number(_v('inputBaseSize')||0),
+ centrofinansMatchRate:Number(_v('inputMatchRate')||0)/100,
+ routerMatch:Number(_v('inputRouterMatch')||0)/100,
+ routerApv2:Number(_v('inputRouterApv2')||0)/100,
+ routerApv3:Number(_v('inputRouterApv3')||0)/100,
+ routerPayout2:Number(_v('inputRouterPayout2')||0),
+ routerPayout3:Number(_v('inputRouterPayout3')||0),
+ crossCard:Number(_v('inputCrossCard')||0)/100,
+ crossInsurance:Number(_v('inputCrossInsurance')||0)/100,
+ crossPayout:Number(_v('inputCrossPayout')||0),
+ repeatRate12m:Number(_v('inputRepeatRate12m')||0)/100,
+ repeatMargin:Number(_v('inputRepeatMargin')||0),
+ churnMonthly:Number(_v('inputChurnMonthly')||0)/100,
+ tierBonus:Number(_v('inputTierBonus')||0)/100
+})}
+const _MODEL_INPUT_KEYS=['issuedToApprovalRate','ltvFactor','partnerPayout','targetRepeatShare','centrofinansBaseSize','centrofinansMatchRate','routerMatch','routerApv2','routerApv3','routerPayout2','routerPayout3','crossCard','crossInsurance','crossPayout','repeatRate12m','repeatMargin','churnMonthly','tierBonus'];
+function sameModelInputs(a,b){return _MODEL_INPUT_KEYS.every(key=>Math.abs((a[key]||0)-(b[key]||0))<0.0001)}
 function syncControlsFromState(){
  document.documentElement.dataset.theme=(safeRead(STORAGE_KEYS.prefs,{theme:'light'}).theme)||'light';
  document.querySelectorAll('.filters select').forEach(sel=>{
@@ -1270,7 +1324,7 @@ function renderContextualViews(){
  renderDataStatusList();
  renderPriorityList();
 }
-function renderAll(){syncControlsFromState();renderModelDirtyState();renderPresetActions();renderContextualViews();renderTargetScenario();renderCentrofinans();renderRouting();renderCharts()}
+function renderAll(){ecoInvalidate();syncControlsFromState();renderModelDirtyState();renderPresetActions();renderEcoPresets();renderValidators();renderSeoStages();renderContextualViews();renderTargetScenario();renderCentrofinans();renderRouting();renderCharts()}
 // Целевой сценарий «40 млн ₽/мес к декабрю 2027»: строим помесячную траекторию выручки,
 // требуемые мультипликаторы по воронке и список точек роста. Базовый план в декабре 2027
 // (revenue последний элемент) недотягивает до цели, поэтому считаем равномерный коэффициент уплотнения.
@@ -1753,7 +1807,221 @@ function initDragScroll(){
   });
  });
 }
-function fillModelInputs(values){document.getElementById('inputIssuedRate').value=(values.issuedToApprovalRate*100).toFixed(1);document.getElementById('inputLtvFactor').value=values.ltvFactor.toFixed(2);document.getElementById('inputPartnerPayout').value=Math.round(Number(values.partnerPayout??DEFAULT_MODEL_INPUTS.partnerPayout));document.getElementById('inputRepeatTarget').value=(values.targetRepeatShare*100).toFixed(1);const baseEl=document.getElementById('inputBaseSize');if(baseEl)baseEl.value=Number(values.centrofinansBaseSize??DEFAULT_MODEL_INPUTS.centrofinansBaseSize).toFixed(1);const matchEl=document.getElementById('inputMatchRate');if(matchEl)matchEl.value=((values.centrofinansMatchRate??DEFAULT_MODEL_INPUTS.centrofinansMatchRate)*100).toFixed(1);renderModelDirtyState()}
+// ===================================================================================
+// EconomicsModel bridge (TZ Раздел 1: единый расчётный слой).
+// Все разделы дашборда читают экономические агрегаты через ecoModel(), а не из
+// разрозненных констант. Любое изменение modelInputs триггерит rebuild и через
+// renderAll() пересчитывает: KPI, payback, CJM waterfall, валидаторы, светофор.
+// ===================================================================================
+function ecoBaseSeries(){
+ // Адаптер к существующим переменным модуля: горизонт, ряды по каналам и итоги.
+ return {
+  months,revenue,expenses,visits,offerClicks,applications,approvals,repeat,
+  revenueSEO,revenuePPC,revenuePR,revenueRepeat,
+  expensesSEO,expensesPPC,expensesPR,expensesRepeat,
+  trafficSEO,trafficPPC,trafficPR,
+  budgetSEO,budgetDirect,budgetPR,
+  expensesFixed:expensesPayroll.map((v,i)=>v+expensesInfra[i]),
+  cjmNoncoreUsers:(scenarios.find(s=>s.name==='Хочу машину')||{}).users,
+  cjmOverdueUsers:(scenarios.find(s=>s.name==='Перегруженный клиент')||{}).users,
+  totals
+ };
+}
+function ecoInputsFromUI(){
+ // Маппинг modelInputs → форма, которую ожидает EconomicsModel.build.
+ const m=modelInputs;
+ return {
+  issuedToApprovalRate:m.issuedToApprovalRate,ltvFactor:m.ltvFactor,partnerPayout:m.partnerPayout,
+  targetRepeatShare:m.targetRepeatShare,
+  router:{matchRate:m.routerMatch,pApprovalStep2:m.routerApv2,pApprovalStep3:m.routerApv3,
+   payoutSecondary:m.routerPayout2,payoutTertiary:m.routerPayout3,attributionShare:1.0},
+  cross:{pCard:m.crossCard,pInsurance:m.crossInsurance,payoutCross:m.crossPayout},
+  crm:{repeatRate12m:m.repeatRate12m,marginRepeat:m.repeatMargin,churnMonthly:m.churnMonthly},
+  tier:{bonusPerTier:m.tierBonus,volumePerTier:4000}
+ };
+}
+let _ecoModelCache=null,_ecoModelDirty=true;
+function ecoInvalidate(){_ecoModelDirty=true}
+function ecoModel(){
+ if(!_ecoModelDirty&&_ecoModelCache)return _ecoModelCache;
+ if(typeof window.EconomicsModel==='undefined')return null;
+ try{_ecoModelCache=window.EconomicsModel.build(ecoInputsFromUI(),ecoBaseSeries());}
+ catch(e){console.error('EconomicsModel build failed',e);_ecoModelCache=null}
+ _ecoModelDirty=false;return _ecoModelCache;
+}
+// ===================================================================================
+// TZ §C2 — пресеты сценариев Конс / Базовый / Маркетплейс зрелый из EconomicsModel.
+// Полный пресет состоит из патча на DEFAULT_MARKETPLACE_INPUTS + legacy-полей.
+// ===================================================================================
+function applyEcoPreset(presetId){
+ const p=(window.EconomicsModel?.PRESETS||[]).find(x=>x.id===presetId);
+ if(!p)return false;
+ const patch=p.patch||{};
+ const next={...modelInputs};
+ if(patch.router){
+  if(patch.router.matchRate!=null)next.routerMatch=patch.router.matchRate;
+  if(patch.router.pApprovalStep2!=null)next.routerApv2=patch.router.pApprovalStep2;
+  if(patch.router.pApprovalStep3!=null)next.routerApv3=patch.router.pApprovalStep3;
+  if(patch.router.payoutSecondary!=null)next.routerPayout2=patch.router.payoutSecondary;
+  if(patch.router.payoutTertiary!=null)next.routerPayout3=patch.router.payoutTertiary;
+ }
+ if(patch.cross){
+  if(patch.cross.pCard!=null)next.crossCard=patch.cross.pCard;
+  if(patch.cross.pInsurance!=null)next.crossInsurance=patch.cross.pInsurance;
+  if(patch.cross.payoutCross!=null)next.crossPayout=patch.cross.payoutCross;
+ }
+ if(patch.crm){
+  if(patch.crm.repeatRate12m!=null)next.repeatRate12m=patch.crm.repeatRate12m;
+  if(patch.crm.marginRepeat!=null)next.repeatMargin=patch.crm.marginRepeat;
+  if(patch.crm.churnMonthly!=null)next.churnMonthly=patch.crm.churnMonthly;
+ }
+ if(patch.tier&&patch.tier.bonusPerTier!=null)next.tierBonus=patch.tier.bonusPerTier;
+ if(patch.ltvFactor!=null)next.ltvFactor=patch.ltvFactor;
+ if(patch.targetRepeatShare!=null)next.targetRepeatShare=patch.targetRepeatShare;
+ if(patch.issuedToApprovalRate!=null)next.issuedToApprovalRate=patch.issuedToApprovalRate;
+ fillModelInputs(next);
+ modelInputs=currentDraftInputs();ecoInvalidate();
+ recordAction(`Применён сценарий «${p.label}»: ${p.note}`);
+ persistModelInputs();renderAll();
+ return true;
+}
+function renderEcoPresets(){
+ const el=document.getElementById('scenarioActions');if(!el)return;
+ const presets=window.EconomicsModel?.PRESETS||[];
+ el.innerHTML=presets.map(p=>`<button class="action" data-eco-preset="${escapeHtml(p.id)}" type="button" title="${escapeHtml(p.note)}">${escapeHtml(p.label)}</button>`).join('');
+}
+// ===================================================================================
+// TZ §C — validators панель (раздел 2: коридоры правдоподобности).
+// Жёлтые/красные подсветки полей + список нарушений + блокировка «зелёного» статуса.
+// ===================================================================================
+function renderValidators(){
+ const host=document.getElementById('validatorsPanel');if(!host)return;
+ const E=window.EconomicsModel;if(!E){host.innerHTML='';return}
+ const draft=currentDraftInputs();
+ const ecoInputs={
+  router:{matchRate:draft.routerMatch,pApprovalStep2:draft.routerApv2,pApprovalStep3:draft.routerApv3},
+  cross:{pCard:draft.crossCard,pInsurance:draft.crossInsurance},
+  crm:{repeatRate12m:draft.repeatRate12m},
+  tier:{bonusPerTier:draft.tierBonus},
+  funnel:{crApplicationToApproval:ratio(totals.approvals,totals.applications)}
+ };
+ const warnings=E.validateCorridors(ecoInputs);
+ // Подсветить инпуты
+ document.querySelectorAll('[data-corridor]').forEach(input=>{
+  const path=input.dataset.corridor;
+  const bad=warnings.find(w=>w.path===path);
+  input.classList.toggle('is-corridor-error',!!bad);
+ });
+ if(!warnings.length){
+  host.innerHTML=`<div class="validator-row is-ok">✅ Все вводные в коридоре правдоподобности (PDL CR 18–35%, repeat 25–55%, match 40–70%, tier ≤ 25%)</div>`;
+  return;
+ }
+ host.innerHTML=warnings.map(w=>{
+  const valTxt=w.path.startsWith('tier.')||w.path.startsWith('router.payout')?w.value.toFixed(2):pct(w.value*100);
+  return `<div class="validator-row is-error">⚠️ ${escapeHtml(w.label)}: ${escapeHtml(valTxt)} — ${escapeHtml(w.message)}</div>`;
+ }).join('');
+}
+// ===================================================================================
+// TZ §D2 — Чек-лист SEO-этапов Маркина. Данные грузим из data/seo-stages.json и
+// храним «выполненные» этапы в localStorage. Каждый отмеченный этап потенциально
+// сдвигает SEO-кривую в economics-model (через EconomicsModel.seoUpliftSeries),
+// что отображается в KPI/payback (рассчитываются заново).
+// ===================================================================================
+const SEO_STAGES_STORAGE_KEY=`vyruchai-seo-stages-${STORAGE_VERSION}`;
+let seoStagesData=null;
+let seoStagesChecked=safeRead(SEO_STAGES_STORAGE_KEY,{});
+function loadSeoStages(){
+ if(seoStagesData)return Promise.resolve(seoStagesData);
+ return fetch('data/seo-stages.json').then(r=>r.ok?r.json():null).then(j=>{seoStagesData=j;return j}).catch(()=>null);
+}
+function renderSeoStages(){
+ const host=document.getElementById('seoStagesList');if(!host)return;
+ loadSeoStages().then(data=>{
+  if(!data||!Array.isArray(data.stages)){host.innerHTML='<div class="mini-row"><span>SEO-этапы не найдены (data/seo-stages.json)</span><b>—</b></div>';return}
+  const total=data.stages.length;
+  const done=data.stages.filter(s=>seoStagesChecked[s.id]).length;
+  const note=document.getElementById('seoStagesNote');
+  if(note)note.textContent=`${done} / ${total} этапов выполнено · уплифт SEO на ${pct(estimateSeoUplift()*100)}`;
+  host.innerHTML=data.stages.map(s=>{
+   const checked=!!seoStagesChecked[s.id];
+   return `<div class="seo-stage${checked?' is-done':''}"><label><input type="checkbox" data-seo-stage="${escapeHtml(s.id)}" ${checked?'checked':''}><div><div class="seo-title">№${s.stage_no} · ${escapeHtml(s.title)}</div><div class="seo-meta">Недели ${s.week_start}–${s.week_end} · +${s.traffic_uplift_pct}% к трафику · +${s.approval_uplift_pct} п.п. к CR апрува</div></div></label></div>`;
+  }).join('');
+ });
+}
+function estimateSeoUplift(){
+ if(!seoStagesData||!window.EconomicsModel)return 0;
+ const stages=seoStagesData.stages.map(s=>({...s,checked:!!seoStagesChecked[s.id]}));
+ const ups=window.EconomicsModel.seoUpliftSeries(stages,months.length,4);
+ // среднее по горизонту: 1 + средний прирост
+ const arr=ups.trafficMult||[];if(!arr.length)return 0;
+ return arr.reduce((a,b)=>a+(b-1),0)/arr.length;
+}
+// ===================================================================================
+// TZ §C3 — Экспорт / Импорт сценария в JSON.
+// ===================================================================================
+function exportScenarioJSON(){
+ const payload={version:STORAGE_VERSION,exportedAt:new Date().toISOString(),inputs:modelInputs,seoStages:seoStagesChecked};
+ const blob=new Blob([JSON.stringify(payload,null,2)],{type:'application/json'});
+ const url=URL.createObjectURL(blob);
+ const a=document.createElement('a');a.href=url;a.download='vyruchai-scenario.json';document.body.appendChild(a);a.click();a.remove();
+ setTimeout(()=>URL.revokeObjectURL(url),0);
+ recordAction('Сценарий выгружен в JSON');
+}
+function importScenarioJSON(file){
+ const r=new FileReader();
+ r.onload=()=>{
+  try{
+   const p=JSON.parse(String(r.result||'{}'));
+   if(p.inputs){modelInputs=normalizeModelInputs(p.inputs);fillModelInputs(modelInputs)}
+   if(p.seoStages){seoStagesChecked=p.seoStages;safeWrite(SEO_STAGES_STORAGE_KEY,seoStagesChecked)}
+   ecoInvalidate();persistModelInputs();
+   recordAction('Сценарий загружен из JSON');renderAll();
+  }catch(e){console.error('Import failed',e);alert('Не удалось прочитать JSON-сценарий')}
+ };
+ r.readAsText(file);
+}
+// ===================================================================================
+// TZ §F2 + §F3 — smoke-сверка модели против baseline PNL (в консоль).
+// ===================================================================================
+let _pnlBaseline=null;
+function loadPnlBaseline(){
+ if(_pnlBaseline)return Promise.resolve(_pnlBaseline);
+ return fetch('data/pnl-baseline.json').then(r=>r.ok?r.json():null).then(j=>{_pnlBaseline=j;return j}).catch(()=>null);
+}
+function runPnlSmokeCheck(){
+ loadPnlBaseline().then(base=>{
+  const m=ecoModel();if(!base||!m||!window.EconomicsModel)return;
+  const diff=window.EconomicsModel.comparePnl(m,base);if(!diff)return;
+  const worstRev=Math.abs(diff.worst.revenue||0)*100;
+  if(worstRev>5)console.warn('[smoke] EconomicsModel vs PNL baseline: worst monthly revenue delta',worstRev.toFixed(1)+'% (порог 5%)');
+  else console.info('[smoke] EconomicsModel vs PNL baseline: worst monthly revenue delta',worstRev.toFixed(1)+'% ✅');
+ });
+}
+
+function fillModelInputs(values){
+ const v={...DEFAULT_MODEL_INPUTS,...values};
+ const set=(id,val)=>{const el=document.getElementById(id);if(el)el.value=val};
+ set('inputIssuedRate',(v.issuedToApprovalRate*100).toFixed(1));
+ set('inputLtvFactor',Number(v.ltvFactor).toFixed(2));
+ set('inputPartnerPayout',Math.round(Number(v.partnerPayout)));
+ set('inputRepeatTarget',(v.targetRepeatShare*100).toFixed(1));
+ set('inputBaseSize',Number(v.centrofinansBaseSize).toFixed(1));
+ set('inputMatchRate',(v.centrofinansMatchRate*100).toFixed(1));
+ set('inputRouterMatch',(v.routerMatch*100).toFixed(1));
+ set('inputRouterApv2',(v.routerApv2*100).toFixed(1));
+ set('inputRouterApv3',(v.routerApv3*100).toFixed(1));
+ set('inputRouterPayout2',Math.round(v.routerPayout2));
+ set('inputRouterPayout3',Math.round(v.routerPayout3));
+ set('inputCrossCard',(v.crossCard*100).toFixed(1));
+ set('inputCrossInsurance',(v.crossInsurance*100).toFixed(1));
+ set('inputCrossPayout',Math.round(v.crossPayout));
+ set('inputRepeatRate12m',(v.repeatRate12m*100).toFixed(1));
+ set('inputRepeatMargin',Math.round(v.repeatMargin));
+ set('inputChurnMonthly',(v.churnMonthly*100).toFixed(1));
+ set('inputTierBonus',(v.tierBonus*100).toFixed(1));
+ renderModelDirtyState();
+ renderValidators();
+}
 function init(){
  const persisted=safeRead(STORAGE_KEYS.prefs,{});
  modelInputs=normalizeModelInputs(safeRead(STORAGE_KEYS.model,DEFAULT_MODEL_INPUTS));
@@ -1768,6 +2036,8 @@ function init(){
  fillModelInputs(modelInputs);
  renderAll();
  initDragScroll();
+ // TZ §F3 — сверить модель с baseline PNL после первого рендера.
+ setTimeout(runPnlSmokeCheck,300);
 }
 const tabs=document.querySelectorAll('.tab'),panels=document.querySelectorAll('.panel');
 tabs.forEach(t=>t.addEventListener('click',()=>{tabs.forEach(x=>x.classList.remove('active'));panels.forEach(x=>x.classList.remove('active'));t.classList.add('active');document.getElementById('tab-'+t.dataset.tab).classList.add('active');state.activeTab=t.dataset.tab;persistPreferences();requestAnimationFrame(()=>{renderCharts();if(state.activeTab==='unit')renderCjmUnitEconomics();})}));
@@ -1782,10 +2052,18 @@ document.addEventListener('click',e=>{
 });
 document.querySelectorAll('.filters select').forEach(sel=>{const label=sel.getAttribute('aria-label');sel.addEventListener('change',()=>{const v=sel.value;if(label==='Канал')state.channel=v;else if(label==='Сценарий')state.scenario=v;else if(label==='Роль'){state.role=v;if(state.activeTab==='overview'&&ROLE_PROFILES[v]?.recommendedTab)state.activeTab=ROLE_PROFILES[v].recommendedTab};persistPreferences();renderAll()})});
 document.getElementById('themeToggle').addEventListener('click',()=>{const root=document.documentElement;root.dataset.theme=root.dataset.theme==='dark'?'light':'dark';persistPreferences();requestAnimationFrame(()=>{renderCharts();if(state.activeTab==='unit')renderCjmUnitEconomics();})});
-document.querySelectorAll('#inputIssuedRate,#inputLtvFactor,#inputPartnerPayout,#inputRepeatTarget,#inputBaseSize,#inputMatchRate').forEach(input=>input.addEventListener('input',renderModelDirtyState));
-document.getElementById('saveModelInputs').addEventListener('click',()=>{modelInputs=currentDraftInputs();recordAction(`Обновлены вводные модели: выдача ${pct(modelInputs.issuedToApprovalRate*100)}, LTV ${modelInputs.ltvFactor.toFixed(2)}x, выплата ${fmt(partnerPayoutValue())} ₽, база ${Number(modelInputs.centrofinansBaseSize).toFixed(1)} млн`);persistModelInputs();renderAll()});
-document.getElementById('resetModelInputs').addEventListener('click',()=>{fillModelInputs(DEFAULT_MODEL_INPUTS);recordAction('Поля модели сброшены к базовому пресету');renderModelDirtyState()});
-document.addEventListener('click',e=>{const preset=e.target.closest('[data-preset-id]');if(preset){const cfg=MODEL_PRESETS.find(x=>x.id===preset.dataset.presetId);if(cfg){fillModelInputs(cfg.values);state.role=cfg.role;state.channel=cfg.channel;state.scenario=cfg.scenario;state.activeTab=ROLE_PROFILES[cfg.role]?.recommendedTab||state.activeTab;persistPreferences();recordAction(`Выбран пресет ${cfg.label}: ${cfg.note}`);renderAll();}return;}const drill=e.target.closest('[data-drill-kind]');if(drill){openDrawer(drill.dataset.drillKind,drill.dataset.drillId);return;}});
+document.querySelectorAll('#inputIssuedRate,#inputLtvFactor,#inputPartnerPayout,#inputRepeatTarget,#inputBaseSize,#inputMatchRate,#inputRouterMatch,#inputRouterApv2,#inputRouterApv3,#inputRouterPayout2,#inputRouterPayout3,#inputCrossCard,#inputCrossInsurance,#inputCrossPayout,#inputRepeatRate12m,#inputRepeatMargin,#inputChurnMonthly,#inputTierBonus').forEach(input=>input.addEventListener('input',()=>{renderModelDirtyState();renderValidators()}));
+document.getElementById('saveModelInputs').addEventListener('click',()=>{modelInputs=currentDraftInputs();ecoInvalidate();recordAction(`Обновлены вводные модели: выдача ${pct(modelInputs.issuedToApprovalRate*100)}, LTV ${modelInputs.ltvFactor.toFixed(2)}x, выплата ${fmt(partnerPayoutValue())} ₽, match роутера ${pct(modelInputs.routerMatch*100)}`);persistModelInputs();renderAll()});
+document.getElementById('resetModelInputs').addEventListener('click',()=>{fillModelInputs(DEFAULT_MODEL_INPUTS);ecoInvalidate();recordAction('Поля модели сброшены к базовому пресету');renderModelDirtyState();renderValidators()});
+document.addEventListener('click',e=>{
+ const ecoPreset=e.target.closest('[data-eco-preset]');
+ if(ecoPreset){applyEcoPreset(ecoPreset.dataset.ecoPreset);return}
+ const preset=e.target.closest('[data-preset-id]');if(preset){const cfg=MODEL_PRESETS.find(x=>x.id===preset.dataset.presetId);if(cfg){fillModelInputs(cfg.values);state.role=cfg.role;state.channel=cfg.channel;state.scenario=cfg.scenario;state.activeTab=ROLE_PROFILES[cfg.role]?.recommendedTab||state.activeTab;persistPreferences();recordAction(`Выбран пресет ${cfg.label}: ${cfg.note}`);renderAll();}return;}
+ const seo=e.target.closest('input[data-seo-stage]');if(seo){const id=seo.dataset.seoStage;if(seo.checked)seoStagesChecked[id]=true;else delete seoStagesChecked[id];safeWrite(SEO_STAGES_STORAGE_KEY,seoStagesChecked);ecoInvalidate();renderSeoStages();renderValidators();return}
+ const drill=e.target.closest('[data-drill-kind]');if(drill){openDrawer(drill.dataset.drillKind,drill.dataset.drillId);return;}
+});
+document.getElementById('exportScenarioBtn')?.addEventListener('click',exportScenarioJSON);
+document.getElementById('importScenarioFile')?.addEventListener('change',e=>{const f=e.target.files?.[0];if(f)importScenarioJSON(f);e.target.value=''});
 document.addEventListener('keydown',e=>{const drill=e.target.closest?.('[data-drill-kind]');const nativeTag=['BUTTON','A','INPUT','SELECT','TEXTAREA'].includes(e.target?.tagName);if(drill&&(e.key==='Enter'||(e.key===' '&&!nativeTag))){e.preventDefault();openDrawer(drill.dataset.drillKind,drill.dataset.drillId);}if(e.key==='Escape')closeDrawer()});
 document.getElementById('drawerClose').addEventListener('click',closeDrawer);
 let resizeTimer;window.addEventListener('resize',()=>{clearTimeout(resizeTimer);resizeTimer=setTimeout(renderCharts,120)});
