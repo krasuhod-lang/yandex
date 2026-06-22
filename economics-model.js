@@ -123,7 +123,7 @@
     {
       id: 'conservative',
       label: 'Консервативный',
-      note: 'Стресс к PNL: овер­хед +80%, только первая сделка, без роутера/повторов — payback сдвигается на Июль 2027',
+      note: 'Стресс к PNL: оверхед +80%, только первая сделка, без роутера/повторов — payback сдвигается на Июль 2027',
       patch: {
         router: { matchRate: 0.0, pApprovalStep2: 0, pApprovalStep3: 0,
                   payoutSecondary: 2400, payoutTertiary: 4500 },
