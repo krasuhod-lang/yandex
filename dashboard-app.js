@@ -798,9 +798,9 @@ function statusFor(romi,ltvCac){
  const hasLtv=Number.isFinite(lc)&&lc>0;
  const isSuccess=(Number.isFinite(r)&&r>20)||(hasLtv&&lc>3);
  const isDanger=Number.isFinite(r)&&r<0;
- if(isSuccess)return {level:'success',badge:'Масштаб',recommendation:'Масштабировать',rowClass:'row-status-success',dotClass:'status-success',badgeClass:'status-badge status-success'};
- if(isDanger)return {level:'danger',badge:'Остановка',recommendation:'Отключить',rowClass:'row-status-danger',dotClass:'status-danger',badgeClass:'status-badge status-danger'};
- return {level:'warning',badge:'Оптимизация',recommendation:'Оптимизировать',rowClass:'row-status-warning',dotClass:'status-warning',badgeClass:'status-badge status-warning'};
+ if(isSuccess)return {level:'success',recommendation:'Масштабировать',rowClass:'row-status-success',dotClass:'status-success',badgeClass:'status-badge status-success'};
+ if(isDanger)return {level:'danger',recommendation:'Отключить',rowClass:'row-status-danger',dotClass:'status-danger',badgeClass:'status-badge status-danger'};
+ return {level:'warning',recommendation:'Оптимизировать',rowClass:'row-status-warning',dotClass:'status-warning',badgeClass:'status-badge status-warning'};
 }
 // TZ §3 — Per-lead Data Engine. Принимает model + опциональные оверрайды для симулятора «Что если?».
 // Базовый юнит = 1 входящий «грязный» лид (totals.visits). Считаем доли веток, ARPU каждой, Blended ARPU и Unit Margin.
@@ -1025,7 +1025,7 @@ function renderCjmUnitEconomics(){
     <div>
      <h3>${escapeHtml(meta.title)}</h3>
      <div class="cjm-unit-tags">
-      <span class="${st.badgeClass}"><span class="status-dot ${st.dotClass}"></span>${escapeHtml(st.badge)}</span>
+      <span class="${st.badgeClass}"><span class="status-dot ${st.dotClass}"></span>${escapeHtml(st.recommendation)}</span>
      </div>
     </div>
     <span class="cjm-unit-code">${escapeHtml(b.id.toUpperCase())}</span>
@@ -1227,7 +1227,7 @@ function renderUnitRationale(perLead,model){
  const gm=m.global_metrics;
  const shares=u.shares||{},arpu=u.arpu||{};
  const branch=id=>m.cjm_branches.find(b=>b.id===id)||{};
- const shareLine=(id,name)=>`<li><b>${escapeHtml(name)}</b>: доля ${pct((shares[id]||0)*100)}, выручка на пользователя ${moneyPrec(arpu[id]||0)}, вклад ${moneyPrec((shares[id]||0)*(arpu[id]||0))}</li>`;
+ const shareLine=(id,name)=>`<li><b>${escapeHtml(name)}</b>: доля ${pct((shares[id]||0)*100)}, выручка на пользователя ${moneyPrec(arpu[id]||0)}, вклад ${moneyPrec((u.contrib&&u.contrib[id])||0)}</li>`;
  const items=[
   {name:'Стоимость лида',val:moneyPrec(u.cpl),formula:'Стоимость лида = маркетинговый расход ÷ все входящие лиды (визиты)',inputs:[
     `<li>Маркетинговый расход за горизонт: <b>${mln(gm.marketing_spend)}</b> (Директ + SEO + PR)</li>`,
