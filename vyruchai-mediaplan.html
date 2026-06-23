@@ -285,6 +285,39 @@ canvas{display:block;width:100%;max-width:100%;height:auto;cursor:crosshair}
 #routeAnalyticsTable td:first-child{font-family:var(--font-mono);font-weight:600}
 .criterion{display:flex;gap:12px;align-items:flex-start;font-size:13.5px;line-height:1.45}
 .criterion .ck{flex:0 0 auto;width:22px;height:22px;border-radius:7px;display:grid;place-items:center;background:color-mix(in srgb,var(--green) 16%,transparent);color:var(--green);font-weight:800;font-size:13px}
+/* ---------- Quiz tab · pipeline of qualification steps ---------- */
+.quiz-steps{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px}
+.quiz-step{position:relative;border:1px solid var(--line);border-radius:var(--radius-xs);background:var(--surface);padding:14px 16px 14px 46px;box-shadow:var(--shadow-soft);transition:transform .2s var(--ease),box-shadow .2s var(--ease),border-color .2s var(--ease)}
+.quiz-step:hover{transform:translateY(-2px);box-shadow:var(--shadow-hover);border-color:var(--blue)}
+.quiz-step::before{content:attr(data-n);position:absolute;left:12px;top:12px;width:26px;height:26px;border-radius:50%;background:linear-gradient(150deg,var(--blue),var(--violet));color:#fff;font-size:12px;font-weight:700;display:grid;place-items:center;box-shadow:0 2px 6px rgba(0,0,0,.18)}
+.quiz-step.qs-consent::before{background:linear-gradient(150deg,var(--green),#0a8a3e)}
+.quiz-step.qs-bki::before{background:linear-gradient(150deg,var(--orange),#a04a00)}
+.quiz-step .qs-id{font-family:var(--font-mono);font-size:11.5px;color:var(--muted);letter-spacing:.02em}
+.quiz-step .qs-title{font-size:14.5px;font-weight:600;letter-spacing:-.01em;margin-top:1px;line-height:1.3}
+.quiz-step .qs-prompt{font-size:13px;color:var(--muted);margin-top:4px;line-height:1.45;font-style:italic}
+.quiz-step .qs-opts{display:flex;flex-wrap:wrap;gap:4px;margin-top:8px}
+.quiz-step .qs-chip{font-size:11.5px;border:1px solid var(--line-strong);border-radius:980px;padding:2px 9px;background:var(--surface-2);color:var(--text)}
+.quiz-step .qs-chip.qs-chip-warn{background:color-mix(in srgb,var(--orange) 12%,transparent);border-color:color-mix(in srgb,var(--orange) 30%,var(--line-strong));color:var(--orange)}
+.quiz-step .qs-meta{font-size:11.5px;color:var(--muted);margin-top:8px;display:flex;gap:6px;flex-wrap:wrap}
+.quiz-step .qs-meta b{color:var(--text);font-weight:600}
+.quiz-step .qs-skip{display:inline-block;font-size:11px;font-weight:700;color:var(--violet);background:color-mix(in srgb,var(--violet) 14%,transparent);border-radius:6px;padding:1px 7px;margin-top:6px;letter-spacing:.02em;text-transform:uppercase}
+.quiz-flow{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px;align-items:stretch}
+.quiz-flow-stage{position:relative;border:1px solid var(--line);border-radius:var(--radius-xs);background:var(--surface);padding:14px 16px;display:flex;flex-direction:column;gap:6px;box-shadow:var(--shadow-soft)}
+.quiz-flow-stage .qf-tag{font-size:11px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
+.quiz-flow-stage .qf-title{font-size:14.5px;font-weight:700;letter-spacing:-.01em;line-height:1.25}
+.quiz-flow-stage .qf-desc{font-size:13px;color:var(--muted);line-height:1.45}
+.quiz-flow-stage code{font-family:var(--font-mono);font-size:12px;background:var(--surface-3);padding:1px 6px;border-radius:5px}
+.quiz-flow-stage.qf-mock{border-left:3px solid var(--violet)}
+.quiz-flow-stage.qf-consent{border-left:3px solid var(--green)}
+.quiz-flow-stage.qf-checkout{border-left:3px solid var(--blue)}
+.quiz-flow-stage.qf-bki{border-left:3px solid var(--orange)}
+#quizScoringTable td:first-child,#quizGradeTable td:first-child{white-space:nowrap;font-weight:600}
+#quizScoringTable td:nth-child(2),#quizGradeTable td:nth-child(2){font-family:var(--font-mono);text-align:right}
+.quiz-grade-cell{display:inline-flex;align-items:center;gap:6px;font-weight:700}
+.quiz-grade-cell .qgc-dot{width:9px;height:9px;border-radius:50%;display:inline-block}
+.quiz-grade-cell .qgc-high{background:var(--green)}
+.quiz-grade-cell .qgc-medium{background:var(--orange)}
+.quiz-grade-cell .qgc-low{background:var(--red)}
 /* ---------- Block-flow diagram (Miro-style) ---------- */
 .route-diagram-wrap{overflow-x:auto;padding:6px 2px 2px}
 .route-diagram svg{width:100%;min-width:1480px;height:auto;display:block}
@@ -719,6 +752,7 @@ table.sortable thead th[aria-sort="descending"]::after{content:" ▼";font-size:
       <button class="tab" data-tab="funnels">Воронки</button>
       <button class="tab" data-tab="jtbd">JTBD</button>
       <button class="tab" data-tab="ai">AI/SOS</button>
+      <button class="tab" data-tab="quiz">Квиз-Сенсей</button>
       <button class="tab" data-tab="routing">CJM</button>
       <button class="tab" data-tab="retention">Повторные продажи</button>
       <button class="tab" data-tab="unit">Юнит-экономика</button>
@@ -877,6 +911,31 @@ table.sortable thead th[aria-sort="descending"]::after{content:" ▼";font-size:
         <div class="card"><div class="card-title"><div><h2>Качество AI-рекомендаций</h2><p>Прогноз против фактического результата</p></div></div><div class="table-wrap"><table id="aiTable"></table></div></div>
         <div class="card"><div class="card-title"><div><h2>SOS-режим дашборда</h2><p>Ограниченная подача в 2–3 партнёра</p></div></div><div class="table-wrap"><table id="sosTable"></table></div></div>
       </div>
+    </section>
+
+    <section id="tab-quiz" class="panel">
+      <div class="card route-hero">
+        <div class="card-title"><div><span class="eyebrow">AI-помощник · JTBD-онбординг</span><h2>Квиз-Сенсей · логика пред-квалификации</h2><p>Схематичное отражение прототипа <a href="https://github.com/krasuhod-lang/generator" target="_blank" rel="noopener">krasuhod-lang/generator</a> (live-демо: <a href="https://viruchay.ru/prototip/" target="_blank" rel="noopener">viruchay.ru/prototip</a>). Чат-формат «Узнай шансы за 1 минуту»: собирает анкету, считает SOS-прескоринг (low/medium/high) и предлагает top-3 маршрута без отправки реальных заявок в банки. Используется как вход в Smart Safe Router (см. вкладку CJM).</p></div></div>
+        <div class="route-goals" id="quizGoals"></div>
+      </div>
+
+      <h2 class="divider-title">Что собирает квиз · 12 шагов schema-driven диалога</h2>
+      <p class="route-lead">Каждый шаг = декларативный объект <code style="font-family:var(--font-mono);background:var(--surface-3);padding:1px 6px;border-radius:5px">qualification_schema[i]</code> из <code style="font-family:var(--font-mono);background:var(--surface-3);padding:1px 6px;border-radius:5px">categories/prequalification.js</code>: <b>id, type, prompt, quickReplies, parse, validate, applyToProfile, skipIf, afterAnswer</b>. Движок <code style="font-family:var(--font-mono);background:var(--surface-3);padding:1px 6px;border-radius:5px">core/dialog.js</code> поддерживает back/skip/preFill/autosave и подменяет шаги в зависимости от ответов (например, ипотека/карта меняют формулировку суммы и срока).</p>
+      <div class="card" style="padding:18px"><div id="quizSteps" class="quiz-steps"></div></div>
+
+      <h2 class="divider-title">SOS-прескоринг · правила top-3 офферов</h2>
+      <p class="route-lead">Детерминированный rule-based скоринг по ответам (если согласие 152-ФЗ получено). Базовый балл — 68, дальше +/− по возрасту, региону, доходу, занятости, долгу, просрочкам. Из <code style="font-family:var(--font-mono);background:var(--surface-3);padding:1px 6px;border-radius:5px">buildOffers(params, profile)</code> возвращаются <b>строго top-3</b> маршрута с вероятностью одобрения ≥ <b>80%</b>. AI/LLM в проде не нужен — это защита от ложных обещаний.</p>
+      <div class="grid two">
+        <div class="card"><div class="card-title"><div><h2>Корректировки балла</h2><p>Дельты применяются последовательно к базе 68</p></div></div><div class="table-wrap"><table id="quizScoringTable"></table></div></div>
+        <div class="card"><div class="card-title"><div><h2>Грейды и маршруты</h2><p>Куда уходит лид после прескоринга</p></div></div><div class="table-wrap"><table id="quizGradeTable"></table></div></div>
+      </div>
+
+      <h2 class="divider-title">Сквозной поток данных квиза</h2>
+      <p class="route-lead">От согласия 152-ФЗ до seamless checkout и опционального запроса БКИ (218-ФЗ). Все API на клиенте — mock'и через <code style="font-family:var(--font-mono);background:var(--surface-3);padding:1px 6px;border-radius:5px">Sensei.api</code> с feature-flag <code style="font-family:var(--font-mono);background:var(--surface-3);padding:1px 6px;border-radius:5px">USE_MOCK</code>; реальный бэкенд подключается одной строкой.</p>
+      <div class="card" style="padding:18px"><div id="quizFlow" class="quiz-flow"></div></div>
+
+      <h2 class="divider-title">Стыковка с дашбордом</h2>
+      <div class="grid three" id="quizHandoff"></div>
     </section>
 
     <section id="tab-partners" class="panel">

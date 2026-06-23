@@ -1358,7 +1358,7 @@ function renderContextualViews(){
  renderDataStatusList();
  renderPriorityList();
 }
-function renderAll(){ecoInvalidate();syncControlsFromState();renderModelDirtyState();renderPresetActions();renderEcoPresets();renderValidators();renderSeoStages();renderContextualViews();renderTargetScenario();renderCentrofinans();renderRouting();renderCharts()}
+function renderAll(){ecoInvalidate();syncControlsFromState();renderModelDirtyState();renderPresetActions();renderEcoPresets();renderValidators();renderSeoStages();renderContextualViews();renderTargetScenario();renderCentrofinans();renderRouting();renderQuiz();renderCharts()}
 // Целевой сценарий «40 млн ₽/мес к декабрю 2027»: строим помесячную траекторию выручки,
 // требуемые мультипликаторы по воронке и список точек роста. Базовый план в декабре 2027
 // (revenue последний элемент) недотягивает до цели, поэтому считаем равномерный коэффициент уплотнения.
@@ -1813,6 +1813,103 @@ function renderRouting(){
  renderRouteStepSchemes();
  initVolumeCalculator();
  renderRouteOkrKpis();
+}
+// ----------------------------------------------------------------
+// Квиз-Сенсей · схематическое отражение прототипа krasuhod-lang/generator.
+// Источник схемы — categories/prequalification.js (qualification_schema),
+// SOS-прескоринг — buildOffers() (детерминированный rule-based).
+// ----------------------------------------------------------------
+const QUIZ_GOALS=[
+ 'Получить согласие 152-ФЗ до любого скоринга и до отправки лида в API партнёров',
+ 'Понять JTBD клиента: «закрыть долг», «лечение», «до зарплаты», «карта», «ипотека»',
+ 'Собрать минимально-достаточную анкету за 1 минуту через quick-replies и парсинг текста',
+ 'Посчитать SOS-прескоринг (low/medium/high) и показать top-3 маршрута с одобрением ≥ 80%',
+ 'Передать профиль в Smart Safe Router без повторного ввода данных (session_id)'
+];
+const QUIZ_STEPS=[
+ {id:'consent',title:'Согласие 152-ФЗ',cls:'qs-consent',type:'choice',prompt:'Готовы начать функциональное демо?',opts:[['Согласен, начать'],['Не сейчас','ghost']],meta:'skipIf: уже есть согласие в cookie',note:'Без согласия квиз не запускает скоринг и не передаёт данные'},
+ {id:'phone',title:'Телефон',type:'text',prompt:'Начнём с телефона в формате +7 999 123-45-67',opts:[],meta:'parse: parseRussianPhone · afterAnswer: lookup в реестре ЦФ + партнёров',note:'Используется для проверки повторных обращений у партнёров'},
+ {id:'name',title:'Имя',type:'text',prompt:'Как к вам обращаться?',opts:[],meta:'parse: только буквы, 2–60 символов',note:'Для обращения в чате, не для скоринга'},
+ {id:'purpose',title:'Цель займа (JTBD)',type:'choice',prompt:'Какая ситуация ближе всего?',opts:[['Закрыть долг'],['На лечение'],['До зарплаты'],['Кредитная карта'],['Ипотека'],['Другое']],meta:'parse: nlp.classifyJtbd · влияет на формулировки следующих шагов',note:'Ключевой бизнес-сигнал: меняет продукт и маршрут роутера'},
+ {id:'amount',title:'Сумма',type:'number',prompt:'Какая сумма нужна? Можно «30 тысяч» или «10к»',opts:[['15 000 ₽'],['50 000 ₽'],['120 000 ₽'],['3 000 000 ₽']],meta:'parse: nlp.parseAmount · validate: 1 000…15 000 000 ₽',note:'Формулировка адаптируется под ипотеку / карту / рефинанс'},
+ {id:'termDays',title:'Срок',type:'number',prompt:'На какой срок комфортно брать обязательство?',opts:[['14 дней'],['30 дней'],['6 месяцев'],['10 лет']],meta:'parse: nlp.parseTerm',note:'skipIf: цель = credit_card',skip:true},
+ {id:'age',title:'Возраст',type:'number',prompt:'Сколько вам лет?',opts:[['21'],['30'],['45'],['62']],meta:'validate: 18–75 · skipIf: уже найден в реестре ЦФ',note:'Бонус к скорингу за «активный» возраст 23–55'},
+ {id:'region',title:'Регион',type:'choice',prompt:'Регион проживания?',opts:[['Москва / СПб'],['Областной центр'],['Другой регион'],['С ограничениями','warn']],meta:'skipIf: регион известен из реестра ЦФ',note:'Регион с ограничениями (Крым/Севастополь) — штраф к скорингу'},
+ {id:'income',title:'Доход (диапазон)',type:'choice',prompt:'Ежемесячный доход примерно?',opts:[['до 30 тыс'],['30–60 тыс'],['60–100 тыс'],['100+ тыс'],['нет','warn']],meta:'parse: nlp.parseAmount → бакет',note:'Спрашиваем диапазон, не точную сумму — снижает отказ от анкеты'},
+ {id:'employment',title:'Тип занятости',type:'choice',prompt:'Тип занятости?',opts:[['По найму'],['Самозанятый'],['ИП'],['Пенсионер'],['Без оформления','warn']],meta:'skipIf: занятость известна из реестра ЦФ',note:'Влияет на доступные продукты (ипотека требует подтверждение)'},
+ {id:'debtAmount',title:'Текущие долги',type:'number',prompt:'Сумма остатка по действующим долгам?',opts:[['Нет долгов'],['100 000 ₽'],['300 000 ₽'],['500 000 ₽+','warn']],meta:'parse: nlp.parseAmount или 0',note:'Триггер «БФЛ»: отказ + долг > 300 000 ₽ → маршрут реабилитации'},
+ {id:'overdue12m',title:'Просрочки 12 мес',type:'choice',prompt:'За последние 12 месяцев были просрочки?',opts:[['Нет'],['Да','warn'],['Не знаю']],meta:'rule-based parse',note:'«Да» → даунгрейд до low, «Не знаю» → опц. БКИ по 218-ФЗ'},
+ {id:'bki',title:'Опциональный запрос БКИ',cls:'qs-bki',type:'choice',prompt:'Согласны на запрос кредитной истории (218-ФЗ)?',opts:[['Согласен, запросить'],['Не сейчас','ghost']],meta:'отдельное согласие · мягкий запрос, не влияет на скоринговый балл',note:'Запускается только после показа предварительных офферов'}
+];
+const QUIZ_SCORING=[
+ ['Возраст 23–55 лет','+8'],
+ ['Возраст 18–22 или 56–70','+3'],
+ ['Регион Москва / СПб','+5'],
+ ['Регион с ограничениями (Крым/Севастополь)','−10'],
+ ['Доход 100 000+ ₽','+10'],
+ ['Доход 60–100 000 ₽','+5'],
+ ['Доход «нет»','−15'],
+ ['Занятость: по найму / самозанятый','+5'],
+ ['Занятость: без оформления','−10'],
+ ['Просрочки за 12 мес = «нет»','+8'],
+ ['Просрочки за 12 мес = «да»','−20'],
+ ['Долг > 12 × месячный доход','−15'],
+ ['Сумма займа ≤ 50% от дохода','+5']
+];
+const QUIZ_GRADES=[
+ {grade:'high',cls:'qgc-high',approval:'≥ 85%',route:'top-3 офферов ЦФ + банков, прямой Direct API, seamless checkout',action:'Маршрут CF_TARGET / CF_NON_CORE — см. вкладка CJM'},
+ {grade:'medium',cls:'qgc-medium',approval:'70–84%',route:'3 МФО + 1 банк с лояльным скорингом, обязательный SMS-код',action:'Маршрут CF_ACTIVE — защита от перекредитованности'},
+ {grade:'low',cls:'qgc-low',approval:'< 70%',route:'2 МФО PDL + предложение БКИ-проверки (218-ФЗ)',action:'Маршрут CF_REJECTED → БФЛ / реабилитация при долге > 300 000 ₽'}
+];
+const QUIZ_FLOW=[
+ {tag:'1 · Старт',cls:'qf-consent',title:'Согласие 152-ФЗ',desc:'Cookie-баннер + явный чекбокс. Без него <code>buildOffers()</code> не вызывается. session_id (UUID) сохраняется в sessionStorage.'},
+ {tag:'2 · Сбор',cls:'',title:'12 шагов анкеты',desc:'schema-driven движок <code>core/dialog.js</code>: back/skip/preFill/autosave. Quick-replies + NLP-парсинг свободного текста через <code>core/nlp.js</code>.'},
+ {tag:'3 · Mock-API',cls:'qf-mock',title:'POST /api/v1/scoring/sos',desc:'Фасад <code>Sensei.api</code> с флагом <code>USE_MOCK</code>. На фронте — детерминированные правила; в проде — один endpoint, без изменений UI.'},
+ {tag:'4 · Top-3',cls:'',title:'buildOffers(params, profile)',desc:'Фильтр офферов по probability ≥ 80%, исключение партнёров со стоп-флагами из <code>partnersRegistry.lookupByPhone</code>.'},
+ {tag:'5 · Checkout',cls:'qf-checkout',title:'Seamless внутри чата',desc:'Единая JSON-анкета, SMS-согласия, статус заявки через <code>POST /api/v1/webhooks/status</code>. Без редиректа на сайт партнёра.'},
+ {tag:'6 · БКИ (опц.)',cls:'qf-bki',title:'218-ФЗ inquiry',desc:'Отдельное согласие, отдельный экран. Мягкий запрос в НБКИ/ОКБ — не влияет на скоринговый балл клиента.'}
+];
+const QUIZ_HANDOFF=[
+ {title:'→ JTBD',desc:'Поле <code>purpose</code> = 6 категорий (debt/medical/salary/card/mortgage/other) ложится один-к-одному в JTBD-таблицу дашборда — см. вкладку JTBD.'},
+ {title:'→ AI/SOS',desc:'Грейд скоринга и top-3 офферов попадают в KPI «Качество AI-рекомендаций» и SOS-таблицу — см. вкладку AI/SOS.'},
+ {title:'→ CJM',desc:'session_id + профиль передаются в Smart Safe Router. Один из 4 маршрутов (TARGET / ACTIVE / REJECTED / NON_CORE) — см. вкладку CJM.'}
+];
+function renderQuiz(){
+ const goals=document.getElementById('quizGoals');
+ if(!goals)return;
+ goals.innerHTML=QUIZ_GOALS.map((g,i)=>`<div class="route-goal"><span class="rg-num">${i+1}</span><span class="rg-text">${escapeHtml(g)}</span></div>`).join('');
+ const steps=document.getElementById('quizSteps');
+ steps.innerHTML=QUIZ_STEPS.map((s,i)=>{
+  const opts=(s.opts||[]).map(o=>`<span class="qs-chip${o[1]==='warn'?' qs-chip-warn':''}">${escapeHtml(o[0])}</span>`).join('');
+  return `<div class="quiz-step ${s.cls||''}" data-n="${i+1}">`+
+   `<div class="qs-id">id: ${escapeHtml(s.id)} · type: ${escapeHtml(s.type)}</div>`+
+   `<div class="qs-title">${escapeHtml(s.title)}</div>`+
+   `<div class="qs-prompt">«${escapeHtml(s.prompt)}»</div>`+
+   (opts?`<div class="qs-opts">${opts}</div>`:'')+
+   (s.skip?`<span class="qs-skip">может быть пропущен</span>`:'')+
+   `<div class="qs-meta">${escapeHtml(s.meta)}</div>`+
+   `<div class="qs-meta"><b>Зачем:</b> ${escapeHtml(s.note)}</div>`+
+   `</div>`;
+ }).join('');
+ const scoring=document.getElementById('quizScoringTable');
+ scoring.innerHTML=`<thead><tr><th>Правило</th><th>Δ балла</th></tr></thead><tbody>`+
+  QUIZ_SCORING.map(r=>`<tr><td>${escapeHtml(r[0])}</td><td>${escapeHtml(r[1])}</td></tr>`).join('')+`</tbody>`;
+ const grades=document.getElementById('quizGradeTable');
+ grades.innerHTML=`<thead><tr><th>Грейд</th><th>Шанс</th><th>Что показываем</th><th>Действие</th></tr></thead><tbody>`+
+  QUIZ_GRADES.map(g=>`<tr>`+
+   `<td><span class="quiz-grade-cell"><span class="qgc-dot ${g.cls}"></span>${escapeHtml(g.grade)}</span></td>`+
+   `<td>${escapeHtml(g.approval)}</td>`+
+   `<td>${escapeHtml(g.route)}</td>`+
+   `<td>${escapeHtml(g.action)}</td>`+
+   `</tr>`).join('')+`</tbody>`;
+ const flow=document.getElementById('quizFlow');
+ flow.innerHTML=QUIZ_FLOW.map(s=>`<div class="quiz-flow-stage ${s.cls||''}">`+
+  `<span class="qf-tag">${escapeHtml(s.tag)}</span>`+
+  `<span class="qf-title">${escapeHtml(s.title)}</span>`+
+  `<span class="qf-desc">${s.desc}</span>`+
+  `</div>`).join('');
+ const handoff=document.getElementById('quizHandoff');
+ handoff.innerHTML=QUIZ_HANDOFF.map(h=>`<div class="card tight"><div class="card-title"><div><h2>${escapeHtml(h.title)}</h2><p>${h.desc}</p></div></div></div>`).join('');
 }
 // Drag-to-scroll для широкой PNL-таблицы: зажатая левая кнопка мыши тянет таблицу влево/вправо.
 function initDragScroll(){
