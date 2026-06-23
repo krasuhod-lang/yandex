@@ -78,8 +78,10 @@ class Chart{
   const {ticks,min,max}=niceTicks(rawMin,rawMax,5);
   ctx.font='12px '+chartFont();
   const yLabelW=Math.max(...ticks.map(t=>ctx.measureText(shortNum(t)).width),28);
-  const padL=Math.ceil(yLabelW)+16;
-  const padR=20;
+  // Доп. запас слева для подписей оси Y, чтобы они не наезжали на колонки графика (особенно
+  // для stacked-баров с большими суммированными значениями вроде «Расходы по статьям, тыс. ₽»).
+  const padL=Math.ceil(yLabelW)+22;
+  const padR=24;
   ctx.font='12px '+chartFont();
   const legendItems=datasets.filter(ds=>ds.label).map(ds=>{
    const rawColor=ds.borderColor||(Array.isArray(ds.backgroundColor)?ds.backgroundColor[0]:ds.backgroundColor)||colors.blue;
@@ -107,8 +109,10 @@ class Chart{
   const SIN30=0.5, COS30=0.8660254;
   const xLabelH=rotateX?Math.ceil(maxLabelWidth*SIN30+12*COS30+14):30;
   // Зазор между блоком легенды и областью графика, чтобы подписи рядов не наезжали на сам график.
-  const legendGap=legendItems.length?12:0;
-  const pad={l:padL,r:padR,t:8+legendH+legendGap,b:xLabelH};
+  // Для stacked-баров с несколькими рядами легенда обычно занимает 2 строки и без зазора
+  // верхняя сетка/значения «прилипают» к подписям — добавляем дополнительный отступ.
+  const legendGap=legendItems.length?(legendH>22?16:12):0;
+  const pad={l:padL,r:padR,t:10+legendH+legendGap,b:xLabelH};
   const plotW=width-pad.l-pad.r, plotH=height-pad.t-pad.b;
   // legend
   if(legendItems.length){
@@ -1988,11 +1992,7 @@ const QUIZ_FLOW=[
  {tag:'6 · Checkout',cls:'qf-checkout',title:'Seamless внутри чата',desc:'Единая JSON-анкета, SMS-согласия, статус заявки через <code>POST /api/v1/webhooks/status</code>. Без редиректа на сайт партнёра.'},
  {tag:'7 · БКИ (опц.)',cls:'qf-bki',title:'218-ФЗ inquiry',desc:'Отдельное согласие, отдельный экран. Мягкий запрос в НБКИ/ОКБ — не влияет на скоринговый балл клиента.'}
 ];
-const QUIZ_HANDOFF=[
- {title:'→ JTBD',desc:'Поле <code>purpose</code> = 6 категорий (debt/medical/salary/card/mortgage/other) ложится один-к-одному в JTBD-таблицу дашборда — см. вкладку JTBD.'},
- {title:'→ AI/SOS',desc:'Грейд скоринга и top-3 офферов попадают в KPI «Качество AI-рекомендаций» и SOS-таблицу — см. вкладку AI/SOS.'},
- {title:'→ CJM',desc:'session_id + профиль передаются в Smart Safe Router. Один из 8 маршрутов (TARGET / ACTIVE / REPEAT / DORMANT / REJECTED / NON_CORE / OVERDUE / NOT_FOUND) — см. вкладку CJM и блок «Квиз → Smart Safe Router» выше.'}
-];
+const QUIZ_HANDOFF=[];
 function renderQuiz(){
  const goals=document.getElementById('quizGoals');
  if(!goals)return;
@@ -2038,7 +2038,7 @@ function renderQuiz(){
    `</article>`).join('');
  }
  const handoff=document.getElementById('quizHandoff');
- handoff.innerHTML=QUIZ_HANDOFF.map(h=>`<div class="card tight"><div class="card-title"><div><h2>${escapeHtml(h.title)}</h2><p>${h.desc}</p></div></div></div>`).join('');
+ if(handoff)handoff.innerHTML=QUIZ_HANDOFF.map(h=>`<div class="card tight"><div class="card-title"><div><h2>${escapeHtml(h.title)}</h2><p>${h.desc}</p></div></div></div>`).join('');
 }
 // Drag-to-scroll для широкой PNL-таблицы: зажатая левая кнопка мыши тянет таблицу влево/вправо.
 function initDragScroll(){

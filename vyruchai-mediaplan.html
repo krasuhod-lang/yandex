@@ -149,7 +149,9 @@ tbody tr.row-margin td:first-child{color:var(--violet);box-shadow:inset 3px 0 0 
 canvas{display:block;width:100%;max-width:100%;height:auto;cursor:crosshair}
 .chart-card{min-height:0}
 .chart-card .chart-box{position:relative;width:100%;height:300px}
-.cost-mix-card .chart-box{height:400px}
+.cost-mix-card .chart-box{height:440px;padding-top:6px}
+.cost-mix-card .chart-box canvas{height:100%!important}
+@media(max-width:980px){.cost-mix-card .chart-box{height:360px}}
 .chart-card canvas{height:100%!important}
 @media(max-width:980px){.chart-card .chart-box{height:264px}}
 @media(max-width:560px){.chart-card .chart-box{height:236px}}
@@ -1007,8 +1009,6 @@ table.sortable thead th[aria-sort="descending"]::after{content:" ▼";font-size:
       <p class="route-lead">От согласия 152-ФЗ до seamless checkout и опционального запроса БКИ (218-ФЗ). Все API на клиенте — mock'и через <code style="font-family:var(--font-mono);background:var(--surface-3);padding:1px 6px;border-radius:5px">Sensei.api</code> с feature-flag <code style="font-family:var(--font-mono);background:var(--surface-3);padding:1px 6px;border-radius:5px">USE_MOCK</code>; реальный бэкенд подключается одной строкой.</p>
       <div class="card" style="padding:18px"><div id="quizFlow" class="quiz-flow"></div></div>
 
-      <h2 class="divider-title">Стыковка с дашбордом</h2>
-      <div class="grid three" id="quizHandoff"></div>
     </section>
 
     <section id="tab-partners" class="panel">
