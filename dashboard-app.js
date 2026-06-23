@@ -523,6 +523,13 @@ const partnerMethodRows=[
 
 function sum(a){return a.reduce((x,y)=>x+(Number.isFinite(Number(y))?Number(y):0),0)}
 function fmt(n){return Math.round(n).toLocaleString('ru-RU')}
+// Денежный формат с автоматической точностью: для per-lead значений < 100 ₽ показываем
+// 1–2 знака после запятой, чтобы изменения от ползунков и инпутов были заметны.
+function moneyPrec(n){
+ const v=Number(n)||0;const a=Math.abs(v);
+ const d=a<10?2:a<100?1:0;
+ return v.toLocaleString('ru-RU',{minimumFractionDigits:d,maximumFractionDigits:d})+' ₽';
+}
 function money(n){return fmt(n)+' ₽'}
 function mln(n){return (n/1000000).toLocaleString('ru-RU',{maximumFractionDigits:1})+' млн ₽'}
 function pct(n){return Number(n).toLocaleString('ru-RU',{maximumFractionDigits:1})+'%'}
@@ -1180,6 +1187,50 @@ function renderUnitTable(model){
  el.classList.add('sortable');
  el.innerHTML='<thead><tr>'+head+'</tr></thead><tbody>'+body+'</tbody>';
 }
+function renderUnitRationale(perLead,model){
+ const host=document.getElementById('unitRationale');
+ if(!host)return;
+ const u=perLead||perLeadFromModel();
+ const m=model||buildUnitModel();
+ const gm=m.global_metrics;
+ const shares=u.shares||{},arpu=u.arpu||{};
+ const branch=id=>m.cjm_branches.find(b=>b.id===id)||{};
+ const shareLine=(id,name)=>`<li><b>${escapeHtml(name)}</b>: доля ${pct((shares[id]||0)*100)} · ARPU ${moneyPrec(arpu[id]||0)} · вклад ${moneyPrec((shares[id]||0)*(arpu[id]||0))}</li>`;
+ const items=[
+  {name:'CPL',val:moneyPrec(u.cpl),formula:'CPL = маркетинг_спенд ÷ всего «грязных» лидов (визитов)',inputs:[
+    `<li>Маркетинговый расход за горизонт: <b>${mln(gm.marketing_spend)}</b> (Директ + SEO + PR)</li>`,
+    `<li>Всего лидов: <b>${fmt(u.totalLeads)}</b> — сумма визитов из плана трафика</li>`,
+    `<li>Что двигает: бюджеты каналов на вкладке «Обзор», ползунок «Снизить CPL» в симуляторе</li>`
+  ]},
+  {name:'Blended ARPU',val:moneyPrec(u.blendedArpu),formula:'Blended ARPU = Σ доля_i × ARPU_i по 4 веткам Smart Safe Router',inputs:[
+    shareLine('target','TARGET — выдача в ЦФ'),
+    shareLine('rejected','REJECTED — CPA при отказе'),
+    shareLine('noncore','NON_CORE — кросс-офферы'),
+    shareLine('overdue','OVERDUE — перекредитованные'),
+    `<li>Что двигает: вводные «Тарифы партнёров», «Match-rate», «LTV-factor», доли веток</li>`
+  ]},
+  {name:'Unit Margin',val:moneyPrec(u.unitMargin),formula:'Unit Margin = Blended ARPU − CPL',inputs:[
+    `<li>Blended ARPU: <b>${moneyPrec(u.blendedArpu)}</b></li>`,
+    `<li>CPL: <b>${moneyPrec(u.cpl)}</b></li>`,
+    `<li>Положительный → каждый «грязный» лид приносит маржу до постоянных затрат</li>`,
+    `<li>Что двигает: всё, что влияет на CPL и ARPU выше</li>`
+  ]},
+  {name:'ROMI',val:u.romi.toFixed(1)+'%',formula:'ROMI = Unit Margin ÷ CPL × 100%',inputs:[
+    `<li>Текущий ROMI: <b>${u.romi.toFixed(1)}%</b> · светофор: <b>${escapeHtml(statusFor(u.romi).recommendation)}</b></li>`,
+    `<li>Пороги: ≥ 50% — масштабировать, 0..50% — оптимизировать, < 0% — стоп</li>`,
+    `<li>MoM-тренд по последним месяцам: расход ${gm.trends.spend===null?'n/a':gm.trends.spend.toFixed(1)+'%'} · выручка ${gm.trends.revenue===null?'n/a':gm.trends.revenue.toFixed(1)+'%'} · маржа ${gm.trends.margin===null?'n/a':gm.trends.margin.toFixed(1)+'%'}</li>`
+  ]}
+ ];
+ host.innerHTML=items.map(it=>`<div class="unit-rationale-item">`+
+  `<div class="uri-head"><span class="uri-name">${escapeHtml(it.name)}</span><span class="uri-val">${escapeHtml(it.val)}</span></div>`+
+  `<div class="uri-formula">${escapeHtml(it.formula)}</div>`+
+  `<ul>${it.inputs.join('')}</ul>`+
+ `</div>`).join('');
+ const foot=document.getElementById('unitRationaleFoot');
+ if(foot){
+  foot.innerHTML=`Все значения пересчитываются при любых изменениях вводных модели (вкладка «Целевая модель», ползунки симулятора «Что, если?» ниже, фильтры роли/канала/сценария наверху). Если число выглядит «застывшим» — проверьте, что выбран срез <b>«Все каналы / Все сценарии»</b> и что после правок инпутов нажата кнопка «Применить» в блоке вводных.`;
+ }
+}
 function renderDataStatusList(){
  const items=[
   ['Режим данных',DATA_SOURCE.modeLabel],
@@ -1426,11 +1477,12 @@ function renderContextualViews(){
  const _marginBadge=_trendBadge(_gm.trends.margin);
  const _romiBadge=_trendBadge(_gm.trends.romi);
  kpi('unitKpis',filterByRole([
-  {id:'cac',roles:['Рост','Руководитель'],label:'CPL · стоимость лида',value:money(_u.cpl),sub:`всего лидов: ${fmt(_u.totalLeads)}`,cls:'negative',delta:_toDelta(_cplBadge,false)},
-  {id:'revenue',roles:['Рост','Руководитель'],label:'Blended ARPU',value:money(_u.blendedArpu),sub:'доход с 1 «грязного» лида',cls:'positive',delta:_toDelta(_arpuBadge)},
-  {id:'revenue',roles:['Рост','Руководитель'],label:'Unit Margin',value:money(_u.unitMargin),sub:'Blended ARPU − CPL',cls:_u.unitMargin>=0?'positive':'negative',delta:_toDelta(_marginBadge)},
-  {id:'ltv-cac',roles:['Руководитель'],label:'ROMI',value:_u.romi.toFixed(1)+'%',sub:`светофор: ${_romiStatus.recommendation}`,cls:_romiStatus.level==='success'?'positive':_romiStatus.level==='danger'?'negative':'',delta:_toDelta(_romiBadge)}
+  {id:'cac',roles:['Рост','Руководитель'],label:'CPL · стоимость лида',value:moneyPrec(_u.cpl),sub:`маркетинг ${mln(_gm.marketing_spend)} / лидов ${fmt(_u.totalLeads)}`,cls:'negative',delta:_toDelta(_cplBadge,false)},
+  {id:'revenue',roles:['Рост','Руководитель'],label:'Blended ARPU',value:moneyPrec(_u.blendedArpu),sub:'Σ доля_i × ARPU_i по 4 веткам CJM',cls:'positive',delta:_toDelta(_arpuBadge)},
+  {id:'revenue',roles:['Рост','Руководитель'],label:'Unit Margin',value:moneyPrec(_u.unitMargin),sub:`Blended ARPU − CPL = ${moneyPrec(_u.blendedArpu)} − ${moneyPrec(_u.cpl)}`,cls:_u.unitMargin>=0?'positive':'negative',delta:_toDelta(_marginBadge)},
+  {id:'ltv-cac',roles:['Руководитель'],label:'ROMI',value:_u.romi.toFixed(1)+'%',sub:`Unit Margin / CPL · светофор: ${_romiStatus.recommendation}`,cls:_romiStatus.level==='success'?'positive':_romiStatus.level==='danger'?'negative':'',delta:_toDelta(_romiBadge)}
  ]));
+ renderUnitRationale(_u,_um);
  document.getElementById('formulaList').innerHTML=filterByRole(formulaCatalog).map(x=>`<div class="mini-row" ${drillAttrs('formula',x.label)}><span>${escapeHtml(x.label)}</span><b>${escapeHtml(x.status)}</b></div>`).join('');
  const filteredAlerts=filterContext(alertCatalog);
  document.getElementById('alertsGrid').innerHTML=(filteredAlerts.length?filteredAlerts:alertCatalog).map(a=>`<div class="card alert-card" ${drillAttrs('alert',a.id)}><div class="alert-head"><h3>${escapeHtml(a.entity)}</h3><span class="delta ${a.severity==='red'?'bad':a.severity==='yellow'?'warn':'good'}">${a.severity==='red'?'критично':a.severity==='yellow'?'внимание':'норма'}</span></div><div class="mini-row"><span>Первое обнаружение</span><b>${DATA_SOURCE.updatedAt}</b></div><p class="muted">${escapeHtml(a.reason)}</p><div class="actions"><button class="action" type="button" ${drillAttrs('alert',a.id)}>Разобрать сигнал</button></div></div>`).join('');
@@ -1993,6 +2045,149 @@ const QUIZ_FLOW=[
  {tag:'7 · БКИ (опц.)',cls:'qf-bki',title:'218-ФЗ inquiry',desc:'Отдельное согласие, отдельный экран. Мягкий запрос в НБКИ/ОКБ — не влияет на скоринговый балл клиента.'}
 ];
 const QUIZ_HANDOFF=[];
+// ---------- Интерактивный прототип квиза ----------
+// Состояние держим в модуле — кнопки переключают шаги, профиль и скоринг пересчитываются на лету,
+// в финале buildQuizResult() возвращает грейд + одну из 8 веток Smart Safe Router + top-3 оффера.
+const QUIZ_PROTO_STATE={step:0,profile:{},history:[],score:68,done:false};
+function quizGradeFor(score){
+ if(score>=85)return {grade:'high',cls:'high',label:'High',approval:'≥ 85%'};
+ if(score>=70)return {grade:'medium',cls:'medium',label:'Medium',approval:'70–84%'};
+ return {grade:'low',cls:'low',label:'Low',approval:'< 70%'};
+}
+// Жёстко зашитые правила скоринга — совпадают с таблицей QUIZ_SCORING выше,
+// чтобы прототип давал тот же балл, который объявлен в дашборде.
+function quizScoreDelta(stepId,value){
+ const v=String(value||'');
+ if(stepId==='age'){const n=parseInt(v,10);if(n>=23&&n<=55)return 8;if((n>=18&&n<=22)||(n>=56&&n<=70))return 3;return -5}
+ if(stepId==='region'){if(v.startsWith('Москва'))return 5;if(v.startsWith('С ограничениями'))return -10;return 0}
+ if(stepId==='income'){if(v.startsWith('100+'))return 10;if(v.startsWith('60–100'))return 5;if(v.startsWith('30–60'))return 2;if(v==='нет')return -15;return -3}
+ if(stepId==='employment'){if(v==='Без оформления')return -10;if(v==='Пенсионер')return -2;return 5}
+ if(stepId==='overdue12m'){if(v==='Нет')return 8;if(v==='Да')return -20;return 0}
+ if(stepId==='debtAmount'){if(v.startsWith('500'))return -15;if(v.startsWith('300'))return -8;return 0}
+ return 0;
+}
+// Маршрутизация в одну из 8 веток Smart Safe Router по собранному профилю.
+function quizRouteFor(profile,grade){
+ const purpose=profile.purpose||'';
+ const overdue=profile.overdue12m;
+ const debt=String(profile.debtAmount||'');
+ const employment=profile.employment;
+ const amount=String(profile.amount||'');
+ if(overdue==='Да'&&debt.startsWith('500'))return {code:'CF_OVERDUE',cls:'s-overdue',title:'Открытое взыскание · NPL',outcome:'Маршрут CF_OVERDUE — кредитование заблокировано, витрина БФЛ + HR-вакансии'};
+ if(purpose==='Ипотека'||(amount.startsWith('3 000 000')&&employment&&employment!=='Без оформления'))return {code:'CF_NON_CORE',cls:'s-noncore',title:'Не профиль ЦФ',outcome:'Маршрут CF_NON_CORE — банковский CPA до 5 000 ₽'};
+ if(grade.grade==='low'||overdue==='Да'||employment==='Без оформления')return {code:'CF_REJECTED',cls:'s-rejected',title:'Soft reject у ЦФ',outcome:'Маршрут CF_REJECTED — ТОП-3 МФО с лояльным скорингом, CPA ≈ 1 500–2 500 ₽'};
+ if(purpose==='Закрыть долг')return {code:'CF_DORMANT',cls:'s-dormant',title:'Реактивация / спящий',outcome:'Маршрут CF_DORMANT — смешанная витрина рефинансирования'};
+ if(grade.grade==='high'&&(purpose==='До зарплаты'||purpose==='На лечение'))return {code:'CF_TARGET',cls:'s-target',title:'Идеальный для ЦФ',outcome:'Маршрут CF_TARGET — прямой Direct API в Центрофинанс'};
+ return {code:'NOT_FOUND',cls:'s-notfound',title:'Органика — нет в БД',outcome:'Маршрут NOT_FOUND — смешанная конкурентная витрина: ЦФ №1 + 2–3 МФО + карты'};
+}
+function quizTopOffers(route,grade){
+ const map={
+  CF_TARGET:[['Центрофинанс PDL','одобрение 92%, прямой API'],['Центрофинанс Installment','одобрение 88%, длинная линейка'],['Карта ЦФ кэшбек','одобрение 85%, пост-выдача']],
+  CF_NON_CORE:[['Банк-партнёр · Ипотека','одобрение 84%'],['Банк-партнёр · Автокредит','одобрение 81%'],['Залоговый кредит','одобрение 80%']],
+  CF_DORMANT:[['Центрофинанс рефинанс','скидка для returning'],['Кредитная карта 120 дней','без процентов'],['Беззалоговый кредит банка','одобрение 80%']],
+  CF_REJECTED:[['МФО-партнёр №2 (PDL)','лояльный скоринг'],['МФО-партнёр №3 (контроль риска)','одобрение 80%'],['218-ФЗ: запрос БКИ','опционально, мягкий']],
+  CF_OVERDUE:[['Банкротство физлиц (БФЛ)','CPA 2 000–3 000 ₽'],['HR-вакансии партнёра','доход для выхода из долга'],['Юридическая консультация','рассрочка платежей']],
+  NOT_FOUND:[['Центрофинанс PDL','одобрение 88%'],['МФО-партнёр №2','одобрение 82%'],['Кредитная карта 120 дней','одобрение 80%']]
+ };
+ return map[route.code]||map.NOT_FOUND;
+}
+function renderQuizProto(){
+ const host=document.getElementById('quizProto');
+ if(!host)return;
+ const st=QUIZ_PROTO_STATE;
+ const steps=QUIZ_STEPS;
+ const total=steps.length;
+ const idx=Math.min(st.step,total);
+ const progress=Math.round(idx/total*100);
+ const grade=quizGradeFor(st.score);
+ const profileEntries=Object.entries(st.profile);
+ const profileText=profileEntries.length?JSON.stringify(Object.fromEntries(profileEntries),null,2):'// профиль пуст — ответьте на первый вопрос';
+ // ---- chat messages
+ const msgs=[];
+ msgs.push(`<div class="qp-msg bot">Привет! Я Сенсей — помогу за 1 минуту узнать ваши шансы. Без отправки данных в банки.<div class="qp-msg-meta">шаг 0 · согласие 152-ФЗ</div></div>`);
+ st.history.forEach(h=>{
+  msgs.push(`<div class="qp-msg bot">${escapeHtml(h.prompt)}<div class="qp-msg-meta">шаг ${h.n} · id: ${escapeHtml(h.id)}</div></div>`);
+  msgs.push(`<div class="qp-msg user">${escapeHtml(h.answer)}${h.delta?`<div class="qp-msg-meta">балл ${h.delta>=0?'+':''}${h.delta} → ${h.scoreAfter}</div>`:''}</div>`);
+ });
+ let quickHtml='';
+ if(!st.done&&st.step<total){
+  const cur=steps[st.step];
+  msgs.push(`<div class="qp-msg bot">${escapeHtml(cur.prompt)}<div class="qp-msg-meta">шаг ${st.step+1}/${total} · id: ${escapeHtml(cur.id)} · type: ${escapeHtml(cur.type)}</div></div>`);
+  const opts=cur.opts&&cur.opts.length?cur.opts:[['Продолжить']];
+  quickHtml=opts.map((o,i)=>{
+   const cls=o[1]==='warn'?'warn':(o[1]==='ghost'?'ghost':'');
+   return `<button class="${cls}" type="button" data-qp-pick="${i}">${escapeHtml(o[0])}</button>`;
+  }).join('');
+  if(cur.skip)quickHtml+=`<button class="skip" type="button" data-qp-skip="1">пропустить →</button>`;
+ }else if(st.done){
+  msgs.push(`<div class="qp-msg bot">Готово! Прескоринг посчитан, top-3 офферов подобраны. Смотрите результат →<div class="qp-msg-meta">финал · SOS-grade ${grade.label}</div></div>`);
+  quickHtml=`<button type="button" data-qp-restart="1">⟲ Пройти заново</button>`;
+ }
+ // ---- result panel (only after the final step)
+ let resultHtml='';
+ if(st.done){
+  const route=quizRouteFor(st.profile,grade);
+  const offers=quizTopOffers(route,grade);
+  resultHtml=`<div class="qp-result"><h4>Результат · Smart Safe Router</h4>`+
+   `<h5>${escapeHtml(route.title)} <span class="qp-route-code">${escapeHtml(route.code)}</span></h5>`+
+   `<div class="qp-stub" style="font-style:normal">${escapeHtml(route.outcome)}</div>`+
+   `<ol>${offers.map(o=>`<li><b>${escapeHtml(o[0])}</b> — ${escapeHtml(o[1])}</li>`).join('')}</ol>`+
+   `</div>`;
+ }else{
+  resultHtml=`<div class="qp-stub">Top-3 офферов и маршрут Smart Safe Router появятся после прохождения всех шагов.</div>`;
+ }
+ host.innerHTML=
+  `<div class="qp-chat">`+
+   `<div class="qp-header">`+
+    `<div class="qp-h-left"><div class="qp-avatar">С</div><div class="qp-title">Сенсей<small>чат-помощник · USE_MOCK</small></div></div>`+
+    `<div class="qp-progress" aria-label="Прогресс ${progress}%"><div class="qp-progress-bar" style="width:${progress}%"></div></div>`+
+    `<button class="qp-restart" type="button" data-qp-restart="1">Сброс</button>`+
+   `</div>`+
+   `<div class="qp-messages" id="qpMessages">${msgs.join('')}</div>`+
+   `<div class="qp-quick">${quickHtml}</div>`+
+  `</div>`+
+  `<div class="qp-side">`+
+   `<h4>Скоринг (база 68)</h4>`+
+   `<div class="qp-score-box">`+
+    `<div class="qp-score-row"><span>Текущий балл</span><b>${st.score}</b><span class="qp-grade ${grade.cls}">${grade.label}</span></div>`+
+    `<div class="qp-score-row"><span>Одобрение (оценка)</span><span>${escapeHtml(grade.approval)}</span></div>`+
+    `<div class="qp-score-row"><span>Шаг</span><span>${idx}/${total}</span></div>`+
+   `</div>`+
+   `<h4>JSON-профиль (session)</h4>`+
+   `<div class="qp-profile">${escapeHtml(profileText)}</div>`+
+   `<h4>Маршрут и top-3 офферов</h4>`+
+   resultHtml+
+  `</div>`;
+ const msgEl=host.querySelector('#qpMessages');
+ if(msgEl)msgEl.scrollTop=msgEl.scrollHeight;
+}
+function handleQuizProtoClick(ev){
+ const btn=ev.target.closest('[data-qp-pick],[data-qp-skip],[data-qp-restart]');
+ if(!btn||!btn.closest('#quizProto'))return;
+ const st=QUIZ_PROTO_STATE;
+ if(btn.dataset.qpRestart){
+  st.step=0;st.profile={};st.history=[];st.score=68;st.done=false;
+  renderQuizProto();return;
+ }
+ if(st.step>=QUIZ_STEPS.length){renderQuizProto();return}
+ const cur=QUIZ_STEPS[st.step];
+ if(btn.dataset.qpSkip){
+  st.history.push({n:st.step+1,id:cur.id,prompt:cur.prompt,answer:'(пропущено)',delta:0,scoreAfter:st.score});
+  st.step+=1;
+ }else{
+  const pickIdx=parseInt(btn.dataset.qpPick,10)||0;
+  const opt=(cur.opts&&cur.opts[pickIdx])||['Продолжить'];
+  const answer=opt[0];
+  const delta=quizScoreDelta(cur.id,answer);
+  st.score+=delta;
+  st.profile[cur.id]=answer;
+  st.history.push({n:st.step+1,id:cur.id,prompt:cur.prompt,answer,delta,scoreAfter:st.score});
+  st.step+=1;
+ }
+ if(st.step>=QUIZ_STEPS.length)st.done=true;
+ renderQuizProto();
+}
+document.addEventListener('click',handleQuizProtoClick);
 function renderQuiz(){
  const goals=document.getElementById('quizGoals');
  if(!goals)return;
@@ -2039,6 +2234,7 @@ function renderQuiz(){
  }
  const handoff=document.getElementById('quizHandoff');
  if(handoff)handoff.innerHTML=QUIZ_HANDOFF.map(h=>`<div class="card tight"><div class="card-title"><div><h2>${escapeHtml(h.title)}</h2><p>${h.desc}</p></div></div></div>`).join('');
+ renderQuizProto();
 }
 // Drag-to-scroll для широкой PNL-таблицы: зажатая левая кнопка мыши тянет таблицу влево/вправо.
 function initDragScroll(){
