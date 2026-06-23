@@ -335,6 +335,8 @@
     }
 
     return '<svg viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="График окупаемости когорты">' +
+      '<title>График окупаемости когорты</title>' +
+      '<desc>Накопленный вклад клиента по месяцам (сплошная зелёная линия) против постоянной линии Полного CAC (пунктир). Точка пересечения — срок окупаемости ' + paybackText(m.payback) + '.</desc>' +
       grid + xticks +
       '<line x1="' + padL + '" y1="' + (H - padB) + '" x2="' + (W - padR) + '" y2="' + (H - padB) + '" stroke="var(--line-strong)" stroke-width="1"/>' +
       cacLine + cumLine + marker + '</svg>';
@@ -584,8 +586,8 @@
       '<div class="ue-ai-block"><h4>Почему так произошло</h4><div class="ue-ai-rootcause">' + esc(r.rootCause) + '</div></div>' +
       '<div class="ue-ai-block"><h4>Что делать прямо сейчас</h4><ul class="ue-ai-actions">' +
       r.actions.map(function (a) { return '<li>' + esc(a) + '</li>'; }).join('') + '</ul></div>' +
-      '<div class="ue-ai-foot"><span class="ue-ai-meta">Обновлено: ' + new Date().toLocaleTimeString('ru-RU') +
-      ' · локальный детерминированный анализ</span><button class="ue-ai-reanalyze" type="button" id="ueAiReanalyze">Переанализировать</button></div>';
+      '<div class="ue-ai-foot"><span class="ue-ai-meta">Обновлено: <time datetime="' + new Date().toISOString() + '">' + new Date().toLocaleTimeString('ru-RU') +
+      '</time> · локальный детерминированный анализ</span><button class="ue-ai-reanalyze" type="button" id="ueAiReanalyze">Переанализировать</button></div>';
     var btn = document.getElementById('ueAiReanalyze');
     if (btn) btn.addEventListener('click', function () { scheduleAi(true); });
   }
