@@ -149,7 +149,9 @@ tbody tr.row-margin td:first-child{color:var(--violet);box-shadow:inset 3px 0 0 
 canvas{display:block;width:100%;max-width:100%;height:auto;cursor:crosshair}
 .chart-card{min-height:0}
 .chart-card .chart-box{position:relative;width:100%;height:300px}
-.cost-mix-card .chart-box{height:400px}
+.cost-mix-card .chart-box{height:440px;padding-top:6px}
+.cost-mix-card .chart-box canvas{height:100%!important}
+@media(max-width:980px){.cost-mix-card .chart-box{height:360px}}
 .chart-card canvas{height:100%!important}
 @media(max-width:980px){.chart-card .chart-box{height:264px}}
 @media(max-width:560px){.chart-card .chart-box{height:236px}}
@@ -301,6 +303,51 @@ canvas{display:block;width:100%;max-width:100%;height:auto;cursor:crosshair}
 .quiz-step .qs-meta{font-size:11.5px;color:var(--muted);margin-top:8px;display:flex;gap:6px;flex-wrap:wrap}
 .quiz-step .qs-meta b{color:var(--text);font-weight:600}
 .quiz-step .qs-skip{display:inline-block;font-size:11px;font-weight:700;color:var(--violet);background:color-mix(in srgb,var(--violet) 14%,transparent);border-radius:6px;padding:1px 7px;margin-top:6px;letter-spacing:.02em;text-transform:uppercase}
+
+/* ---------- Интерактивный прототип квиза ---------- */
+.quiz-proto-card{padding:0;overflow:hidden}
+.quiz-proto{display:grid;grid-template-columns:minmax(0,1fr) 320px;gap:0}
+@media(max-width:900px){.quiz-proto{grid-template-columns:1fr}}
+.qp-chat{display:flex;flex-direction:column;min-height:480px;background:linear-gradient(180deg,var(--surface),var(--surface-2));border-right:1px solid var(--line)}
+@media(max-width:900px){.qp-chat{border-right:none;border-bottom:1px solid var(--line)}}
+.qp-header{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:14px 18px;border-bottom:1px solid var(--line);background:var(--surface)}
+.qp-header .qp-h-left{display:flex;align-items:center;gap:10px}
+.qp-avatar{width:34px;height:34px;border-radius:50%;background:linear-gradient(150deg,var(--blue),var(--violet));color:#fff;display:grid;place-items:center;font-weight:800;font-size:14px;box-shadow:0 2px 6px rgba(0,0,0,.18)}
+.qp-title{font-weight:700;font-size:14.5px;line-height:1.2}
+.qp-title small{display:block;font-weight:500;font-size:12px;color:var(--muted);margin-top:2px}
+.qp-progress{flex:1;height:6px;background:var(--surface-3);border-radius:980px;overflow:hidden;margin:0 12px;max-width:200px}
+.qp-progress-bar{height:100%;background:linear-gradient(90deg,var(--blue),var(--violet));border-radius:980px;transition:width .3s var(--ease)}
+.qp-restart{font-size:12px;font-weight:600;background:var(--surface-3);border:1px solid var(--line);border-radius:980px;padding:6px 12px;cursor:pointer;color:var(--text);transition:background .15s,border-color .15s}
+.qp-restart:hover{background:var(--surface);border-color:var(--blue);color:var(--blue)}
+.qp-messages{flex:1;padding:18px;display:flex;flex-direction:column;gap:10px;overflow-y:auto;max-height:420px}
+.qp-msg{max-width:78%;padding:9px 13px;border-radius:14px;font-size:13.5px;line-height:1.45;animation:qpFade .25s ease}
+@keyframes qpFade{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
+.qp-msg.bot{background:var(--surface);border:1px solid var(--line);border-bottom-left-radius:4px;align-self:flex-start}
+.qp-msg.user{background:linear-gradient(150deg,var(--blue),var(--violet));color:#fff;border-bottom-right-radius:4px;align-self:flex-end}
+.qp-msg .qp-msg-meta{font-size:11px;opacity:.7;margin-top:2px}
+.qp-quick{display:flex;flex-wrap:wrap;gap:6px;padding:0 18px 14px}
+.qp-quick button{font-size:13px;font-weight:600;border:1px solid var(--line-strong);background:var(--surface);border-radius:980px;padding:7px 14px;cursor:pointer;color:var(--text);transition:all .15s var(--ease)}
+.qp-quick button:hover{background:color-mix(in srgb,var(--blue) 10%,var(--surface));border-color:var(--blue);color:var(--blue);transform:translateY(-1px)}
+.qp-quick button.warn{border-color:color-mix(in srgb,var(--orange) 35%,var(--line-strong));color:var(--orange)}
+.qp-quick button.warn:hover{background:color-mix(in srgb,var(--orange) 12%,var(--surface));color:var(--orange)}
+.qp-quick button.ghost{color:var(--muted)}
+.qp-quick button.skip{font-weight:500;color:var(--muted);background:transparent;border-style:dashed}
+.qp-side{padding:18px;background:var(--surface);display:flex;flex-direction:column;gap:14px;min-width:0}
+.qp-side h4{margin:0;font-size:11px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.qp-score-box{border:1px solid var(--line);border-radius:12px;padding:12px 14px;background:linear-gradient(170deg,var(--surface-2),var(--surface))}
+.qp-score-row{display:flex;justify-content:space-between;align-items:baseline;gap:8px;font-size:13px;margin-top:6px}
+.qp-score-row b{font-variant-numeric:tabular-nums;font-size:18px;letter-spacing:-.02em}
+.qp-score-row .qp-grade{font-size:11px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;border-radius:980px;padding:3px 10px}
+.qp-score-row .qp-grade.high{background:color-mix(in srgb,var(--green) 16%,transparent);color:var(--green)}
+.qp-score-row .qp-grade.medium{background:color-mix(in srgb,var(--orange) 16%,transparent);color:var(--orange)}
+.qp-score-row .qp-grade.low{background:color-mix(in srgb,var(--red) 16%,transparent);color:var(--red)}
+.qp-profile{font-family:var(--font-mono,ui-monospace,monospace);font-size:11.5px;background:var(--surface-3);border-radius:10px;padding:10px 12px;line-height:1.5;color:var(--text);max-height:160px;overflow-y:auto;white-space:pre-wrap;word-break:break-word}
+.qp-result{border:1px solid var(--line);border-radius:12px;padding:14px;background:var(--surface-2)}
+.qp-result h5{margin:0 0 6px;font-size:14px;font-weight:700}
+.qp-result .qp-route-code{display:inline-block;font-family:var(--font-mono);font-size:11px;font-weight:700;background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:2px 7px;margin-top:4px}
+.qp-result ol{margin:8px 0 0;padding-left:20px;display:grid;gap:4px;font-size:12.5px}
+.qp-result ol li b{font-weight:700}
+.qp-stub{color:var(--muted);font-size:12.5px;font-style:italic}
 .quiz-flow{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px;align-items:stretch}
 .quiz-flow-stage{position:relative;border:1px solid var(--line);border-radius:var(--radius-xs);background:var(--surface);padding:14px 16px;display:flex;flex-direction:column;gap:6px;box-shadow:var(--shadow-soft)}
 .quiz-flow-stage .qf-tag{font-size:11px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
@@ -739,6 +786,22 @@ canvas{display:block;width:100%;max-width:100%;height:auto;cursor:crosshair}
 .romi-cell.romi-cold{background:color-mix(in srgb,var(--red) 22%,transparent);color:var(--red)}
 @media(max-width:560px){.cjm-unit-grid{grid-template-columns:1fr}.waterfall-bars{flex-wrap:wrap}.ltv-cac-row{flex-direction:column}.ltv-cac-arrow{transform:rotate(90deg)}}
 
+/* ---------- Аргументация показателей юнит-экономики ---------- */
+.unit-rationale-card{padding:20px 22px}
+.unit-rationale-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px}
+@media(max-width:980px){.unit-rationale-grid{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:560px){.unit-rationale-grid{grid-template-columns:1fr}}
+.unit-rationale-item{border:1px solid var(--line);border-radius:14px;padding:14px 14px 12px;background:linear-gradient(170deg,var(--surface),var(--surface-2));display:flex;flex-direction:column;gap:8px}
+.unit-rationale-item .uri-head{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.unit-rationale-item .uri-name{font-size:12px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.unit-rationale-item .uri-val{font-size:18px;font-weight:700;font-variant-numeric:tabular-nums;letter-spacing:-.02em}
+.unit-rationale-item .uri-formula{font-family:var(--font-mono,ui-monospace,monospace);font-size:11.5px;background:var(--surface-3);border-radius:8px;padding:6px 8px;line-height:1.4;color:var(--text)}
+.unit-rationale-item ul{margin:2px 0 0;padding-left:0;list-style:none;display:grid;gap:6px}
+.unit-rationale-item ul li{position:relative;padding-left:14px;font-size:12.5px;color:var(--muted);line-height:1.45}
+.unit-rationale-item ul li::before{content:"›";position:absolute;left:0;top:0;color:var(--blue);font-weight:800}
+.unit-rationale-item ul li b{color:var(--text);font-weight:600}
+.unit-rationale-foot{margin:14px 0 0;font-size:12.5px;line-height:1.5}
+
 /* ---------- TZ: Светофор / Status helpers (#tab-unit) ---------- */
 .status-dot{display:inline-block;width:9px;height:9px;border-radius:50%;vertical-align:middle;margin-right:6px;flex:0 0 9px}
 .status-dot.status-success{background:var(--green);box-shadow:0 0 0 3px color-mix(in srgb,var(--green) 18%,transparent)}
@@ -988,6 +1051,10 @@ table.sortable thead th[aria-sort="descending"]::after{content:" ▼";font-size:
         <div class="route-goals" id="quizGoals"></div>
       </div>
 
+      <h2 class="divider-title">Интерактивный прототип · пройдите квиз</h2>
+      <p class="route-lead">Нажимайте кнопки ниже — пройдите 12 шагов, как реальный пользователь. После каждого ответа пересчитывается SOS-скоринг, формируется JSON-профиль и подбирается одна из 8 веток Smart Safe Router с top-3 офферами. Все вычисления локальные, без обращений к партнёрам.</p>
+      <div class="card quiz-proto-card"><div id="quizProto" class="quiz-proto" aria-live="polite"></div></div>
+
       <h2 class="divider-title">Что собирает квиз · 12 шагов schema-driven диалога</h2>
       <p class="route-lead">Каждый шаг = декларативный объект <code style="font-family:var(--font-mono);background:var(--surface-3);padding:1px 6px;border-radius:5px">qualification_schema[i]</code> из <code style="font-family:var(--font-mono);background:var(--surface-3);padding:1px 6px;border-radius:5px">categories/prequalification.js</code>: <b>id, type, prompt, quickReplies, parse, validate, applyToProfile, skipIf, afterAnswer</b>. Движок <code style="font-family:var(--font-mono);background:var(--surface-3);padding:1px 6px;border-radius:5px">core/dialog.js</code> поддерживает back/skip/preFill/autosave и подменяет шаги в зависимости от ответов (например, ипотека/карта меняют формулировку суммы и срока).</p>
       <div class="card" style="padding:18px"><div id="quizSteps" class="quiz-steps"></div></div>
@@ -1007,8 +1074,6 @@ table.sortable thead th[aria-sort="descending"]::after{content:" ▼";font-size:
       <p class="route-lead">От согласия 152-ФЗ до seamless checkout и опционального запроса БКИ (218-ФЗ). Все API на клиенте — mock'и через <code style="font-family:var(--font-mono);background:var(--surface-3);padding:1px 6px;border-radius:5px">Sensei.api</code> с feature-flag <code style="font-family:var(--font-mono);background:var(--surface-3);padding:1px 6px;border-radius:5px">USE_MOCK</code>; реальный бэкенд подключается одной строкой.</p>
       <div class="card" style="padding:18px"><div id="quizFlow" class="quiz-flow"></div></div>
 
-      <h2 class="divider-title">Стыковка с дашбордом</h2>
-      <div class="grid three" id="quizHandoff"></div>
     </section>
 
     <section id="tab-partners" class="panel">
@@ -1085,6 +1150,11 @@ table.sortable thead th[aria-sort="descending"]::after{content:" ▼";font-size:
 
     <section id="tab-unit" class="panel">
       <div class="grid kpis" id="unitKpis"></div>
+      <div class="card unit-rationale-card">
+        <div class="card-title"><div><h2>Аргументация показателей · какие вводные питают KPI</h2><p>Откуда берётся каждая цифра в верхних карточках и как изменение конкретного инпута двигает CPL → ARPU → Unit Margin → ROMI.</p></div></div>
+        <div id="unitRationale" class="unit-rationale-grid"></div>
+        <p class="muted unit-rationale-foot" id="unitRationaleFoot"></p>
+      </div>
       <div class="grid two">
         <div class="card chart-card"><div class="card-title"><div><h2>Маркетинговый PnL</h2><p>Маржинальная прибыль, валовая прибыль и окупаемость</p></div></div><div class="chart-box"><canvas id="chartUnit"></canvas></div></div>
         <div class="card"><div class="card-title"><div><h2>Формулы</h2><p>Единый слой расчётов для прямого API и CPA</p></div></div><div id="formulaList" class="mini-list"></div></div>
