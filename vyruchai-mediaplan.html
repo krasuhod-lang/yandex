@@ -318,6 +318,31 @@ canvas{display:block;width:100%;max-width:100%;height:auto;cursor:crosshair}
 .quiz-grade-cell .qgc-high{background:var(--green)}
 .quiz-grade-cell .qgc-medium{background:var(--orange)}
 .quiz-grade-cell .qgc-low{background:var(--red)}
+/* TZ — Quiz → Smart Safe Router mapping grid */
+.quiz-cjm-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px}
+.quiz-cjm-card{position:relative;border:1px solid var(--line);border-radius:var(--radius);background:var(--surface);padding:16px 18px;box-shadow:var(--shadow-soft);display:flex;flex-direction:column;gap:10px;border-top:3px solid var(--line-strong)}
+.quiz-cjm-card.s-target{border-top-color:var(--green)}
+.quiz-cjm-card.s-active,.quiz-cjm-card.s-repeat{border-top-color:var(--blue)}
+.quiz-cjm-card.s-dormant,.quiz-cjm-card.s-noncore{border-top-color:var(--orange)}
+.quiz-cjm-card.s-rejected,.quiz-cjm-card.s-overdue{border-top-color:var(--red)}
+.quiz-cjm-card.s-notfound{border-top-color:var(--faint)}
+.quiz-cjm-head{display:flex;justify-content:space-between;align-items:flex-start;gap:8px}
+.quiz-cjm-head h3{margin:0;font-size:14.5px;font-weight:650;letter-spacing:-.01em;line-height:1.25}
+.quiz-cjm-code{font-family:var(--font-mono);font-size:11px;font-weight:800;border-radius:980px;padding:3px 9px;background:var(--surface-3);color:var(--muted);white-space:nowrap}
+.quiz-cjm-card.s-target .quiz-cjm-code{background:color-mix(in srgb,var(--green) 16%,transparent);color:var(--green)}
+.quiz-cjm-card.s-active .quiz-cjm-code,.quiz-cjm-card.s-repeat .quiz-cjm-code{background:color-mix(in srgb,var(--blue) 16%,transparent);color:var(--blue)}
+.quiz-cjm-card.s-dormant .quiz-cjm-code,.quiz-cjm-card.s-noncore .quiz-cjm-code{background:color-mix(in srgb,var(--orange) 16%,transparent);color:var(--orange)}
+.quiz-cjm-card.s-rejected .quiz-cjm-code,.quiz-cjm-card.s-overdue .quiz-cjm-code{background:color-mix(in srgb,var(--red) 16%,transparent);color:var(--red)}
+.quiz-cjm-section{display:flex;flex-direction:column;gap:5px}
+.quiz-cjm-section .qcl-h{font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.07em;color:var(--muted)}
+.quiz-cjm-section .qcl-body{font-size:12.5px;color:var(--text);line-height:1.45}
+.quiz-cjm-signals{display:flex;flex-wrap:wrap;gap:4px}
+.quiz-cjm-signal{font-size:11px;font-weight:700;border-radius:980px;padding:2px 9px;background:color-mix(in srgb,var(--blue) 12%,transparent);color:var(--blue);border:1px solid color-mix(in srgb,var(--blue) 25%,var(--line))}
+.quiz-cjm-card .qcm-grade{font-size:11px;font-weight:700;border-radius:6px;padding:2px 8px;align-self:flex-start;background:var(--surface-3);color:var(--muted);letter-spacing:.04em;text-transform:uppercase}
+.quiz-cjm-card.s-target .qcm-grade{background:color-mix(in srgb,var(--green) 14%,transparent);color:var(--green)}
+.quiz-cjm-card.s-active .qcm-grade,.quiz-cjm-card.s-repeat .qcm-grade{background:color-mix(in srgb,var(--blue) 14%,transparent);color:var(--blue)}
+.quiz-cjm-card.s-rejected .qcm-grade,.quiz-cjm-card.s-overdue .qcm-grade{background:color-mix(in srgb,var(--red) 14%,transparent);color:var(--red)}
+.quiz-cjm-card.s-noncore .qcm-grade,.quiz-cjm-card.s-dormant .qcm-grade{background:color-mix(in srgb,var(--orange) 14%,transparent);color:var(--orange)}
 /* ---------- Block-flow diagram (Miro-style) ---------- */
 .route-diagram-wrap{overflow-x:auto;padding:6px 2px 2px}
 .route-diagram svg{width:100%;min-width:1480px;height:auto;display:block}
@@ -668,6 +693,50 @@ canvas{display:block;width:100%;max-width:100%;height:auto;cursor:crosshair}
 .ltv-cac-arrow{font-size:32px;font-weight:700;color:var(--muted)}
 .ltv-cac-formula{margin-top:10px;padding:10px 14px;border-radius:var(--radius-xs);background:var(--surface-3);border:1px solid var(--line);font-size:12px;color:var(--muted);line-height:1.5}
 .ltv-cac-formula b{color:var(--text)}
+/* TZ §5.4 — Slider-based what-if simulator */
+.sim-grid{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,1fr);gap:18px;padding:6px 0}
+.sim-sliders{display:flex;flex-direction:column;gap:14px}
+.sim-row{display:flex;flex-direction:column;gap:6px}
+.sim-row-head{display:flex;justify-content:space-between;align-items:baseline;gap:10px}
+.sim-row-label{font-size:13px;font-weight:600;color:var(--text)}
+.sim-row-val{font-family:var(--font-mono);font-size:13px;font-weight:700;color:var(--blue);font-variant-numeric:tabular-nums}
+.sim-range{-webkit-appearance:none;appearance:none;width:100%;height:6px;border-radius:6px;background:var(--surface-3);outline:none;cursor:pointer;border:1px solid var(--line)}
+.sim-range::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;width:18px;height:18px;border-radius:50%;background:linear-gradient(150deg,var(--blue),var(--violet));border:2px solid var(--surface);box-shadow:0 2px 6px rgba(0,0,0,.18);cursor:grab;transition:transform .15s var(--ease)}
+.sim-range::-webkit-slider-thumb:active{cursor:grabbing;transform:scale(1.1)}
+.sim-range::-moz-range-thumb{width:18px;height:18px;border-radius:50%;background:linear-gradient(150deg,var(--blue),var(--violet));border:2px solid var(--surface);box-shadow:0 2px 6px rgba(0,0,0,.18);cursor:grab}
+.sim-row-meta{display:flex;justify-content:space-between;font-size:11px;color:var(--muted);font-variant-numeric:tabular-nums}
+.sim-reset{align-self:flex-start;margin-top:4px}
+.sim-output{display:flex;flex-direction:column;gap:6px;border:1px solid var(--line);border-radius:var(--radius-sm);background:var(--surface-2);padding:14px 16px}
+.sim-out-row{display:grid;grid-template-columns:1fr auto auto;gap:10px;align-items:baseline;padding:6px 0;border-bottom:1px dashed var(--line)}
+.sim-out-row:last-of-type{border-bottom:0}
+.sim-out-row>span:first-child{font-size:12.5px;color:var(--muted);font-weight:600}
+.sim-out-row b{font-size:16px;font-variant-numeric:tabular-nums;letter-spacing:-.01em}
+.sim-out-row-strong b{font-size:20px;font-weight:700}
+.sim-out-row .positive{color:var(--green)}
+.sim-out-row .negative{color:var(--red)}
+.sim-delta{font-size:11px;font-weight:700;border-radius:980px;padding:2px 8px;font-variant-numeric:tabular-nums;white-space:nowrap;min-width:54px;text-align:center}
+.sim-delta.good{background:color-mix(in srgb,var(--green) 14%,transparent);color:var(--green)}
+.sim-delta.bad{background:color-mix(in srgb,var(--red) 14%,transparent);color:var(--red)}
+.sim-delta.warn{background:var(--surface-3);color:var(--muted)}
+.sim-breakeven{display:flex;align-items:center;gap:8px;margin-top:8px;padding:9px 11px;border-radius:var(--radius-xs);font-size:12.5px;font-weight:650;border:1px solid var(--line)}
+.sim-breakeven.is-good{background:color-mix(in srgb,var(--green) 8%,transparent);border-color:color-mix(in srgb,var(--green) 30%,var(--line));color:var(--green)}
+.sim-breakeven.is-bad{background:color-mix(in srgb,var(--red) 8%,transparent);border-color:color-mix(in srgb,var(--red) 30%,var(--line));color:var(--red)}
+.sim-formula{margin-top:8px;padding:8px 10px;border-radius:var(--radius-xs);background:var(--surface-3);border:1px solid var(--line);font-family:var(--font-mono);font-size:11px;color:var(--muted);line-height:1.5}
+@media(max-width:760px){.sim-grid{grid-template-columns:1fr}}
+/* CJM unit card: contribution margin + danger border */
+.cjm-unit-card[data-status="danger"]{border:1px solid color-mix(in srgb,var(--red) 55%,var(--line));box-shadow:0 0 0 2px color-mix(in srgb,var(--red) 14%,transparent),var(--shadow-soft)}
+.cjm-unit-card[data-status="danger"] .cjm-unit-formula{background:color-mix(in srgb,var(--red) 6%,var(--surface-3));border-color:color-mix(in srgb,var(--red) 25%,var(--line))}
+.cjm-contrib-bar{display:flex;justify-content:space-between;font-size:11px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.06em;margin-top:6px}
+.cjm-contrib-bar b{color:var(--text);font-size:14px;font-weight:700;text-transform:none;letter-spacing:0;font-variant-numeric:tabular-nums}
+.cjm-contrib-bar b.positive{color:var(--green)}
+.cjm-contrib-bar b.negative{color:var(--red)}
+/* ROMI heatmap cell in unit table */
+.romi-cell{display:inline-flex;align-items:center;gap:6px;font-weight:700;font-variant-numeric:tabular-nums;border-radius:6px;padding:2px 8px}
+.romi-cell.romi-hot{background:color-mix(in srgb,var(--green) 24%,transparent);color:var(--green)}
+.romi-cell.romi-warm{background:color-mix(in srgb,var(--green) 12%,transparent);color:var(--green)}
+.romi-cell.romi-mid{background:var(--surface-3);color:var(--text)}
+.romi-cell.romi-cool{background:color-mix(in srgb,var(--red) 12%,transparent);color:var(--red)}
+.romi-cell.romi-cold{background:color-mix(in srgb,var(--red) 22%,transparent);color:var(--red)}
 @media(max-width:560px){.cjm-unit-grid{grid-template-columns:1fr}.waterfall-bars{flex-wrap:wrap}.ltv-cac-row{flex-direction:column}.ltv-cac-arrow{transform:rotate(90deg)}}
 
 /* ---------- TZ: Светофор / Status helpers (#tab-unit) ---------- */
@@ -930,6 +999,10 @@ table.sortable thead th[aria-sort="descending"]::after{content:" ▼";font-size:
         <div class="card"><div class="card-title"><div><h2>Грейды и маршруты</h2><p>Куда уходит лид после прескоринга</p></div></div><div class="table-wrap"><table id="quizGradeTable"></table></div></div>
       </div>
 
+      <h2 class="divider-title">Квиз → Smart Safe Router · маршрутизация ответов в CJM</h2>
+      <p class="route-lead">Каждая комбинация ответов квиза попадает в один из 8 маршрутов <a href="#tab-routing">Smart Safe Router</a>. Грейд скоринга — только числовая «температура» лида; финальную ветку решают конкретные сигналы (наличие в реестре ЦФ, статус действующих обязательств, JTBD, регион, NPL). Профиль и <code style="font-family:var(--font-mono);background:var(--surface-3);padding:1px 6px;border-radius:5px">session_id</code> уходят без повторного ввода данных.</p>
+      <div class="quiz-cjm-grid" id="quizCjmGrid"></div>
+
       <h2 class="divider-title">Сквозной поток данных квиза</h2>
       <p class="route-lead">От согласия 152-ФЗ до seamless checkout и опционального запроса БКИ (218-ФЗ). Все API на клиенте — mock'и через <code style="font-family:var(--font-mono);background:var(--surface-3);padding:1px 6px;border-radius:5px">Sensei.api</code> с feature-flag <code style="font-family:var(--font-mono);background:var(--surface-3);padding:1px 6px;border-radius:5px">USE_MOCK</code>; реальный бэкенд подключается одной строкой.</p>
       <div class="card" style="padding:18px"><div id="quizFlow" class="quiz-flow"></div></div>
@@ -1020,8 +1093,8 @@ table.sortable thead th[aria-sort="descending"]::after{content:" ▼";font-size:
       <div class="table-wrap"><table id="unitTable"></table></div>
       <h2 class="divider-title">CJM → юнит-экономика по путям</h2>
       <p class="cjm-unit-lead">Каждая ветка Smart Safe Router переведена в цифры из текущих вводных модели: используем фактическую воронку, CAC, match-rate, динамические тарифы партнёров и LTV без ручных коэффициентов «с потолка».</p>
-      <div class="card cjm-waterfall-wrap"><div class="card-title"><div><h2>PnL Waterfall</h2><p>Маржинальная прибыль: вклад каждой CJM-ветки в итоговый PnL</p></div></div><div id="pnlWaterfallChart" class="waterfall-host"></div></div>
-      <div class="card cjm-ltv-cac-wrap"><div class="card-title"><div><h2>Влияние роутера на окупаемость</h2><p>Эффективный LTV/CAC: монетизация отказного трафика снижает стоимость привлечения</p></div></div><div id="ltvCacSimulator"></div></div>
+      <div class="card cjm-waterfall-wrap"><div class="card-title"><div><h2>PnL Waterfall на 1 лид</h2><p>−CPL → +вклад каждой CJM-ветки (доля × ARPU) → =Unit Margin. Реагирует на симулятор «Что, если?»</p></div></div><div id="pnlWaterfallChart" class="waterfall-host"></div></div>
+      <div class="card cjm-ltv-cac-wrap"><div class="card-title"><div><h2>Симулятор «Что, если?»</h2><p>Сдвиньте ползунки — KPI, водопад и точка безубыточности пересчитаются мгновенно</p></div></div><div id="ltvCacSimulator"></div></div>
       <div class="grid four cjm-unit-grid" id="cjmUnitGrid"></div>
     </section>
 
