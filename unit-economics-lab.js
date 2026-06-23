@@ -755,6 +755,7 @@
   /* ------------------------------- init ------------------------------- */
   function init() {
     if (!document.getElementById('ueLab')) return;
+    if (document.getElementById('ueLab').dataset.source === 'dashboard-cjm') return;
     render();
   }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);

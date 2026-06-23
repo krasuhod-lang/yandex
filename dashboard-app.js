@@ -798,9 +798,9 @@ function statusFor(romi,ltvCac){
  const hasLtv=Number.isFinite(lc)&&lc>0;
  const isSuccess=(Number.isFinite(r)&&r>20)||(hasLtv&&lc>3);
  const isDanger=Number.isFinite(r)&&r<0;
- if(isSuccess)return {level:'success',badge:'Scale',recommendation:'Масштабировать',rowClass:'row-status-success',dotClass:'status-success',badgeClass:'status-badge status-success'};
- if(isDanger)return {level:'danger',badge:'Stop',recommendation:'Отключить',rowClass:'row-status-danger',dotClass:'status-danger',badgeClass:'status-badge status-danger'};
- return {level:'warning',badge:'Optimize',recommendation:'Оптимизировать',rowClass:'row-status-warning',dotClass:'status-warning',badgeClass:'status-badge status-warning'};
+ if(isSuccess)return {level:'success',badge:'Масштаб',recommendation:'Масштабировать',rowClass:'row-status-success',dotClass:'status-success',badgeClass:'status-badge status-success'};
+ if(isDanger)return {level:'danger',badge:'Стоп',recommendation:'Отключить',rowClass:'row-status-danger',dotClass:'status-danger',badgeClass:'status-badge status-danger'};
+ return {level:'warning',badge:'Улучшить',recommendation:'Оптимизировать',rowClass:'row-status-warning',dotClass:'status-warning',badgeClass:'status-badge status-warning'};
 }
 // TZ §3 — Per-lead Data Engine. Принимает model + опциональные оверрайды для симулятора «Что если?».
 // Базовый юнит = 1 входящий «грязный» лид (totals.visits). Считаем доли веток, ARPU каждой, Blended ARPU и Unit Margin.
@@ -836,6 +836,37 @@ function perLeadFromModel(model,overrides){
  const unitMargin=blendedArpu-cpl;
  const romi=cpl>0?unitMargin/cpl*100:0;
  return {totalLeads,cpl,blendedArpu,unitMargin,romi,shares,arpu,contrib,baseShares,baseArpu,baseCpl:spend/totalLeads};
+}
+function renderUnitBrief(model){
+ const host=document.getElementById('ueLab');
+ if(!host)return;
+ const m=model||buildUnitModel();
+ const u=perLeadFromModel(m);
+ const branchMeta={
+ target:{name:'Целевые',route:'выдача в ЦФ'},
+ rejected:{name:'Отказы',route:'CPA при отказе'},
+ noncore:{name:'Непрофильные',route:'кросс-офферы'},
+ overdue:{name:'Просрочка',route:'перекредитованные / БФЛ'}
+ };
+ const branchLines=m.cjm_branches.map(b=>{
+ const meta=branchMeta[b.id]||{name:b.name,route:'ветка CJM'};
+ const share=u.shares[b.id]||0;
+ const arpu=u.arpu[b.id]||0;
+ const contrib=(u.contrib&&u.contrib[b.id])||share*arpu;
+ return `<div class="unit-branch-line"><div><span class="unit-branch-name">${escapeHtml(meta.name)}</span><span class="muted"> — ${escapeHtml(meta.route)}</span></div>`+
+  `<div class="unit-branch-metrics">доля <b>${escapeHtml(pct(share*100))}</b> · выручка/польз. <b>${escapeHtml(moneyPrec(arpu))}</b> · вклад <b>${escapeHtml(moneyPrec(contrib))}</b></div></div>`;
+ }).join('');
+ const status=statusFor(u.romi);
+ host.innerHTML=`<div class="card unit-brief-card"><div class="card-title"><div><h2>Краткая юнит-экономика</h2><p>Сводка считается из тех же данных, что дашборд и CJM: трафик, заявки, решения ЦФ, тарифы партнёров и доли веток.</p></div><span class="${status.badgeClass}"><span class="status-dot ${status.dotClass}"></span>${escapeHtml(status.recommendation)}</span></div>`+
+ `<div class="unit-brief-grid"><div class="unit-branch-list">${branchLines}</div><div>`+
+ `<div class="mini-row"><span>Стоимость лида</span><b>${escapeHtml(moneyPrec(u.cpl))}</b></div>`+
+ `<div class="mini-row"><span>Средняя выручка на лид</span><b>${escapeHtml(moneyPrec(u.blendedArpu))}</b></div>`+
+ `<div class="mini-row"><span>Маржа на лид</span><b class="${u.unitMargin>=0?'positive':'negative'}">${escapeHtml(moneyPrec(u.unitMargin))}</b></div>`+
+ `<div class="mini-row"><span>Окупаемость рекламы</span><b class="${u.romi>=0?'positive':'negative'}">${escapeHtml(u.romi.toFixed(1)+'%')}</b></div>`+
+ `<ul class="unit-driver-list" style="margin-top:14px">`+
+ `<li><b>Что двигает:</b> тарифы партнёров, доля совпадений с базой ЦФ, множитель LTV и доли веток CJM.</li>`+
+ `<li><b>Источник:</b> план трафика, воронка заявок, CJM Smart Safe Router и текущие вводные целевой модели.</li>`+
+ `</ul></div></div></div>`;
 }
 function buildUnitModel(){
  const unit=calculateUnitEconomics();
@@ -969,12 +1000,13 @@ function renderCjmUnitEconomics(){
  const host=document.getElementById('cjmUnitGrid');
  if(!host)return;
  const model=buildUnitModel();
+ renderUnitBrief(model);
  const u=perLeadFromModel(model);
  const META={
-  target:{title:'Целевые (Выдача ЦФ)',sub:'Прямой оффер Центрофинанса',cls:'s-target'},
-  rejected:{title:'Отказники (Брокер / МФО)',sub:'Soft reject → CPA-сеть',cls:'s-rejected'},
-  noncore:{title:'Непрофильные (Банковский лид)',sub:'Ипотека / автокредит / залоги',cls:'s-noncore'},
-  overdue:{title:'Перегруженные (БФЛ / HR)',sub:'Банкротство и трудоустройство',cls:'s-overdue'}
+  target:{title:'Целевые — выдача в ЦФ',sub:'Прямой оффер Центрофинанса',cls:'s-target'},
+  rejected:{title:'Отказы — CPA при отказе',sub:'Мягкий отказ → витрина партнёров',cls:'s-rejected'},
+  noncore:{title:'Непрофильные — кросс-офферы',sub:'Банк, авто, залог, ипотека',cls:'s-noncore'},
+  overdue:{title:'Просрочка — БФЛ / работа',sub:'Банкротство и трудоустройство',cls:'s-overdue'}
  };
  host.innerHTML=model.cjm_branches.map(b=>{
   const meta=META[b.id]||{title:b.name,sub:'',cls:'s-notfound'};
@@ -1002,12 +1034,12 @@ function renderCjmUnitEconomics(){
    <div class="cjm-secondary-row">
     <div class="mini-row"><span>Трафик</span><b>${escapeHtml(fmt(b.traffic))}</b></div>
     <div class="mini-row"><span>Доля трафика</span><b>${escapeHtml(pct(share*100))}</b></div>
-    <div class="mini-row"><span>ARPU ветки</span><b>${escapeHtml(money(b.arpu))}</b></div>
-    <div class="mini-row"><span>ROMI</span><b class="${b.romi>=0?'positive':'negative'}">${escapeHtml(b.romi.toFixed(1)+'%')}</b></div>
+    <div class="mini-row"><span>Выручка на пользователя</span><b>${escapeHtml(money(b.arpu))}</b></div>
+    <div class="mini-row"><span>Окупаемость рекламы</span><b class="${b.romi>=0?'positive':'negative'}">${escapeHtml(b.romi.toFixed(1)+'%')}</b></div>
    </div>
-   <div class="cjm-contrib-bar"><span>Contribution Margin / лид</span><b class="${contribMargin>=0?'positive':'negative'}">${(contribMargin>=0?'+':'')+money(contribMargin)}</b></div>
+   <div class="cjm-contrib-bar"><span>Маржа ветки / лид</span><b class="${contribMargin>=0?'positive':'negative'}">${(contribMargin>=0?'+':'')+money(contribMargin)}</b></div>
    <div class="cjm-conv-bar"><div class="cjm-conv-bar-label"><span>Конверсия</span><span>${pct(b.cr_to_deal*100)}</span></div><div class="cjm-conv-bar-track"><div class="cjm-conv-bar-fill" style="width:${Math.min(100,Math.round(b.cr_to_deal*100))}%"></div></div></div>
-   <div class="cjm-unit-formula"><b>Contribution:</b> share × ARPU − share × CPL = ${escapeHtml(pct(share*100))} × ${escapeHtml(money(b.arpu))} − ${escapeHtml(pct(share*100))} × ${escapeHtml(money(u.cpl))}</div>
+   <div class="cjm-unit-formula"><b>Вклад:</b> доля × выручка на пользователя − доля × стоимость лида = ${escapeHtml(pct(share*100))} × ${escapeHtml(money(b.arpu))} − ${escapeHtml(pct(share*100))} × ${escapeHtml(money(u.cpl))}</div>
    ${killBtn}
   </article>`;
  }).join('');
@@ -1028,8 +1060,8 @@ function ensureApexReady(callback){
 }
 function disposeApex(id){if(apexInstances[id]){try{apexInstances[id].destroy()}catch{}delete apexInstances[id]}}
 function apexThemeMode(){return document.documentElement.dataset.theme==='dark'?'dark':'light'}
-// TZ §5.2 — PnL Waterfall: −CPL, +Share×ARPU(Target), +Share×ARPU(Rejected), +Share×ARPU(Non-core), =Unit Margin. Per-lead ₽.
-const UNIT_LABELS={target:'Целевые (ЦФ)',rejected:'Отказники (CPA)',noncore:'Нецелевые (Витрина)',overdue:'Перегруженные (БФЛ/HR)'};
+// TZ §5.2 — водопад PnL: стоимость лида, вклад веток CJM и итоговая маржа на лид.
+const UNIT_LABELS={target:'Целевые — ЦФ',rejected:'Отказы — CPA',noncore:'Непрофильные — кросс',overdue:'Просрочка — БФЛ/HR'};
 function renderPnlWaterfall(model,overrides){
  const host=document.getElementById('pnlWaterfallChart');
  if(!host)return;
@@ -1039,7 +1071,7 @@ function renderPnlWaterfall(model,overrides){
  const u=perLeadFromModel(m,overrides);
  const c=chartColors();
  if(typeof window.ApexCharts==='undefined'){
-  host.innerHTML=`<div class="ltv-cac-fallback">Загрузка ApexCharts… Unit Margin: <b>${money(u.unitMargin)}</b> на 1 лид = Blended ARPU (${money(u.blendedArpu)}) − CPL (${money(u.cpl)}).</div>`;
+  host.innerHTML=`<div class="ltv-cac-fallback">Загрузка графика… Маржа на лид: <b>${money(u.unitMargin)}</b> = средняя выручка на лид (${money(u.blendedArpu)}) − стоимость лида (${money(u.cpl)}).</div>`;
   ensureApexReady(()=>renderPnlWaterfall(model,overrides));
   return;
  }
@@ -1048,29 +1080,29 @@ function renderPnlWaterfall(model,overrides){
  const branchSteps=Object.keys(u.contrib).filter(k=>(u.contrib[k]||0)>0.005).map(k=>({
   key:k,label:'+ '+(UNIT_LABELS[k]||k),delta:u.contrib[k],color:c.green,share:u.shares[k],arpu:u.arpu[k]
  }));
- const steps=[{key:'cpl',label:'− CPL',delta:-u.cpl,color:c.red},...branchSteps];
+ const steps=[{key:'cpl',label:'− стоимость лида',delta:-u.cpl,color:c.red},...branchSteps];
  let cum=0;
  const data=steps.map(s=>{const from=cum;cum+=s.delta;return {x:s.label,y:[from,cum],fillColor:s.color,label:s.label,delta:s.delta,share:s.share,arpu:s.arpu,key:s.key}});
  const marginColor=u.unitMargin>=0?c.blue:c.red;
- data.push({x:'= Unit Margin',y:[0,u.unitMargin],fillColor:marginColor,label:'Unit Margin',delta:u.unitMargin,isTotal:true,key:'margin'});
+ data.push({x:'= маржа на лид',y:[0,u.unitMargin],fillColor:marginColor,label:'Маржа на лид',delta:u.unitMargin,isTotal:true,key:'margin'});
  const options={
-  series:[{name:'Per-lead PnL',data}],
+  series:[{name:'Экономика на лид',data}],
   chart:{type:'rangeBar',height:340,toolbar:{show:false},fontFamily:chartFont(),background:'transparent',animations:{enabled:true,speed:280}},
   theme:{mode:apexThemeMode()},
   plotOptions:{bar:{horizontal:false,borderRadius:6,columnWidth:'55%'}},
   dataLabels:{enabled:true,formatter:(_,o)=>{const d=data[o.dataPointIndex];return (d.delta>=0?'+':'')+Math.round(d.delta).toLocaleString('ru-RU')+' ₽'},style:{fontSize:'11px',fontWeight:700,colors:[c.text]},offsetY:-22},
   xaxis:{type:'category',labels:{style:{colors:c.muted,fontSize:'12px'}}},
-  yaxis:{labels:{style:{colors:c.muted,fontSize:'11px'},formatter:v=>Math.round(v).toLocaleString('ru-RU')+' ₽'},title:{text:'₽ на 1 лид',style:{color:c.muted,fontSize:'11px',fontWeight:600}}},
+  yaxis:{labels:{style:{colors:c.muted,fontSize:'11px'},formatter:v=>Math.round(v).toLocaleString('ru-RU')+' ₽'},title:{text:'₽ на лид',style:{color:c.muted,fontSize:'11px',fontWeight:600}}},
   grid:{borderColor:c.line+'55',strokeDashArray:4},
   legend:{show:false},
   annotations:{yaxis:[{y:0,strokeDashArray:0,borderColor:c.line,opacity:.6}]},
   tooltip:{theme:apexThemeMode(),custom:({dataPointIndex})=>{
    const d=data[dataPointIndex];
    const extra=d.isTotal
-    ? `<div style="color:${c.muted};margin-top:2px">ROMI: ${u.romi.toFixed(1)}%</div>`
+    ? `<div style="color:${c.muted};margin-top:2px">Окупаемость рекламы: ${u.romi.toFixed(1)}%</div>`
     : (d.key==='cpl'
        ? `<div style="color:${c.muted};margin-top:2px">всего лидов: ${fmt(u.totalLeads)}</div>`
-       : `<div style="color:${c.muted};margin-top:2px">Доля: ${(d.share*100).toFixed(1)}% · ARPU ветки: ${money(d.arpu)}</div>`);
+       : `<div style="color:${c.muted};margin-top:2px">Доля: ${(d.share*100).toFixed(1)}% · выручка на пользователя: ${money(d.arpu)}</div>`);
    return `<div style="padding:8px 12px;font-size:12px"><div style="font-weight:800;margin-bottom:4px">${escapeHtml(d.label)}</div><div>${(d.delta>=0?'+':'')+money(d.delta)} / лид</div>${extra}</div>`;
   }},
   responsive:[{breakpoint:768,options:{chart:{height:260},plotOptions:{bar:{columnWidth:'80%'}},dataLabels:{style:{fontSize:'10px'},offsetY:-18}}}]
@@ -1078,7 +1110,7 @@ function renderPnlWaterfall(model,overrides){
  apexInstances.waterfall=new ApexCharts(host,options);
  apexInstances.waterfall.render();
 }
-// TZ §5.4 — Интерактивный симулятор «Что, если?» (killer feature).
+// TZ §5.4 — Интерактивный симулятор «Что, если?».
 // 3 ползунка: ΔCPL (-50..0%) · ΔShare_Target (+0..+5 п.п.) · ΔARPU_Rejected (×1..×2).
 // OnInput: пересчёт Data Engine + live-обновление KPI карточек, Waterfall и блока LTV/CAC, без перезагрузки.
 const SIM_STATE={cplDelta:0,shareTargetAbs:0,arpuRejectedMul:1};
@@ -1092,18 +1124,18 @@ function renderLtvCacSimulator(model){
   <div class="sim-grid">
    <div class="sim-sliders">
     <div class="sim-row" data-sim-key="cplDelta">
-     <div class="sim-row-head"><span class="sim-row-label">Снизить CPL</span><span class="sim-row-val" id="simValCpl">0%</span></div>
-     <input type="range" class="sim-range" min="-50" max="0" step="1" value="${Math.round(SIM_STATE.cplDelta*100)}" data-sim="cplDelta" aria-label="Изменение CPL в процентах">
+     <div class="sim-row-head"><span class="sim-row-label">Снизить стоимость лида</span><span class="sim-row-val" id="simValCpl">0%</span></div>
+     <input type="range" class="sim-range" min="-50" max="0" step="1" value="${Math.round(SIM_STATE.cplDelta*100)}" data-sim="cplDelta" aria-label="Изменение стоимости лида в процентах">
      <div class="sim-row-meta"><span>−50%</span><span>0%</span></div>
     </div>
     <div class="sim-row" data-sim-key="shareTargetAbs">
-     <div class="sim-row-head"><span class="sim-row-label">Повысить долю Target</span><span class="sim-row-val" id="simValShare">+0 п.п.</span></div>
-     <input type="range" class="sim-range" min="0" max="5" step="0.1" value="${(SIM_STATE.shareTargetAbs*100).toFixed(1)}" data-sim="shareTargetAbs" aria-label="Прирост доли Target в процентных пунктах">
+     <div class="sim-row-head"><span class="sim-row-label">Повысить долю целевых ЦФ</span><span class="sim-row-val" id="simValShare">+0 п.п.</span></div>
+     <input type="range" class="sim-range" min="0" max="5" step="0.1" value="${(SIM_STATE.shareTargetAbs*100).toFixed(1)}" data-sim="shareTargetAbs" aria-label="Прирост доли целевых ЦФ в процентных пунктах">
      <div class="sim-row-meta"><span>+0 п.п.</span><span>+5 п.п.</span></div>
     </div>
     <div class="sim-row" data-sim-key="arpuRejectedMul">
-     <div class="sim-row-head"><span class="sim-row-label">Увеличить ARPU отказников</span><span class="sim-row-val" id="simValArpu">×1.00</span></div>
-     <input type="range" class="sim-range" min="100" max="200" step="5" value="${Math.round(SIM_STATE.arpuRejectedMul*100)}" data-sim="arpuRejectedMul" aria-label="Множитель ARPU отказников">
+     <div class="sim-row-head"><span class="sim-row-label">Увеличить выручку с отказов</span><span class="sim-row-val" id="simValArpu">×1.00</span></div>
+     <input type="range" class="sim-range" min="100" max="200" step="5" value="${Math.round(SIM_STATE.arpuRejectedMul*100)}" data-sim="arpuRejectedMul" aria-label="Множитель выручки с отказов">
      <div class="sim-row-meta"><span>×1.0</span><span>×2.0</span></div>
     </div>
     <button class="action sim-reset" type="button" id="simReset">Сбросить</button>
@@ -1120,12 +1152,12 @@ function renderLtvCacSimulator(model){
    const breakeven=u.unitMargin>=0;
    const reachStr=breakeven?'Точка безубыточности пройдена':'До безубыточности не хватает '+money(-u.unitMargin)+' / лид';
    out.innerHTML=`
-    <div class="sim-out-row"><span>CPL</span><b class="negative">${money(u.cpl)}</b><span class="sim-delta ${u.cpl<ub.cpl?'good':u.cpl>ub.cpl?'bad':'warn'}">${u.cpl===ub.cpl?'•':((u.cpl<ub.cpl?'−':'+')+money(Math.abs(u.cpl-ub.cpl)))}</span></div>
-    <div class="sim-out-row"><span>Blended ARPU</span><b class="positive">${money(u.blendedArpu)}</b><span class="sim-delta ${u.blendedArpu>ub.blendedArpu?'good':u.blendedArpu<ub.blendedArpu?'bad':'warn'}">${u.blendedArpu===ub.blendedArpu?'•':((u.blendedArpu>ub.blendedArpu?'+':'−')+money(Math.abs(u.blendedArpu-ub.blendedArpu)))}</span></div>
-    <div class="sim-out-row sim-out-row-strong"><span>Unit Margin</span><b class="${u.unitMargin>=0?'positive':'negative'}">${money(u.unitMargin)}</b><span class="sim-delta ${dMargin>0?'good':dMargin<0?'bad':'warn'}">${dMargin===0?'•':((dMargin>0?'+':'−')+money(Math.abs(dMargin)))}</span></div>
-    <div class="sim-out-row sim-out-row-strong"><span>ROMI</span><b class="${u.romi>=0?'positive':'negative'}">${u.romi.toFixed(1)}%</b><span class="sim-delta ${dRomi>0?'good':dRomi<0?'bad':'warn'}">${dRomi===0?'•':((dRomi>0?'+':'')+dRomi.toFixed(1)+' п.п.')}</span></div>
+    <div class="sim-out-row"><span>Стоимость лида</span><b class="negative">${money(u.cpl)}</b><span class="sim-delta ${u.cpl<ub.cpl?'good':u.cpl>ub.cpl?'bad':'warn'}">${u.cpl===ub.cpl?'•':((u.cpl<ub.cpl?'−':'+')+money(Math.abs(u.cpl-ub.cpl)))}</span></div>
+    <div class="sim-out-row"><span>Средняя выручка на лид</span><b class="positive">${money(u.blendedArpu)}</b><span class="sim-delta ${u.blendedArpu>ub.blendedArpu?'good':u.blendedArpu<ub.blendedArpu?'bad':'warn'}">${u.blendedArpu===ub.blendedArpu?'•':((u.blendedArpu>ub.blendedArpu?'+':'−')+money(Math.abs(u.blendedArpu-ub.blendedArpu)))}</span></div>
+    <div class="sim-out-row sim-out-row-strong"><span>Маржа на лид</span><b class="${u.unitMargin>=0?'positive':'negative'}">${money(u.unitMargin)}</b><span class="sim-delta ${dMargin>0?'good':dMargin<0?'bad':'warn'}">${dMargin===0?'•':((dMargin>0?'+':'−')+money(Math.abs(dMargin)))}</span></div>
+    <div class="sim-out-row sim-out-row-strong"><span>Окупаемость рекламы</span><b class="${u.romi>=0?'positive':'negative'}">${u.romi.toFixed(1)}%</b><span class="sim-delta ${dRomi>0?'good':dRomi<0?'bad':'warn'}">${dRomi===0?'•':((dRomi>0?'+':'')+dRomi.toFixed(1)+' п.п.')}</span></div>
     <div class="sim-breakeven ${breakeven?'is-good':'is-bad'}"><span class="status-dot ${breakeven?'status-success':'status-danger'}"></span>${escapeHtml(reachStr)}</div>
-    <div class="sim-formula">Blended ARPU = Σ доля_i × ARPU_i · Unit Margin = Blended ARPU − CPL · ROMI = Unit Margin / CPL × 100%</div>`;
+    <div class="sim-formula">Средняя выручка на лид = Σ доля ветки × выручка на пользователя · Маржа на лид = средняя выручка на лид − стоимость лида · Окупаемость рекламы = маржа / стоимость лида × 100%</div>`;
   }
   document.getElementById('simValCpl').textContent=(SIM_STATE.cplDelta*100).toFixed(0)+'%';
   document.getElementById('simValShare').textContent='+'+(SIM_STATE.shareTargetAbs*100).toFixed(1)+' п.п.';
@@ -1164,11 +1196,11 @@ function renderUnitTable(model){
  const COLS=[
   {key:'name',label:'Источник',render:b=>escapeHtml(b.name)},
   {key:'leads',label:'Лиды',numeric:true,render:b=>fmt(b.traffic),getVal:b=>b.traffic},
-  {key:'cpl',label:'CPL',numeric:true,render:b=>money(b.cost/Math.max(1,b.traffic)),getVal:b=>b.cost/Math.max(1,b.traffic)},
-  {key:'share',label:'Доля Target',numeric:true,render:b=>pct((u.shares[b.id]||0)*100),getVal:b=>(u.shares[b.id]||0)},
-  {key:'arpu',label:'Blended ARPU',numeric:true,render:b=>money(b.arpu)},
-  {key:'unitMargin',label:'Unit Margin',numeric:true,render:b=>{const v=b.arpu-(b.cost/Math.max(1,b.traffic));return `<span class="${v>=0?'positive':'negative'}">${money(v)}</span>`},getVal:b=>b.arpu-(b.cost/Math.max(1,b.traffic))},
-  {key:'romi',label:'ROMI',numeric:true,render:b=>`<span class="romi-cell ${romiHeatClass(b.romi)}">${b.romi.toFixed(1)}%</span>`},
+  {key:'cpl',label:'Стоимость лида',numeric:true,render:b=>money(b.cost/Math.max(1,b.traffic)),getVal:b=>b.cost/Math.max(1,b.traffic)},
+  {key:'share',label:'Доля ветки',numeric:true,render:b=>pct((u.shares[b.id]||0)*100),getVal:b=>(u.shares[b.id]||0)},
+  {key:'arpu',label:'Выручка на пользователя',numeric:true,render:b=>money(b.arpu)},
+  {key:'unitMargin',label:'Маржа на лид',numeric:true,render:b=>{const v=b.arpu-(b.cost/Math.max(1,b.traffic));return `<span class="${v>=0?'positive':'negative'}">${money(v)}</span>`},getVal:b=>b.arpu-(b.cost/Math.max(1,b.traffic))},
+  {key:'romi',label:'Окупаемость рекламы',numeric:true,render:b=>`<span class="romi-cell ${romiHeatClass(b.romi)}">${b.romi.toFixed(1)}%</span>`},
   {key:'status',label:'Статус',render:b=>{const s=statusFor(b.romi);return `<span class="status-cell"><span class="status-dot ${s.dotClass}"></span>${escapeHtml(s.recommendation)}</span>`}}
  ];
  const rows=m.cjm_branches.slice();
@@ -1195,28 +1227,28 @@ function renderUnitRationale(perLead,model){
  const gm=m.global_metrics;
  const shares=u.shares||{},arpu=u.arpu||{};
  const branch=id=>m.cjm_branches.find(b=>b.id===id)||{};
- const shareLine=(id,name)=>`<li><b>${escapeHtml(name)}</b>: доля ${pct((shares[id]||0)*100)} · ARPU ${moneyPrec(arpu[id]||0)} · вклад ${moneyPrec((shares[id]||0)*(arpu[id]||0))}</li>`;
+ const shareLine=(id,name)=>`<li><b>${escapeHtml(name)}</b>: доля ${pct((shares[id]||0)*100)} · выручка/польз. ${moneyPrec(arpu[id]||0)} · вклад ${moneyPrec((shares[id]||0)*(arpu[id]||0))}</li>`;
  const items=[
-  {name:'CPL',val:moneyPrec(u.cpl),formula:'CPL = маркетинг_спенд ÷ всего «грязных» лидов (визитов)',inputs:[
+  {name:'Стоимость лида',val:moneyPrec(u.cpl),formula:'Стоимость лида = маркетинговый расход ÷ все входящие лиды (визиты)',inputs:[
     `<li>Маркетинговый расход за горизонт: <b>${mln(gm.marketing_spend)}</b> (Директ + SEO + PR)</li>`,
     `<li>Всего лидов: <b>${fmt(u.totalLeads)}</b> — сумма визитов из плана трафика</li>`,
-    `<li>Что двигает: бюджеты каналов на вкладке «Обзор», ползунок «Снизить CPL» в симуляторе</li>`
+    `<li>Что двигает: бюджеты каналов на вкладке «Обзор», ползунок «Снизить стоимость лида» в симуляторе</li>`
   ]},
-  {name:'Blended ARPU',val:moneyPrec(u.blendedArpu),formula:'Blended ARPU = Σ доля_i × ARPU_i по 4 веткам Smart Safe Router',inputs:[
-    shareLine('target','TARGET — выдача в ЦФ'),
-    shareLine('rejected','REJECTED — CPA при отказе'),
-    shareLine('noncore','NON_CORE — кросс-офферы'),
-    shareLine('overdue','OVERDUE — перекредитованные'),
-    `<li>Что двигает: вводные «Тарифы партнёров», «Match-rate», «LTV-factor», доли веток</li>`
+  {name:'Средняя выручка',val:moneyPrec(u.blendedArpu),formula:'Средняя выручка на лид = Σ доля ветки × выручка на пользователя по 4 веткам Smart Safe Router',inputs:[
+    shareLine('target','Целевые — выдача в ЦФ'),
+    shareLine('rejected','Отказы — CPA при отказе'),
+    shareLine('noncore','Непрофильные — кросс-офферы'),
+    shareLine('overdue','Просрочка — перекредитованные'),
+    `<li>Что двигает: тарифы партнёров, доля совпадений с базой ЦФ, множитель LTV, доли веток</li>`
   ]},
-  {name:'Unit Margin',val:moneyPrec(u.unitMargin),formula:'Unit Margin = Blended ARPU − CPL',inputs:[
-    `<li>Blended ARPU: <b>${moneyPrec(u.blendedArpu)}</b></li>`,
-    `<li>CPL: <b>${moneyPrec(u.cpl)}</b></li>`,
+  {name:'Маржа на лид',val:moneyPrec(u.unitMargin),formula:'Маржа на лид = средняя выручка на лид − стоимость лида',inputs:[
+    `<li>Средняя выручка на лид: <b>${moneyPrec(u.blendedArpu)}</b></li>`,
+    `<li>Стоимость лида: <b>${moneyPrec(u.cpl)}</b></li>`,
     `<li>Положительный → каждый «грязный» лид приносит маржу до постоянных затрат</li>`,
-    `<li>Что двигает: всё, что влияет на CPL и ARPU выше</li>`
+    `<li>Что двигает: всё, что влияет на стоимость лида и выручку выше</li>`
   ]},
-  {name:'ROMI',val:u.romi.toFixed(1)+'%',formula:'ROMI = Unit Margin ÷ CPL × 100%',inputs:[
-    `<li>Текущий ROMI: <b>${u.romi.toFixed(1)}%</b> · светофор: <b>${escapeHtml(statusFor(u.romi).recommendation)}</b></li>`,
+  {name:'Окупаемость рекламы',val:u.romi.toFixed(1)+'%',formula:'Окупаемость рекламы = маржа на лид ÷ стоимость лида × 100%',inputs:[
+    `<li>Текущая окупаемость: <b>${u.romi.toFixed(1)}%</b> · светофор: <b>${escapeHtml(statusFor(u.romi).recommendation)}</b></li>`,
     `<li>Пороги: ≥ 50% — масштабировать, 0..50% — оптимизировать, < 0% — стоп</li>`,
     `<li>MoM-тренд по последним месяцам: расход ${gm.trends.spend===null?'n/a':gm.trends.spend.toFixed(1)+'%'} · выручка ${gm.trends.revenue===null?'n/a':gm.trends.revenue.toFixed(1)+'%'} · маржа ${gm.trends.margin===null?'n/a':gm.trends.margin.toFixed(1)+'%'}</li>`
   ]}
@@ -1228,7 +1260,7 @@ function renderUnitRationale(perLead,model){
  `</div>`).join('');
  const foot=document.getElementById('unitRationaleFoot');
  if(foot){
-  foot.innerHTML=`Все значения пересчитываются при любых изменениях вводных модели (вкладка «Целевая модель», ползунки симулятора «Что, если?» ниже, фильтры роли/канала/сценария наверху). Если число выглядит «застывшим» — проверьте, что выбран срез <b>«Все каналы / Все сценарии»</b> и что после правок инпутов нажата кнопка «Применить» в блоке вводных.`;
+  foot.innerHTML=`Все значения пересчитываются из текущего дашборда и CJM: план трафика, воронка, тарифы партнёров, доля совпадений с базой ЦФ, множитель LTV и доли веток. Если число выглядит «застывшим» — проверьте срез <b>«Все каналы / Все сценарии»</b> и примените изменения в целевой модели.`;
  }
 }
 function renderDataStatusList(){
@@ -1267,7 +1299,7 @@ function renderCharts(){
   chartEpc:{type:'line',data:{labels,datasets:[{label:'EPC ('+ch.label+'), ₽',data:sliceWindow(ch.epc),borderColor:c.blue,backgroundColor:c.blue+'22',fill:true,borderWidth:2.5,pointRadius:3}]}},
   chartRetention:{type:'bar',stacked:true,data:{labels,datasets:[{label:'Выручка с первой сделки, тыс. ₽',data:sliceWindow(retFirst).map(v=>v/1000),backgroundColor:c.green+'cc'},{label:'Выручка с повторов / CRM, тыс. ₽',data:sliceWindow(retRepeat).map(v=>v/1000),backgroundColor:c.orange+'cc'},{label:'Повторные визиты',type:'line',data:sliceWindow(repeat),borderColor:c.violet,borderWidth:2}]}},
   chartUnit:(function(){
-   // TZ §4.2: Bar (Revenue + Spend in тыс. ₽) + Line (ROMI %), single Y axis with ROMI normalised to bar magnitude for visibility.
+   // TZ §4.2: столбцы выручки/расхода + линия окупаемости рекламы.
    const model=buildUnitModel();
    const labels2=model.monthly.labels.slice();
    const rev=model.monthly.revenue;
@@ -1279,7 +1311,7 @@ function renderCharts(){
    return {type:'bar',data:{labels:labels2,datasets:[
     {label:'Выручка, тыс. ₽',data:rev.map(v=>v/1000),backgroundColor:c.green+'cc',tooltipFormat:v=>shortNum(v*1000)+' ₽'},
     {label:'Расход, тыс. ₽',data:spend.map(v=>v/1000),backgroundColor:c.red+'99',tooltipFormat:v=>shortNum(v*1000)+' ₽'},
-    {label:'ROMI, %',type:'line',data:romi.map(v=>v*lineScale),borderColor:c.blue,borderWidth:2.5,pointRadius:3,tooltipFormat:(_,i)=>(romi[i]||0).toFixed(1)+'%'}
+    {label:'Окупаемость рекламы, %',type:'line',data:romi.map(v=>v*lineScale),borderColor:c.blue,borderWidth:2.5,pointRadius:3,tooltipFormat:(_,i)=>(romi[i]||0).toFixed(1)+'%'}
    ]}};
   })(),
   chartCacChannels:(function(){const cc=channelCac();const order=['SEO','Яндекс.Директ','PR','Повторный','Все каналы'];return {type:'bar',data:{labels:order,datasets:[{label:'CAC, ₽',data:order.map(k=>Math.round(cc[k].cac)),backgroundColor:order.map(k=>k==='Все каналы'?c.muted+'aa':k==='SEO'?c.green+'cc':k==='Яндекс.Директ'?c.blue+'cc':k==='PR'?c.violet+'cc':c.orange+'cc')}]}}})(),
@@ -1454,7 +1486,7 @@ function renderContextualViews(){
  table('partnerMethodTable',['Метрика','Тип значения','Источник / бенчмарк','Как пересчитывается'],partnerMethodRows);
  kpi('retentionKpis',filterByRole([{id:'repeat-share',roles:['CRM','Руководитель'],label:'Доля повторов',value:'5.1%',sub:'цель 6%'},{id:'repeat-share',roles:['CRM'],label:'Дней до повтора',value:'21',sub:'медиана дней'},{id:'repeat-share',roles:['CRM','Руководитель'],label:'Реактивация SMS',value:'12.8%',sub:'лучший канал',cls:'positive'},{id:'repeat-share',roles:['CRM','Руководитель'],label:'Выручка после сделки',value:mln(9860000),sub:'повторы + кросс-продажи',cls:'positive'}]));
  table('retentionTable',['Событие','Пользователи / события','Конверсия'],retentionEvents);
- // TZ §5.1 — Юнит-экономика: 4 верхние карточки на 1 лид (CPL · Blended ARPU · Unit Margin · ROMI).
+ // TZ §5.1 — Юнит-экономика: 4 верхние карточки на 1 лид.
  const _um=buildUnitModel();
  const _gm=_um.global_metrics;
  const _u=perLeadFromModel(_um);
@@ -1477,10 +1509,10 @@ function renderContextualViews(){
  const _marginBadge=_trendBadge(_gm.trends.margin);
  const _romiBadge=_trendBadge(_gm.trends.romi);
  kpi('unitKpis',filterByRole([
-  {id:'cac',roles:['Рост','Руководитель'],label:'CPL · стоимость лида',value:moneyPrec(_u.cpl),sub:`маркетинг ${mln(_gm.marketing_spend)} / лидов ${fmt(_u.totalLeads)}`,cls:'negative',delta:_toDelta(_cplBadge,false)},
-  {id:'revenue',roles:['Рост','Руководитель'],label:'Blended ARPU',value:moneyPrec(_u.blendedArpu),sub:'Σ доля_i × ARPU_i по 4 веткам CJM',cls:'positive',delta:_toDelta(_arpuBadge)},
-  {id:'revenue',roles:['Рост','Руководитель'],label:'Unit Margin',value:moneyPrec(_u.unitMargin),sub:`Blended ARPU − CPL = ${moneyPrec(_u.blendedArpu)} − ${moneyPrec(_u.cpl)}`,cls:_u.unitMargin>=0?'positive':'negative',delta:_toDelta(_marginBadge)},
-  {id:'ltv-cac',roles:['Руководитель'],label:'ROMI',value:_u.romi.toFixed(1)+'%',sub:`Unit Margin / CPL · светофор: ${_romiStatus.recommendation}`,cls:_romiStatus.level==='success'?'positive':_romiStatus.level==='danger'?'negative':'',delta:_toDelta(_romiBadge)}
+  {id:'cac',roles:['Рост','Руководитель'],label:'Стоимость лида',value:moneyPrec(_u.cpl),sub:`маркетинг ${mln(_gm.marketing_spend)} / лидов ${fmt(_u.totalLeads)}`,cls:'negative',delta:_toDelta(_cplBadge,false)},
+  {id:'revenue',roles:['Рост','Руководитель'],label:'Средняя выручка на лид',value:moneyPrec(_u.blendedArpu),sub:'Σ доля ветки × выручка на пользователя',cls:'positive',delta:_toDelta(_arpuBadge)},
+  {id:'revenue',roles:['Рост','Руководитель'],label:'Маржа на лид',value:moneyPrec(_u.unitMargin),sub:`средняя выручка − стоимость лида = ${moneyPrec(_u.blendedArpu)} − ${moneyPrec(_u.cpl)}`,cls:_u.unitMargin>=0?'positive':'negative',delta:_toDelta(_marginBadge)},
+  {id:'ltv-cac',roles:['Руководитель'],label:'Окупаемость рекламы',value:_u.romi.toFixed(1)+'%',sub:`маржа / стоимость лида · светофор: ${_romiStatus.recommendation}`,cls:_romiStatus.level==='success'?'positive':_romiStatus.level==='danger'?'negative':'',delta:_toDelta(_romiBadge)}
  ]));
  renderUnitRationale(_u,_um);
  document.getElementById('formulaList').innerHTML=filterByRole(formulaCatalog).map(x=>`<div class="mini-row" ${drillAttrs('formula',x.label)}><span>${escapeHtml(x.label)}</span><b>${escapeHtml(x.status)}</b></div>`).join('');

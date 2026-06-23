@@ -777,6 +777,18 @@ canvas{display:block;width:100%;max-width:100%;height:auto;cursor:crosshair}
 .cjm-contrib-bar b{color:var(--text);font-size:14px;font-weight:700;text-transform:none;letter-spacing:0;font-variant-numeric:tabular-nums}
 .cjm-contrib-bar b.positive{color:var(--green)}
 .cjm-contrib-bar b.negative{color:var(--red)}
+.unit-brief-card{border-left:4px solid var(--blue)}
+.unit-brief-grid{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(0,.85fr);gap:18px;align-items:start}
+.unit-branch-list{display:grid;gap:10px}
+.unit-branch-line{display:flex;align-items:baseline;justify-content:space-between;gap:14px;padding:12px 14px;border:1px solid var(--line);border-radius:var(--radius-xs);background:var(--surface-2)}
+.unit-branch-name{font-weight:750;letter-spacing:-.01em}
+.unit-branch-metrics{color:var(--muted);font-size:13px;line-height:1.45;text-align:right}
+.unit-branch-metrics b{color:var(--text);font-variant-numeric:tabular-nums}
+.unit-driver-list{margin:0;padding:0;list-style:none;display:grid;gap:9px}
+.unit-driver-list li{position:relative;padding-left:18px;color:var(--muted);font-size:13px;line-height:1.45}
+.unit-driver-list li::before{content:"";position:absolute;left:0;top:8px;width:7px;height:7px;border-radius:50%;background:var(--blue)}
+.unit-driver-list b{color:var(--text)}
+@media(max-width:860px){.unit-brief-grid{grid-template-columns:1fr}.unit-branch-line{align-items:flex-start;flex-direction:column}.unit-branch-metrics{text-align:left}}
 /* ROMI heatmap cell in unit table */
 .romi-cell{display:inline-flex;align-items:center;gap:6px;font-weight:700;font-variant-numeric:tabular-nums;border-radius:6px;padding:2px 8px}
 .romi-cell.romi-hot{background:color-mix(in srgb,var(--green) 24%,transparent);color:var(--green)}
@@ -1292,14 +1304,9 @@ table.sortable thead th[aria-sort="descending"]::after{content:" ▼";font-size:
 
     <section id="tab-unit" class="panel">
       <div class="card ue-hero">
-        <div class="card-title"><div><span class="eyebrow">Юнит-экономика · штаб принятия решений</span><h2>Интерактивная B2B-модель</h2><p>Полный стек метрик: Marketing CAC и Full CAC с учётом отдела продаж, срок окупаемости клиента, LTV с оттоком, симулятор «Что, если…» и ИИ-аналитик отклонений План/Факт. Редактируйте только жёлтые поля — серые пересчитываются автоматически.</p></div>
-          <div class="ue-hero-actions">
-            <button class="ue-action" type="button" id="uePlanBtn">Задать план на месяц</button>
-            <button class="ue-action ghost" type="button" id="ueResetBtn">Сбросить к фактическим</button>
-          </div>
-        </div>
+        <div class="card-title"><div><span class="eyebrow">Юнит-экономика · из дашборда и CJM</span><h2>Короткая экономика по 4 веткам</h2><p>Без ручного ввода: все значения берутся из плана трафика, CJM Smart Safe Router, тарифов партнёров и текущих вводных целевой модели.</p></div></div>
       </div>
-      <div id="ueLab" aria-live="polite"></div>
+      <div id="ueLab" data-source="dashboard-cjm" aria-live="polite"></div>
       <div id="uePlanModal" class="ue-modal" hidden>
         <div class="ue-modal-backdrop" data-ue-modal-close></div>
         <div class="ue-modal-card" role="dialog" aria-modal="true" aria-labelledby="uePlanTitle">
@@ -1312,7 +1319,7 @@ table.sortable thead th[aria-sort="descending"]::after{content:" ▼";font-size:
       <h2 class="divider-title">Витрина модели · каналы и пути</h2>
       <div class="grid kpis" id="unitKpis"></div>
       <div class="card unit-rationale-card">
-        <div class="card-title"><div><h2>Аргументация показателей · какие вводные питают KPI</h2><p>Откуда берётся каждая цифра в верхних карточках и как изменение конкретного инпута двигает CPL → ARPU → Unit Margin → ROMI.</p></div></div>
+        <div class="card-title"><div><h2>Аргументация показателей · какие вводные питают KPI</h2><p>Откуда берётся каждая цифра в верхних карточках и как изменение конкретного инпута двигает стоимость лида → среднюю выручку → маржу → окупаемость рекламы.</p></div></div>
         <div id="unitRationale" class="unit-rationale-grid"></div>
         <p class="muted unit-rationale-foot" id="unitRationaleFoot"></p>
       </div>
@@ -1324,7 +1331,7 @@ table.sortable thead th[aria-sort="descending"]::after{content:" ▼";font-size:
       <div class="table-wrap"><table id="unitTable"></table></div>
       <h2 class="divider-title">CJM → юнит-экономика по путям</h2>
       <p class="cjm-unit-lead">Каждая ветка Smart Safe Router переведена в цифры из текущих вводных модели: используем фактическую воронку, CAC, match-rate, динамические тарифы партнёров и LTV без ручных коэффициентов «с потолка».</p>
-      <div class="card cjm-waterfall-wrap"><div class="card-title"><div><h2>PnL Waterfall на 1 лид</h2><p>−CPL → +вклад каждой CJM-ветки (доля × ARPU) → =Unit Margin. Реагирует на симулятор «Что, если?»</p></div></div><div id="pnlWaterfallChart" class="waterfall-host"></div></div>
+      <div class="card cjm-waterfall-wrap"><div class="card-title"><div><h2>Водопад PnL на 1 лид</h2><p>−стоимость лида → +вклад каждой CJM-ветки (доля × выручка на пользователя) → =маржа на лид. Реагирует на симулятор «Что, если?»</p></div></div><div id="pnlWaterfallChart" class="waterfall-host"></div></div>
       <div class="card cjm-ltv-cac-wrap"><div class="card-title"><div><h2>Симулятор «Что, если?»</h2><p>Сдвиньте ползунки — KPI, водопад и точка безубыточности пересчитаются мгновенно</p></div></div><div id="ltvCacSimulator"></div></div>
       <div class="grid four cjm-unit-grid" id="cjmUnitGrid"></div>
     </section>
