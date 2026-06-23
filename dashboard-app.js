@@ -863,7 +863,7 @@ function renderUnitBrief(model){
  `<div class="mini-row"><span>Средняя выручка на лид</span><b>${escapeHtml(moneyPrec(u.blendedArpu))}</b></div>`+
  `<div class="mini-row"><span>Маржа на лид</span><b class="${u.unitMargin>=0?'positive':'negative'}">${escapeHtml(moneyPrec(u.unitMargin))}</b></div>`+
  `<div class="mini-row"><span>Окупаемость рекламы</span><b class="${u.romi>=0?'positive':'negative'}">${escapeHtml(u.romi.toFixed(1)+'%')}</b></div>`+
- `<ul class="unit-driver-list" style="margin-top:14px">`+
+ `<ul class="unit-driver-list">`+
  `<li><b>Что двигает:</b> тарифы партнёров, доля совпадений с базой ЦФ, множитель LTV и доли веток CJM.</li>`+
  `<li><b>Источник:</b> план трафика, воронка заявок, CJM Smart Safe Router и текущие вводные целевой модели.</li>`+
  `</ul></div></div></div>`;
