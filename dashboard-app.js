@@ -792,6 +792,28 @@ function routeScenarioVolumes(){
 }
 // ===== TZ unit-economics model (§3) and светофор helper (§2). Single source of truth for #tab-unit. =====
 // Light wrapper around calculateUnitEconomics + DYNAMIC_PAYOUTS, exposed in the {global_metrics, cjm_branches} shape from the TZ.
+// Целевые коридоры долей по веткам CJM. Используются вместо ROMI-критерия «Отключить»:
+// non-profile / overdue трафик по факту больше, поэтому судим о ветке не по знаку маржи к blended CPL,
+// а по попаданию доли в целевой коридор. «Отключить» оставляем только для ARPU≤0.
+const BRANCH_SHARE_TARGETS={
+ target:{min:0.60,max:0.75},
+ rejected:{min:0.10,max:0.20},
+ noncore:{min:0.08,max:0.18},
+ overdue:{min:0.05,max:0.12}
+};
+function branchStatusByShare(branchId,share,arpu){
+ const band=BRANCH_SHARE_TARGETS[branchId];
+ if(Number.isFinite(arpu)&&arpu<=0){
+  return {level:'danger',recommendation:'Отключить',rowClass:'row-status-danger',dotClass:'status-danger',badgeClass:'status-badge status-danger',band};
+ }
+ if(!band){
+  return {level:'warning',recommendation:'Оптимизировать',rowClass:'row-status-warning',dotClass:'status-warning',badgeClass:'status-badge status-warning',band:null};
+ }
+ const s=Number(share)||0;
+ if(s<band.min)return {level:'success',recommendation:'Масштабировать',rowClass:'row-status-success',dotClass:'status-success',badgeClass:'status-badge status-success',band};
+ if(s>band.max)return {level:'warning',recommendation:'Снизить долю',rowClass:'row-status-warning',dotClass:'status-warning',badgeClass:'status-badge status-warning',band};
+ return {level:'success',recommendation:'Удерживать долю',rowClass:'row-status-success',dotClass:'status-success',badgeClass:'status-badge status-success',band};
+}
 function statusFor(romi,ltvCac){
  const r=Number(romi);
  const lc=Number(ltvCac);
@@ -1010,17 +1032,16 @@ function renderCjmUnitEconomics(){
  };
  host.innerHTML=model.cjm_branches.map(b=>{
   const meta=META[b.id]||{title:b.name,sub:'',cls:'s-notfound'};
-  // Contribution margin per lead = share × ARPU − share × CPL (вклад ветки в Unit Margin).
+  // Светофор по целевому коридору доли (см. BRANCH_SHARE_TARGETS).
+  // Non-profile/overdue трафика по факту больше — «Отключить» не выводим, пока ARPU>0.
   const share=u.shares[b.id]||0;
   const contribRevenue=share*(u.arpu[b.id]||0);
   const contribCost=share*u.cpl;
   const contribMargin=contribRevenue-contribCost;
-  // Danger если ветка тянет Unit Margin вниз (отрицательный вклад per lead).
-  const dangerLevel=contribMargin<0?'danger':(b.romi>=20?'success':'warning');
-  const st={...statusFor(b.romi)};
-  const isDanger=dangerLevel==='danger';
-  const killBtn=isDanger?`<button class="cjm-kill-btn" type="button" disabled aria-disabled="true" title="UI-заглушка: отключение ветки">Отключить ветку</button>`:'';
-  return `<article class="card cjm-unit-card ${escapeHtml(meta.cls)}" data-status="${escapeHtml(isDanger?'danger':st.level)}">
+  const st=branchStatusByShare(b.id,share,b.arpu);
+  const band=st.band;
+  const bandText=band?`целевой коридор ${pct(band.min*100)}–${pct(band.max*100)}`:'без целевого коридора';
+  return `<article class="card cjm-unit-card ${escapeHtml(meta.cls)}" data-status="${escapeHtml(st.level)}">
    <div class="cjm-unit-head">
     <div>
      <h3>${escapeHtml(meta.title)}</h3>
@@ -1039,8 +1060,7 @@ function renderCjmUnitEconomics(){
    </div>
    <div class="cjm-contrib-bar"><span>Маржа ветки / лид</span><b class="${contribMargin>=0?'positive':'negative'}">${(contribMargin>=0?'+':'')+money(contribMargin)}</b></div>
    <div class="cjm-conv-bar"><div class="cjm-conv-bar-label"><span>Конверсия</span><span>${pct(b.cr_to_deal*100)}</span></div><div class="cjm-conv-bar-track"><div class="cjm-conv-bar-fill" style="width:${Math.min(100,Math.round(b.cr_to_deal*100))}%"></div></div></div>
-   <div class="cjm-unit-formula"><b>Вклад:</b> доля × выручка на пользователя − доля × стоимость лида = ${escapeHtml(pct(share*100))} × ${escapeHtml(money(b.arpu))} − ${escapeHtml(pct(share*100))} × ${escapeHtml(money(u.cpl))}</div>
-   ${killBtn}
+   <div class="cjm-unit-formula"><b>Критерий:</b> доля ветки <b>${escapeHtml(pct(share*100))}</b> vs ${escapeHtml(bandText)}. Вклад: ${escapeHtml(pct(share*100))} × ${escapeHtml(money(b.arpu))} − ${escapeHtml(pct(share*100))} × ${escapeHtml(money(u.cpl))}</div>
   </article>`;
  }).join('');
  renderPnlWaterfall(model);
