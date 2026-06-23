@@ -144,7 +144,8 @@
 
   function paybackMonths(ltv0, ltv1, ltv2, cac) {
     if (cac <= 0) return 0;
-    if (ltv0 >= cac) return ltv0 > 0 ? cac / ltv0 * 0 + 0.5 : 0; // окупается в первый месяц
+    // Если выручка нулевого периода уже покрывает CAC, окупаемость условно — первый месяц.
+    if (ltv0 >= cac) return ltv0 > 0 ? Math.min(1, cac / ltv0) : 1;
     // Между 0 и 12 мес растёт линейно от ltv0 до ltv1
     if (ltv1 >= cac) {
       var t = (cac - ltv0) / Math.max(0.0001, (ltv1 - ltv0));
