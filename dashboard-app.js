@@ -1033,6 +1033,7 @@ function renderPnlWaterfall(model,overrides){
   return;
  }
  // Build per-lead waterfall steps for ALL CJM branches present in the model.
+ // Filter out branches with negligible contribution (< 0.5 ₽/lead) to keep the waterfall readable.
  const branchSteps=Object.keys(u.contrib).filter(k=>(u.contrib[k]||0)>0.005).map(k=>({
   key:k,label:'+ '+(UNIT_LABELS[k]||k),delta:u.contrib[k],color:c.green,share:u.shares[k],arpu:u.arpu[k]
  }));
@@ -1151,8 +1152,8 @@ function renderUnitTable(model){
  const u=perLeadFromModel(m);
  const COLS=[
   {key:'name',label:'Источник',render:b=>escapeHtml(b.name)},
-  {key:'clicks',label:'Лиды',numeric:true,render:b=>fmt(b.traffic)},
-  {key:'cac',label:'CPL',numeric:true,render:b=>money(b.cost/Math.max(1,b.traffic)),getVal:b=>b.cost/Math.max(1,b.traffic)},
+  {key:'leads',label:'Лиды',numeric:true,render:b=>fmt(b.traffic),getVal:b=>b.traffic},
+  {key:'cpl',label:'CPL',numeric:true,render:b=>money(b.cost/Math.max(1,b.traffic)),getVal:b=>b.cost/Math.max(1,b.traffic)},
   {key:'share',label:'Доля Target',numeric:true,render:b=>pct((u.shares[b.id]||0)*100),getVal:b=>(u.shares[b.id]||0)},
   {key:'arpu',label:'Blended ARPU',numeric:true,render:b=>money(b.arpu)},
   {key:'unitMargin',label:'Unit Margin',numeric:true,render:b=>{const v=b.arpu-(b.cost/Math.max(1,b.traffic));return `<span class="${v>=0?'positive':'negative'}">${money(v)}</span>`},getVal:b=>b.arpu-(b.cost/Math.max(1,b.traffic))},
