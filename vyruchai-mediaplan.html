@@ -877,6 +877,127 @@ table.sortable thead th[aria-sort="descending"]::after{content:" ▼";font-size:
 }
 
 /* ===================== Юнит-экономика · штаб решений ===================== */
+/* ---- Новый сегментный модуль (unit-economics-lab.js, segments-v2) ---- */
+.ue2{display:grid;grid-template-columns:minmax(280px,320px) minmax(0,1fr);gap:18px;align-items:flex-start}
+@media(max-width:1100px){.ue2{grid-template-columns:1fr}}
+.ue2-side{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius-sm);box-shadow:var(--shadow-soft);padding:18px 16px;display:flex;flex-direction:column;gap:14px;position:sticky;top:18px;max-height:calc(100vh - 36px);overflow:auto}
+@media(max-width:1100px){.ue2-side{position:static;max-height:none}}
+.ue2-side-head{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.ue2-side-head h3{margin:0;font-size:16px;letter-spacing:-.02em;font-weight:700}
+.ue2-reset{border:1px solid var(--line-strong);background:var(--surface);color:var(--muted);border-radius:980px;padding:6px 12px;font-size:11.5px;font-weight:600;cursor:pointer;transition:color .15s,border-color .15s}
+.ue2-reset:hover{color:var(--blue);border-color:var(--blue)}
+.ue2-side-lead{margin:0;font-size:12px;color:var(--muted);line-height:1.45}
+.ue2-side-group{display:flex;flex-direction:column;gap:11px;padding:13px 14px;border:1px solid var(--line);border-radius:var(--radius-xs);background:var(--surface-2)}
+.ue2-side-group h4{margin:0;font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);font-weight:800;display:flex;align-items:center;gap:8px}
+.ue2-seg-group{border-left:3px solid var(--seg-accent,var(--line-strong))}
+.ue2-seg-dot{display:inline-block;width:9px;height:9px;border-radius:50%}
+.ue2-slider{display:flex;flex-direction:column;gap:5px}
+.ue2-slider-head{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.ue2-slider-head label{font-size:12.5px;font-weight:600;color:var(--text);flex:1;min-width:0}
+.ue2-slider-head .ue2-unit{color:var(--faint);font-weight:500;font-size:11.5px}
+.ue2-num{width:74px;border:1px solid var(--line-strong);background:var(--surface);color:var(--text);border-radius:8px;padding:5px 8px;font:inherit;font-size:12px;font-weight:700;font-variant-numeric:tabular-nums;text-align:right}
+.ue2-num:focus{outline:0;border-color:var(--blue);box-shadow:0 0 0 3px color-mix(in srgb,var(--blue) 14%,transparent)}
+.ue2-range{width:100%;accent-color:var(--seg-accent,var(--blue));margin:2px 0 0}
+.ue2-hint{font-size:11px;color:var(--faint);line-height:1.35}
+
+.ue2-main{display:flex;flex-direction:column;gap:18px;min-width:0}
+.ue2-card{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius-sm);box-shadow:var(--shadow-soft);padding:18px 20px;display:flex;flex-direction:column;gap:14px;min-width:0}
+.ue2-card-head{display:flex;flex-direction:column;gap:4px}
+.ue2-card-head h2{margin:0;font-size:18px;letter-spacing:-.02em;font-weight:700}
+.ue2-card-head p{margin:0;font-size:12.5px;color:var(--muted);line-height:1.45}
+.ue2-row-between{flex-direction:row;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.ue2-row{display:grid;grid-template-columns:1fr 1fr;gap:18px;min-width:0}
+@media(max-width:1100px){.ue2-row{grid-template-columns:1fr}}
+.ue2-seg-select{display:flex;align-items:center;gap:8px;font-size:12.5px;color:var(--muted);font-weight:600}
+.ue2-seg-select select{border:1px solid var(--line-strong);background:var(--surface);color:var(--text);border-radius:980px;padding:6px 12px;font:inherit;font-size:12.5px;font-weight:600}
+
+/* KPI top cards */
+.ue2-kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px}
+@media(max-width:1000px){.ue2-kpis{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:520px){.ue2-kpis{grid-template-columns:1fr}}
+.ue2-kpi{border:1px solid var(--line);border-radius:var(--radius-sm);padding:16px 18px;background:var(--surface);box-shadow:var(--shadow-soft);display:flex;flex-direction:column;gap:6px;border-left:4px solid var(--line-strong)}
+.ue2-kpi.tone-green{border-left-color:var(--green)}
+.ue2-kpi.tone-yellow{border-left-color:var(--orange)}
+.ue2-kpi.tone-red{border-left-color:var(--red)}
+.ue2-kpi.tone-blue{border-left-color:var(--blue)}
+.ue2-kpi-label{font-size:11.5px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);font-weight:700}
+.ue2-kpi-value{font-size:26px;line-height:1.05;letter-spacing:-.03em;font-weight:700;font-variant-numeric:tabular-nums}
+.ue2-kpi.tone-green .ue2-kpi-value{color:var(--green)}
+.ue2-kpi.tone-red .ue2-kpi-value{color:var(--red)}
+.ue2-kpi.tone-yellow .ue2-kpi-value{color:var(--orange)}
+.ue2-kpi-sub{font-size:12px;color:var(--muted);line-height:1.4}
+.ue2-kpi-badge{align-self:flex-start;font-size:11px;font-weight:700;border-radius:980px;padding:3px 10px}
+.ue2-kpi-badge.tone-green{background:color-mix(in srgb,var(--green) 16%,transparent);color:var(--green)}
+.ue2-kpi-badge.tone-yellow{background:color-mix(in srgb,var(--orange) 18%,transparent);color:var(--orange)}
+.ue2-kpi-badge.tone-red{background:color-mix(in srgb,var(--red) 15%,transparent);color:var(--red)}
+.ue2-kpi-badge.tone-blue{background:color-mix(in srgb,var(--blue) 15%,transparent);color:var(--blue)}
+
+.ue2-kpi-mini-row{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
+@media(max-width:760px){.ue2-kpi-mini-row{grid-template-columns:repeat(2,1fr)}}
+.ue2-kpi-mini{border:1px solid var(--line);border-radius:var(--radius-xs);padding:10px 12px;background:var(--surface-2);display:flex;flex-direction:column;gap:3px;border-top:3px solid var(--line-strong)}
+.ue2-kpi-mini.tone-green{border-top-color:var(--green)}
+.ue2-kpi-mini.tone-yellow{border-top-color:var(--orange)}
+.ue2-kpi-mini.tone-red{border-top-color:var(--red)}
+.ue2-mini-name{font-size:11px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.05em}
+.ue2-mini-val{font-size:18px;font-weight:700;font-variant-numeric:tabular-nums;letter-spacing:-.02em}
+.ue2-kpi-mini.tone-green .ue2-mini-val{color:var(--green)}
+.ue2-kpi-mini.tone-yellow .ue2-mini-val{color:var(--orange)}
+.ue2-kpi-mini.tone-red .ue2-mini-val{color:var(--red)}
+.ue2-mini-sub{font-size:11px;color:var(--faint);font-variant-numeric:tabular-nums}
+
+/* Segment matrix */
+.ue2-seg-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+@media(max-width:880px){.ue2-seg-grid{grid-template-columns:1fr}}
+.ue2-seg-card{border:1px solid var(--line);border-radius:var(--radius-xs);padding:14px 16px;background:var(--surface-2);display:flex;flex-direction:column;gap:11px;border-top:3px solid var(--seg-accent,var(--line-strong))}
+.ue2-seg-head{display:flex;align-items:center;gap:9px}
+.ue2-seg-head h3{margin:0;font-size:15px;font-weight:700;letter-spacing:-.01em;flex:1}
+.ue2-seg-share{font-size:11.5px;font-weight:700;color:var(--muted);background:var(--surface-3);border-radius:980px;padding:2px 9px}
+.ue2-seg-metrics{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+@media(max-width:520px){.ue2-seg-metrics{grid-template-columns:repeat(2,1fr)}}
+.ue2-seg-metrics > div{display:flex;flex-direction:column;gap:1px;background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:7px 9px}
+.ue2-seg-metrics span{font-size:10.5px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.05em}
+.ue2-seg-metrics b{font-size:14px;font-weight:700;font-variant-numeric:tabular-nums}
+.ue2-seg-metrics b.tone-green{color:var(--green)}
+.ue2-seg-metrics b.tone-yellow{color:var(--orange)}
+.ue2-seg-metrics b.tone-red{color:var(--red)}
+.ue2-seg-prosc{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+@media(max-width:520px){.ue2-seg-prosc{grid-template-columns:1fr}}
+.ue2-seg-pros,.ue2-seg-cons{background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:9px 11px}
+.ue2-seg-pros h5,.ue2-seg-cons h5{margin:0 0 5px;font-size:11px;text-transform:uppercase;letter-spacing:.06em;font-weight:800}
+.ue2-seg-pros h5{color:var(--green)}
+.ue2-seg-cons h5{color:var(--red)}
+.ue2-seg-pros ul,.ue2-seg-cons ul{margin:0;padding-left:16px;display:flex;flex-direction:column;gap:3px}
+.ue2-seg-pros li,.ue2-seg-cons li{font-size:11.5px;color:var(--text);line-height:1.4}
+
+/* Funnel */
+.ue2-funnel{display:flex;flex-direction:column;gap:11px}
+.ue2-funnel-row{display:grid;grid-template-columns:minmax(180px,220px) 1fr;gap:14px;align-items:center}
+@media(max-width:680px){.ue2-funnel-row{grid-template-columns:1fr}}
+.ue2-funnel-meta{display:flex;flex-direction:column;gap:2px}
+.ue2-funnel-step{font-size:12.5px;font-weight:700;color:var(--text);line-height:1.3}
+.ue2-funnel-cta{font-size:11px;color:var(--muted);line-height:1.35}
+.ue2-funnel-bar{display:flex;align-items:center;gap:10px}
+.ue2-funnel-fill{background:linear-gradient(90deg,color-mix(in srgb,var(--blue) 85%,#fff),var(--blue));color:#fff;font-weight:700;font-variant-numeric:tabular-nums;padding:7px 10px;border-radius:8px;font-size:12px;min-width:60px;text-align:right;transition:width .3s var(--ease)}
+.ue2-funnel-conv{font-size:11.5px;color:var(--muted);font-weight:600;font-variant-numeric:tabular-nums;white-space:nowrap}
+.ue2-funnel-foot{margin-top:6px;font-size:12px;color:var(--muted);line-height:1.45}
+
+/* Charts (SVG hosts) */
+.ue2-chart-host{width:100%;overflow:hidden}
+.ue2-chart-host svg{display:block;width:100%;height:auto}
+.ue2-legend{display:flex;flex-wrap:wrap;gap:14px;font-size:12px;color:var(--muted)}
+.ue2-leg-item{display:inline-flex;align-items:center;gap:6px;font-variant-numeric:tabular-nums}
+.ue2-leg-item i{display:inline-block;width:14px;height:3px;border-radius:2px}
+
+/* Waterfall */
+.ue2-waterfall-foot{font-size:12.5px;color:var(--muted);line-height:1.5}
+.ue2-waterfall-foot b.tone-green{color:var(--green)}
+.ue2-waterfall-foot b.tone-red{color:var(--red)}
+
+/* Summary */
+.ue2-summary-list{margin:0;padding-left:18px;display:flex;flex-direction:column;gap:7px}
+.ue2-summary-list li{font-size:13.5px;line-height:1.5;color:var(--text)}
+
+/* ---- Старые стили (используются ниже в дашборде и модальном окне плана) ---- */
 .ue-hero{background:linear-gradient(165deg,var(--surface),var(--surface-2))}
 .ue-hero-actions{display:flex;gap:10px;flex-wrap:wrap}
 .ue-action{border:1px solid var(--line-strong);background:var(--text);color:var(--surface);border-radius:980px;padding:10px 16px;font-size:13px;font-weight:650;transition:opacity .18s var(--ease),box-shadow .18s var(--ease),border-color .18s var(--ease)}
@@ -1305,9 +1426,9 @@ table.sortable thead th[aria-sort="descending"]::after{content:" ▼";font-size:
 
     <section id="tab-unit" class="panel">
       <div class="card ue-hero">
-        <div class="card-title"><div><span class="eyebrow">Юнит-экономика · из дашборда и CJM</span><h2>Короткая экономика по 4 веткам</h2><p>Без ручного ввода: все значения берутся из плана трафика, CJM Smart Safe Router, тарифов партнёров и текущих вводных целевой модели.</p></div></div>
+        <div class="card-title"><div><span class="eyebrow">Юнит-экономика · 4 сегмента · LTV / CAC / ROMI</span><h2>Интерактивный дашборд по сегментам пользователей</h2><p>Сегменты <b>Новый</b>, <b>Повторный</b>, <b>Просроченный</b> и <b>Спящий</b> — каждый со своим CJM, CAC, Retention и долей трафика. Сдвигайте ползунки в панели слева — Blended CAC, Average ARPU, LTV/CAC, Payback period, CJM-воронка, когортный LTV и P&amp;L-водопад пересчитываются мгновенно. Чекер через ЦФ — дополнительный инструмент перенаправления трафика: большая часть пользователей вне базы ЦФ, поэтому ни один сегмент не отсекается.</p></div></div>
       </div>
-      <div id="ueLab" data-source="dashboard-cjm" aria-live="polite"></div>
+      <div id="ueLab" data-source="segments-v2" aria-live="polite"></div>
       <div id="uePlanModal" class="ue-modal" hidden>
         <div class="ue-modal-backdrop" data-ue-modal-close></div>
         <div class="ue-modal-card" role="dialog" aria-modal="true" aria-labelledby="uePlanTitle">

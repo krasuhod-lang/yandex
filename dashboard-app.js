@@ -862,6 +862,8 @@ function perLeadFromModel(model,overrides){
 function renderUnitBrief(model){
  const host=document.getElementById('ueLab');
  if(!host)return;
+ // Новый сегментный модуль (unit-economics-lab.js) сам владеет #ueLab.
+ if(host.dataset.source!=='dashboard-cjm')return;
  const m=model||buildUnitModel();
  const u=perLeadFromModel(m);
  const branchMeta={
