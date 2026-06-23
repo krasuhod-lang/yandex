@@ -862,6 +862,148 @@ table.sortable thead th[aria-sort="descending"]::after{content:" ▼";font-size:
   .product-row{grid-template-columns:1fr 1fr}
   .product-row .pbar{grid-column:1/-1}
 }
+
+/* ===================== Юнит-экономика · штаб решений ===================== */
+.ue-hero{background:linear-gradient(165deg,var(--surface),var(--surface-2))}
+.ue-hero-actions{display:flex;gap:10px;flex-wrap:wrap}
+.ue-action{border:1px solid var(--line-strong);background:var(--text);color:var(--surface);border-radius:980px;padding:10px 16px;font-size:13px;font-weight:650;transition:opacity .18s var(--ease),box-shadow .18s var(--ease),border-color .18s var(--ease)}
+.ue-action:hover{box-shadow:var(--shadow-soft);opacity:.92}
+.ue-action.ghost{background:var(--surface);color:var(--text)}
+.ue-action.ghost:hover{border-color:var(--blue);color:var(--blue)}
+.ue-section{display:flex;flex-direction:column;gap:0;border:1px solid var(--line);border-radius:var(--radius-sm);overflow:hidden;background:var(--surface);box-shadow:var(--shadow-soft)}
+.ue-section-head{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:13px 18px;font-weight:700;letter-spacing:-.01em;color:#fff}
+.ue-section-head .ue-sh-title{font-size:14.5px}
+.ue-section-head .ue-sh-note{font-size:12px;font-weight:600;opacity:.85}
+.ue-sec-mkt .ue-section-head{background:var(--blue)}
+.ue-sec-sales .ue-section-head{background:var(--violet)}
+.ue-sec-econ .ue-section-head{background:var(--green)}
+.ue-sec-result .ue-section-head{background:#2b2b30}
+[data-theme="dark"] .ue-sec-result .ue-section-head{background:#3a3a42}
+.ue-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px;padding:18px}
+@media(max-width:980px){.ue-grid{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:560px){.ue-grid{grid-template-columns:1fr}}
+.ue-cell{display:grid;gap:6px}
+.ue-cell label{font-size:11.5px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);font-weight:700}
+.ue-cell .ue-unit{color:var(--faint);font-weight:600;text-transform:none;letter-spacing:0}
+.ue-cell input{width:100%;border:1px solid var(--line-strong);border-radius:var(--radius-xs);padding:11px 13px;font:inherit;font-weight:650;font-variant-numeric:tabular-nums;transition:border-color .18s var(--ease),box-shadow .18s var(--ease)}
+.ue-cell input:focus{outline:0;border-color:var(--blue);box-shadow:0 0 0 4px color-mix(in srgb,var(--blue) 14%,transparent)}
+.ue-input input{background:#FFFDE7;color:#1d1d1f;border-color:#efe6a8}
+[data-theme="dark"] .ue-input input{background:color-mix(in srgb,#f7d24a 22%,var(--surface-2));color:var(--text);border-color:color-mix(in srgb,#f7d24a 40%,var(--line))}
+.ue-calc .ue-calc-box{border:1px solid var(--line);border-radius:var(--radius-xs);padding:11px 13px;font-weight:700;font-variant-numeric:tabular-nums;background:#F5F5F5;color:var(--text)}
+[data-theme="dark"] .ue-calc .ue-calc-box{background:var(--surface-3)}
+.ue-calc.is-pos .ue-calc-box{background:rgba(76,175,80,.15);border-color:color-mix(in srgb,var(--green) 35%,var(--line))}
+.ue-calc.is-warn .ue-calc-box{background:rgba(255,193,7,.2);border-color:color-mix(in srgb,var(--orange) 38%,var(--line))}
+.ue-calc.is-bad .ue-calc-box{background:rgba(244,67,54,.15);border-color:color-mix(in srgb,var(--red) 38%,var(--line))}
+.ue-cell-hint{font-size:11px;color:var(--faint);line-height:1.4}
+.ue-edit-note{padding:0 18px 14px;font-size:12px;color:var(--muted)}
+.ue-edit-note b{color:var(--text)}
+/* KPI cards */
+.ue-kpi-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}
+@media(max-width:880px){.ue-kpi-grid{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:520px){.ue-kpi-grid{grid-template-columns:1fr}}
+.ue-kpi{border:1px solid var(--line);border-radius:var(--radius-sm);padding:16px 18px;background:var(--surface);box-shadow:var(--shadow-soft);display:flex;flex-direction:column;gap:7px;border-left:4px solid var(--line-strong)}
+.ue-kpi.tone-green{border-left-color:var(--green)}
+.ue-kpi.tone-yellow{border-left-color:var(--orange)}
+.ue-kpi.tone-red{border-left-color:var(--red)}
+.ue-kpi.tone-blue{border-left-color:var(--blue)}
+.ue-kpi-label{font-size:11.5px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);font-weight:700}
+.ue-kpi-value{font-size:27px;line-height:1.05;letter-spacing:-.03em;font-weight:700;font-variant-numeric:tabular-nums}
+.ue-kpi.tone-green .ue-kpi-value{color:var(--green)}
+.ue-kpi.tone-red .ue-kpi-value{color:var(--red)}
+.ue-kpi-sub{font-size:12px;color:var(--muted);line-height:1.4}
+.ue-badge{align-self:flex-start;font-size:11px;font-weight:700;border-radius:980px;padding:3px 10px}
+.ue-badge.green{background:color-mix(in srgb,var(--green) 16%,transparent);color:var(--green)}
+.ue-badge.yellow{background:color-mix(in srgb,var(--orange) 18%,transparent);color:var(--orange)}
+.ue-badge.red{background:color-mix(in srgb,var(--red) 15%,transparent);color:var(--red)}
+.ue-warn-row{display:flex;align-items:center;gap:9px;padding:11px 14px;border-radius:var(--radius-xs);background:color-mix(in srgb,var(--red) 9%,var(--surface));border:1px solid color-mix(in srgb,var(--red) 28%,var(--line));font-size:13px;color:var(--text);line-height:1.4}
+.ue-warn-row.tone-warn{background:color-mix(in srgb,var(--orange) 9%,var(--surface));border-color:color-mix(in srgb,var(--orange) 28%,var(--line))}
+.ue-warn-dot{width:9px;height:9px;border-radius:50%;background:var(--red);flex:0 0 auto}
+.ue-warn-row.tone-warn .ue-warn-dot{background:var(--orange)}
+/* Funnel */
+.ue-funnel{display:grid;grid-template-columns:1fr auto 1fr auto 1fr;align-items:end;gap:10px}
+@media(max-width:680px){.ue-funnel{grid-template-columns:1fr;gap:14px}.ue-funnel-arrow{justify-self:start;transform:rotate(90deg)}}
+.ue-funnel-bar{display:flex;flex-direction:column;gap:8px;align-items:center;text-align:center}
+.ue-funnel-fill{width:100%;border-radius:var(--radius-xs);background:linear-gradient(180deg,color-mix(in srgb,var(--blue) 80%,#fff),var(--blue));display:flex;align-items:flex-end;justify-content:center;min-height:40px;color:#fff;font-weight:700;padding:8px 6px;font-variant-numeric:tabular-nums}
+.ue-funnel-bar.is-bottleneck .ue-funnel-fill{background:linear-gradient(180deg,color-mix(in srgb,var(--red) 75%,#fff),var(--red))}
+.ue-funnel-name{font-size:12px;color:var(--muted);font-weight:600}
+.ue-funnel-arrow{display:flex;flex-direction:column;align-items:center;gap:4px;color:var(--muted);padding-bottom:24px}
+.ue-conv-badge{font-size:11.5px;font-weight:700;border-radius:980px;padding:3px 9px;background:var(--surface-3);color:var(--text);font-variant-numeric:tabular-nums}
+.ue-conv-badge.is-bottleneck{background:color-mix(in srgb,var(--red) 16%,transparent);color:var(--red)}
+.ue-bottleneck-note{font-size:12.5px;color:var(--red);font-weight:600;margin-top:4px}
+/* Breakeven chart */
+.ue-chart-host{width:100%;overflow:hidden}
+.ue-chart-host svg{display:block;width:100%;height:auto}
+.ue-legend{display:flex;gap:18px;flex-wrap:wrap;font-size:12.5px;color:var(--muted);margin-top:6px}
+.ue-legend i{display:inline-block;width:22px;height:0;border-top-width:3px;border-top-style:solid;vertical-align:middle;margin-right:7px}
+/* Simulator */
+.ue-sim-grid{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,.9fr);gap:18px}
+@media(max-width:880px){.ue-sim-grid{grid-template-columns:1fr}}
+.ue-sliders{display:flex;flex-direction:column;gap:15px}
+.ue-slider-row{display:grid;gap:7px}
+.ue-slider-head{display:flex;justify-content:space-between;align-items:baseline;gap:10px}
+.ue-slider-head .ue-sl-label{font-size:13px;font-weight:600}
+.ue-slider-head .ue-sl-val{font-family:var(--font-mono);font-size:12.5px;font-weight:700;color:var(--blue);font-variant-numeric:tabular-nums}
+.ue-slider-row input[type=range]{width:100%;accent-color:var(--blue)}
+.ue-slider-meta{display:flex;justify-content:space-between;font-size:11px;color:var(--faint);font-variant-numeric:tabular-nums}
+.ue-sim-out{display:flex;flex-direction:column;gap:9px}
+.ue-sim-insight{padding:12px 14px;border-radius:var(--radius-xs);background:color-mix(in srgb,var(--blue) 8%,var(--surface));border:1px solid color-mix(in srgb,var(--blue) 24%,var(--line));font-size:13px;line-height:1.45;color:var(--text)}
+.ue-sim-insight b{color:var(--blue)}
+.ue-sim-out-row{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:8px 12px;border-radius:var(--radius-xs);background:var(--surface-2);border:1px solid var(--line)}
+.ue-sim-out-row.strong{background:var(--surface-3)}
+.ue-sim-out-row span{font-size:13px;color:var(--muted)}
+.ue-sim-out-row b{font-variant-numeric:tabular-nums;font-size:15px}
+.ue-sim-out-row b.pos{color:var(--green)}
+.ue-sim-out-row b.neg{color:var(--red)}
+.ue-sim-delta{font-size:11px;font-weight:700;border-radius:980px;padding:2px 8px;min-width:52px;text-align:center;font-variant-numeric:tabular-nums}
+.ue-sim-delta.good{background:color-mix(in srgb,var(--green) 14%,transparent);color:var(--green)}
+.ue-sim-delta.bad{background:color-mix(in srgb,var(--red) 13%,transparent);color:var(--red)}
+.ue-sim-delta.flat{background:var(--surface-3);color:var(--muted)}
+/* Sensitivity table */
+.ue-sens-wrap{overflow:auto;border:1px solid var(--line);border-radius:var(--radius-xs)}
+.ue-sens{width:100%;border-collapse:collapse;font-size:12.5px}
+.ue-sens th,.ue-sens td{padding:10px 12px;text-align:center;border-bottom:1px solid var(--line);border-right:1px solid var(--line);font-variant-numeric:tabular-nums;white-space:nowrap}
+.ue-sens th{background:var(--surface-3);font-weight:700}
+.ue-sens td.rowhead{background:var(--surface-2);font-weight:700;text-align:left}
+.ue-sens td.cell-pos{background:rgba(76,175,80,.15);color:var(--green);font-weight:700}
+.ue-sens td.cell-neg{background:rgba(244,67,54,.15);color:var(--red);font-weight:700}
+.ue-sens td.is-center{outline:2px solid var(--blue);outline-offset:-2px}
+/* AI panel */
+.ue-ai{position:relative;border-radius:var(--radius-sm);padding:2px;background:linear-gradient(120deg,var(--blue),var(--violet),var(--green));box-shadow:var(--shadow-soft)}
+.ue-ai-inner{background:var(--surface);border-radius:calc(var(--radius-sm) - 2px);padding:18px 20px;display:flex;flex-direction:column;gap:14px}
+.ue-ai-head{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.ue-ai-title{display:flex;flex-direction:column;gap:3px}
+.ue-ai-title h3{margin:0;font-size:16px;letter-spacing:-.02em;font-weight:700}
+.ue-ai-title p{margin:0;font-size:12.5px;color:var(--muted)}
+.ue-ai-status{font-size:12px;font-weight:700;border-radius:980px;padding:5px 12px}
+.ue-ai-status.green{background:color-mix(in srgb,var(--green) 15%,transparent);color:var(--green)}
+.ue-ai-status.yellow{background:color-mix(in srgb,var(--orange) 17%,transparent);color:var(--orange)}
+.ue-ai-status.red{background:color-mix(in srgb,var(--red) 14%,transparent);color:var(--red)}
+.ue-ai-block h4{margin:0 0 6px;font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);font-weight:700}
+.ue-ai-rootcause{font-size:14px;line-height:1.5;color:var(--text)}
+.ue-ai-actions{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:9px}
+.ue-ai-actions li{position:relative;padding:10px 12px 10px 38px;border-radius:var(--radius-xs);background:var(--surface-2);border:1px solid var(--line);font-size:13px;line-height:1.45}
+.ue-ai-actions li::before{content:"";position:absolute;left:13px;top:13px;width:14px;height:14px;border-radius:4px;border:2px solid var(--blue)}
+.ue-ai-foot{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.ue-ai-reanalyze{border:1px solid var(--line-strong);background:var(--surface);color:var(--text);border-radius:980px;padding:8px 14px;font-size:12.5px;font-weight:650}
+.ue-ai-reanalyze:hover{border-color:var(--blue);color:var(--blue)}
+.ue-ai-meta{font-size:11.5px;color:var(--faint)}
+.ue-skel{border-radius:8px;background:linear-gradient(90deg,var(--surface-2) 25%,var(--surface-3) 37%,var(--surface-2) 63%);background-size:400% 100%;animation:ueShimmer 1.3s ease infinite;height:14px}
+@keyframes ueShimmer{0%{background-position:100% 0}100%{background-position:-100% 0}}
+.ue-ai-loading{display:flex;flex-direction:column;gap:10px}
+.ue-ai-loading .ue-ai-loading-txt{font-size:13px;color:var(--muted)}
+/* Plan modal */
+.ue-modal{position:fixed;inset:0;z-index:60;display:flex;align-items:center;justify-content:center;padding:20px}
+.ue-modal[hidden]{display:none}
+.ue-modal-backdrop{position:absolute;inset:0;background:rgba(17,17,22,.45);backdrop-filter:blur(4px)}
+.ue-modal-card{position:relative;background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);width:min(560px,100%);max-height:90vh;overflow:auto;padding:22px 24px;display:flex;flex-direction:column;gap:14px}
+.ue-modal-head{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.ue-modal-head h3{margin:0;font-size:18px;letter-spacing:-.02em;font-weight:700}
+.ue-modal-x{border:1px solid var(--line-strong);background:var(--surface);color:var(--muted);border-radius:980px;padding:6px 12px;font-size:12px;font-weight:600}
+.ue-modal-sub{margin:0;font-size:13px;color:var(--muted);line-height:1.45}
+.ue-modal-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media(max-width:520px){.ue-modal-grid{grid-template-columns:1fr}}
+.ue-modal-foot{display:flex;justify-content:flex-end;gap:10px}
+.ue-block-lead{font-size:13.5px;color:var(--muted);line-height:1.5;margin:0}
 </style>
 </head>
 <body>
@@ -1149,6 +1291,25 @@ table.sortable thead th[aria-sort="descending"]::after{content:" ▼";font-size:
     </section>
 
     <section id="tab-unit" class="panel">
+      <div class="card ue-hero">
+        <div class="card-title"><div><span class="eyebrow">Юнит-экономика · штаб принятия решений</span><h2>Интерактивная B2B-модель</h2><p>Полный стек метрик: Marketing CAC и Full CAC с учётом отдела продаж, срок окупаемости клиента, LTV с оттоком, симулятор «Что, если…» и ИИ-аналитик отклонений План/Факт. Редактируйте только жёлтые поля — серые пересчитываются автоматически.</p></div>
+          <div class="ue-hero-actions">
+            <button class="ue-action" type="button" id="uePlanBtn">Задать план на месяц</button>
+            <button class="ue-action ghost" type="button" id="ueResetBtn">Сбросить к фактическим</button>
+          </div>
+        </div>
+      </div>
+      <div id="ueLab" aria-live="polite"></div>
+      <div id="uePlanModal" class="ue-modal" hidden>
+        <div class="ue-modal-backdrop" data-ue-modal-close></div>
+        <div class="ue-modal-card" role="dialog" aria-modal="true" aria-labelledby="uePlanTitle">
+          <div class="ue-modal-head"><h3 id="uePlanTitle">Задать план на месяц</h3><button class="ue-modal-x" type="button" data-ue-modal-close aria-label="Закрыть">Закрыть</button></div>
+          <p class="ue-modal-sub">Введите целевые значения ключевых метрик. План сохраняется локально и сравнивается с фактом в панели ИИ-аналитика.</p>
+          <div id="uePlanFields" class="ue-modal-grid"></div>
+          <div class="ue-modal-foot"><button class="ue-action ghost" type="button" data-ue-modal-close>Отмена</button><button class="ue-action" type="button" id="uePlanSave">Сохранить план</button></div>
+        </div>
+      </div>
+      <h2 class="divider-title">Витрина модели · каналы и пути</h2>
       <div class="grid kpis" id="unitKpis"></div>
       <div class="card unit-rationale-card">
         <div class="card-title"><div><h2>Аргументация показателей · какие вводные питают KPI</h2><p>Откуда берётся каждая цифра в верхних карточках и как изменение конкретного инпута двигает CPL → ARPU → Unit Margin → ROMI.</p></div></div>
@@ -1178,5 +1339,6 @@ table.sortable thead th[aria-sort="descending"]::after{content:" ▼";font-size:
 
 <script src="economics-model.js"></script>
 <script src="dashboard-app.js"></script>
+<script src="unit-economics-lab.js"></script>
 </body>
 </html>
