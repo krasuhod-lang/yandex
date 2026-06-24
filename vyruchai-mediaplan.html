@@ -365,6 +365,41 @@ canvas{display:block;width:100%;max-width:100%;height:auto;cursor:crosshair}
 .quiz-grade-cell .qgc-high{background:var(--green)}
 .quiz-grade-cell .qgc-medium{background:var(--orange)}
 .quiz-grade-cell .qgc-low{background:var(--red)}
+/* TZ §3.2 — Quiz scoring weights editor + audit */
+.quiz-we{display:flex;flex-direction:column;gap:10px}
+.quiz-we-row{display:grid;grid-template-columns:160px 1fr 90px 90px;gap:10px;align-items:center;padding:8px 10px;border:1px solid var(--line);border-radius:var(--radius-xs);background:var(--surface-2)}
+@media(max-width:760px){.quiz-we-row{grid-template-columns:1fr}}
+.quiz-we-row b{font-size:13px}
+.quiz-we-row input[type=number]{border:1px solid var(--line-strong);border-radius:6px;padding:4px 8px;font:inherit;font-weight:700;font-variant-numeric:tabular-nums;text-align:right;background:var(--surface);color:var(--text)}
+.quiz-we-add{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.quiz-we-add input,.quiz-we-add select{border:1px solid var(--line-strong);border-radius:6px;padding:5px 9px;font:inherit;font-size:12.5px;background:var(--surface);color:var(--text)}
+.quiz-we-add button{border:1px solid var(--line-strong);background:var(--text);color:var(--surface);border-radius:980px;padding:6px 12px;font:inherit;font-size:12px;font-weight:650;cursor:pointer}
+.quiz-we-del{background:transparent;border:0;color:var(--red);font:inherit;font-size:14px;cursor:pointer}
+.quiz-audit{display:flex;flex-direction:column;gap:6px;font-size:12.5px;max-height:240px;overflow:auto}
+.quiz-audit .qa-row{display:grid;grid-template-columns:140px 130px 1fr;gap:10px;padding:4px 8px;border-bottom:1px dashed var(--line);font-variant-numeric:tabular-nums}
+.quiz-audit .qa-empty{color:var(--muted);padding:6px}
+.quiz-we-toolbar{display:flex;gap:8px;flex-wrap:wrap;padding:4px 0}
+.quiz-we-toolbar .qwb{border:1px solid var(--line-strong);background:var(--surface);color:var(--text);border-radius:980px;padding:5px 12px;font:inherit;font-size:12px;font-weight:650;cursor:pointer}
+.quiz-we-toolbar .qwb:hover{border-color:var(--blue);color:var(--blue)}
+
+/* TZ §3.3 — Smart Safe Router matrix editor + log */
+.ssr-mx{display:flex;flex-direction:column;gap:10px}
+.ssr-mx-pinned{padding:8px 12px;border-radius:8px;background:color-mix(in srgb,var(--green) 10%,var(--surface-2));border:1px solid color-mix(in srgb,var(--green) 35%,var(--line));font-size:12.5px}
+.ssr-mx-pinned.empty{background:var(--surface-2);border-color:var(--line);color:var(--muted)}
+.ssr-mx-tbl{width:100%;border-collapse:collapse;font-size:12.5px}
+.ssr-mx-tbl th,.ssr-mx-tbl td{border:1px solid var(--line);padding:5px 8px;text-align:left;vertical-align:middle}
+.ssr-mx-tbl th{background:var(--surface-2);font-weight:700}
+.ssr-mx-tbl input,.ssr-mx-tbl select{width:100%;border:1px solid var(--line-strong);border-radius:6px;padding:4px 6px;font:inherit;font-size:12px;background:var(--surface);color:var(--text)}
+.ssr-mx-tbl .ssr-del{background:transparent;border:0;color:var(--red);font:inherit;font-size:14px;cursor:pointer}
+.ssr-mx-tools{display:flex;gap:8px;flex-wrap:wrap}
+.ssr-mx-tools button{border:1px solid var(--line-strong);background:var(--surface);color:var(--text);border-radius:980px;padding:6px 12px;font:inherit;font-size:12.5px;font-weight:650;cursor:pointer}
+.ssr-mx-tools button.primary{background:var(--text);color:var(--surface);border-color:var(--text)}
+.ssr-mx-tools button:hover{border-color:var(--blue);color:var(--blue)}
+.ssr-mx-tools button.primary:hover{color:var(--surface);opacity:.9}
+.ssr-log{display:flex;flex-direction:column;gap:5px;font-size:12.5px;max-height:240px;overflow:auto}
+.ssr-log .sl-row{display:grid;grid-template-columns:170px 100px 90px 1fr;gap:10px;padding:4px 8px;border-bottom:1px dashed var(--line);font-variant-numeric:tabular-nums}
+.ssr-log .sl-empty{color:var(--muted);padding:6px}
+
 /* TZ — Quiz → Smart Safe Router mapping grid */
 .quiz-cjm-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px}
 .quiz-cjm-card{position:relative;border:1px solid var(--line);border-radius:var(--radius);background:var(--surface);padding:16px 18px;box-shadow:var(--shadow-soft);display:flex;flex-direction:column;gap:10px;border-top:3px solid var(--line-strong)}
@@ -1455,6 +1490,13 @@ table.sortable thead th[aria-sort="descending"]::after{content:" ▼";font-size:
       <p class="route-lead">От согласия 152-ФЗ до seamless checkout и опционального запроса БКИ (218-ФЗ). Все API на клиенте — mock'и через <code style="font-family:var(--font-mono);background:var(--surface-3);padding:1px 6px;border-radius:5px">Sensei.api</code> с feature-flag <code style="font-family:var(--font-mono);background:var(--surface-3);padding:1px 6px;border-radius:5px">USE_MOCK</code>; реальный бэкенд подключается одной строкой.</p>
       <div class="card" style="padding:18px"><div id="quizFlow" class="quiz-flow"></div></div>
 
+      <h2 class="divider-title">Редактор весов прескоринга · CRUD без релиза</h2>
+      <p class="route-lead">Веса ответов хранятся в localStorage и сразу применяются в симуляторе. Любое изменение фиксируется в аудит-логе ниже (кто/когда/что менял). Итоговый Score = Σ(вес_ответа), нормирован 0–100. Зоны: <b>Hot ≥ 70</b>, <b>Warm 40–69</b>, <b>Cold &lt; 40</b>, <b>Block</b> — при отсутствии согласия на ПДн.</p>
+      <div class="card" style="padding:18px"><div id="quizWeightEditor"></div></div>
+
+      <h2 class="divider-title">Аудит правил · история изменений весов</h2>
+      <div class="card" style="padding:18px"><div id="quizAuditLog" class="quiz-audit"></div></div>
+
     </section>
 
     <section id="tab-partners" class="panel">
@@ -1518,7 +1560,14 @@ table.sortable thead th[aria-sort="descending"]::after{content:" ▼";font-size:
 
       <h2 class="divider-title">Окупаемость внешнего трафика</h2>
       <p class="route-lead">Три метрики, которые показывают инвестиционному комитету, как Smart Safe Router компенсирует CAC и защищает базу ЦФ.</p>
-      <div class="grid kpis" id="routeOkrKpis"></div>
+      <h2 class="divider-title">Редактируемая матрица маршрутизации Smart Safe Router</h2>
+      <p class="route-lead">Матрица из ТЗ §3.3.3: {статус_клиента, зона, условие} → {узел CJM}. CRUD без релиза — изменения сохраняются в браузере и применяются в симуляторе квиза. Решение по «Повторным» Own/CF подтягивается из юнит-экономики (вкладка «Юнит-экономика»).</p>
+      <div class="card" style="padding:18px"><div id="ssrMatrixEditor"></div></div>
+
+      <h2 class="divider-title">Лог событий маршрутизации</h2>
+      <p class="route-lead">Каждая сработавшая маршрутизация (симулятор квиза) записывает событие {quiz_id, score, route, ts} в локальный журнал — для последующей сверки факт vs. план.</p>
+      <div class="card" style="padding:18px"><div id="ssrEventLog" class="ssr-log"></div></div>
+
     </section>
 
     <section id="tab-retention" class="panel">
