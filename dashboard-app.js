@@ -2559,6 +2559,9 @@ init();
   'use strict';
   var WK='quiz_weights_v1',AK='quiz_weights_audit_v1';
   var MK='ssr_matrix_v1',LK='ssr_route_log_v1',DK='ssr_repeat_decision_v1';
+  // Sentinel: вес ≤ BLOCKING_THRESHOLD означает «BLOCK» (ТЗ §3.2.3 — отсутствие согласия / стоп-фактор).
+  // BLOCKING_WEIGHT — значение по умолчанию для блокирующих правил.
+  var BLOCKING_WEIGHT=-1000, BLOCKING_THRESHOLD=-500;
   function read(k,fb){try{var r=localStorage.getItem(k);return r?JSON.parse(r):fb;}catch(e){return fb;}}
   function write(k,v){try{localStorage.setItem(k,JSON.stringify(v));}catch(e){}}
   function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
@@ -2581,7 +2584,7 @@ init();
     {id:'w-od-2',stepId:'overdue12m',answer:'Да',weight:-20,note:'есть просрочки'},
     {id:'w-debt-1',stepId:'debtAmount',answer:'500+ тыс.',weight:-15,note:'высокий долг'},
     {id:'w-debt-2',stepId:'debtAmount',answer:'300–500 тыс.',weight:-8,note:'средний долг'},
-    {id:'w-pdn',stepId:'consent',answer:'нет согласия 152-ФЗ',weight:-1000,note:'BLOCK · обязательное согласие'}
+    {id:'w-pdn',stepId:'consent',answer:'нет согласия 152-ФЗ',weight:BLOCKING_WEIGHT,note:'BLOCK · обязательное согласие'}
   ];
   function loadWeights(){var w=read(WK,null);return Array.isArray(w)&&w.length?w:DEFAULT_WEIGHTS.slice();}
   function saveWeights(w){write(WK,w);}
@@ -2594,7 +2597,7 @@ init();
   // Нормировка Score в 0–100 по сумме весов от текущего набора (без учёта BLOCK-ответа).
   function normalizeScore(rawSum,weights){
     var minS=0,maxS=0;
-    weights.forEach(function(w){if(w.weight>-500){if(w.weight>0)maxS+=w.weight;else minS+=w.weight;}});
+    weights.forEach(function(w){if(w.weight>BLOCKING_THRESHOLD){if(w.weight>0)maxS+=w.weight;else minS+=w.weight;}});
     var span=Math.max(1,maxS-minS);
     var n=(rawSum-minS)/span*100;
     return Math.max(0,Math.min(100,Math.round(n)));
