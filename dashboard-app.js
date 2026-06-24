@@ -2546,3 +2546,286 @@ document.addEventListener('keydown',e=>{const drill=e.target.closest?.('[data-dr
 document.getElementById('drawerClose').addEventListener('click',closeDrawer);
 let resizeTimer;window.addEventListener('resize',()=>{clearTimeout(resizeTimer);resizeTimer=setTimeout(renderCharts,120)});
 init();
+
+/* ================================================================
+ * TZ §3 — Editable scoring weights + Smart Safe Router matrix
+ *   - Хранение в localStorage, CRUD без релиза
+ *   - Аудит изменений (кто/когда/что)
+ *   - Журнал событий маршрутизации
+ *   - Подхват решения Own/CF из юнит-экономики (event ssr-repeat-decision)
+ *   - Подсветка активного узла CJM в renderRoutingDiagram (по data-route)
+ * ================================================================ */
+(function(){
+  'use strict';
+  var WK='quiz_weights_v1',AK='quiz_weights_audit_v1';
+  var MK='ssr_matrix_v1',LK='ssr_route_log_v1',DK='ssr_repeat_decision_v1';
+  // Sentinel: вес ≤ BLOCKING_THRESHOLD означает «BLOCK» (ТЗ §3.2.3 — отсутствие согласия / стоп-фактор).
+  // BLOCKING_WEIGHT — значение по умолчанию для блокирующих правил.
+  var BLOCKING_WEIGHT=-1000, BLOCKING_THRESHOLD=-500;
+  function read(k,fb){try{var r=localStorage.getItem(k);return r?JSON.parse(r):fb;}catch(e){return fb;}}
+  function write(k,v){try{localStorage.setItem(k,JSON.stringify(v));}catch(e){}}
+  function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
+
+  // ---- Стартовые веса прескоринга (соответствуют статическим правилам quizScoreDelta) ----
+  var DEFAULT_WEIGHTS=[
+    {id:'w-age-1',stepId:'age',answer:'23–55',weight:8,note:'оптимальный возраст'},
+    {id:'w-age-2',stepId:'age',answer:'18–22 / 56–70',weight:3,note:'граничный возраст'},
+    {id:'w-age-3',stepId:'age',answer:'вне диапазона',weight:-5,note:'риск-фактор'},
+    {id:'w-region-1',stepId:'region',answer:'Москва/СПб',weight:5,note:'высокий доход региона'},
+    {id:'w-region-2',stepId:'region',answer:'С ограничениями (НСУ)',weight:-10,note:'регион ограничений'},
+    {id:'w-income-1',stepId:'income',answer:'100+ тыс.',weight:10,note:'высокий доход'},
+    {id:'w-income-2',stepId:'income',answer:'60–100 тыс.',weight:5,note:'средний+'},
+    {id:'w-income-3',stepId:'income',answer:'30–60 тыс.',weight:2,note:'средний'},
+    {id:'w-income-4',stepId:'income',answer:'нет',weight:-15,note:'без дохода'},
+    {id:'w-empl-1',stepId:'employment',answer:'Без оформления',weight:-10,note:'занятость серая'},
+    {id:'w-empl-2',stepId:'employment',answer:'Пенсионер',weight:-2,note:'пенсия'},
+    {id:'w-empl-3',stepId:'employment',answer:'Официально',weight:5,note:'белая занятость'},
+    {id:'w-od-1',stepId:'overdue12m',answer:'Нет',weight:8,note:'без просрочек'},
+    {id:'w-od-2',stepId:'overdue12m',answer:'Да',weight:-20,note:'есть просрочки'},
+    {id:'w-debt-1',stepId:'debtAmount',answer:'500+ тыс.',weight:-15,note:'высокий долг'},
+    {id:'w-debt-2',stepId:'debtAmount',answer:'300–500 тыс.',weight:-8,note:'средний долг'},
+    {id:'w-pdn',stepId:'consent',answer:'нет согласия 152-ФЗ',weight:BLOCKING_WEIGHT,note:'BLOCK · обязательное согласие'}
+  ];
+  function loadWeights(){var w=read(WK,null);return Array.isArray(w)&&w.length?w:DEFAULT_WEIGHTS.slice();}
+  function saveWeights(w){write(WK,w);}
+  function audit(action,detail){
+    var log=read(AK,[])||[];
+    log.unshift({ts:Date.now(),user:'руководитель',action:action,detail:detail});
+    write(AK,log.slice(0,200));
+  }
+
+  // Нормировка Score в 0–100 по сумме весов от текущего набора (без учёта BLOCK-ответа).
+  function normalizeScore(rawSum,weights){
+    var minS=0,maxS=0;
+    weights.forEach(function(w){if(w.weight>BLOCKING_THRESHOLD){if(w.weight>0)maxS+=w.weight;else minS+=w.weight;}});
+    var span=Math.max(1,maxS-minS);
+    var n=(rawSum-minS)/span*100;
+    return Math.max(0,Math.min(100,Math.round(n)));
+  }
+  function zoneFor(score,blocked){
+    if(blocked)return{key:'block',label:'BLOCK',cls:'low'};
+    if(score>=70)return{key:'hot',label:'Hot',cls:'high'};
+    if(score>=40)return{key:'warm',label:'Warm',cls:'medium'};
+    return{key:'cold',label:'Cold',cls:'low'};
+  }
+
+  function renderWeightEditor(){
+    var host=document.getElementById('quizWeightEditor');
+    if(!host)return;
+    var weights=loadWeights();
+    var steps=['age','region','income','employment','overdue12m','debtAmount','consent','purpose','amount','term','contact','utm'];
+    var rows=weights.map(function(w){
+      return '<div class="quiz-we-row" data-wid="'+esc(w.id)+'">'+
+        '<b>'+esc(w.stepId)+'</b>'+
+        '<span>'+esc(w.answer)+(w.note?' <span style="color:var(--muted);font-weight:400">· '+esc(w.note)+'</span>':'')+'</span>'+
+        '<input type="number" step="1" data-we-field="weight" value="'+w.weight+'">'+
+        '<button class="quiz-we-del" data-we-del="'+esc(w.id)+'" type="button" title="Удалить">×</button>'+
+      '</div>';
+    }).join('');
+    var stepOpts=steps.map(function(s){return '<option value="'+s+'">'+s+'</option>';}).join('');
+    host.innerHTML=
+      '<div class="quiz-we">'+
+        '<div class="quiz-we-toolbar">'+
+          '<button class="qwb" type="button" data-we-reset>Сбросить к дефолту</button>'+
+          '<button class="qwb" type="button" data-we-export>Экспорт JSON</button>'+
+        '</div>'+
+        rows+
+        '<div class="quiz-we-add">'+
+          '<select id="weAddStep">'+stepOpts+'</select>'+
+          '<input id="weAddAnswer" type="text" placeholder="ответ / вариант" style="min-width:160px">'+
+          '<input id="weAddWeight" type="number" step="1" value="0" style="width:80px">'+
+          '<input id="weAddNote" type="text" placeholder="комментарий" style="min-width:140px">'+
+          '<button type="button" id="weAddBtn">Добавить правило</button>'+
+        '</div>'+
+      '</div>';
+    host.querySelectorAll('[data-we-field="weight"]').forEach(function(inp){
+      inp.addEventListener('change',function(){
+        var row=inp.closest('[data-wid]');var id=row.getAttribute('data-wid');
+        var w=loadWeights();var item=w.find(function(x){return x.id===id;});
+        if(!item)return;var prev=item.weight;item.weight=Number(inp.value)||0;
+        saveWeights(w);audit('edit-weight',item.stepId+' / '+item.answer+': '+prev+' → '+item.weight);
+        renderAuditLog();
+      });
+    });
+    host.querySelectorAll('[data-we-del]').forEach(function(b){
+      b.addEventListener('click',function(){
+        var id=b.getAttribute('data-we-del');
+        var w=loadWeights();var item=w.find(function(x){return x.id===id;});
+        if(!item)return;
+        saveWeights(w.filter(function(x){return x.id!==id;}));
+        audit('delete-weight',item.stepId+' / '+item.answer+' (w='+item.weight+')');
+        renderWeightEditor();renderAuditLog();
+      });
+    });
+    var addBtn=document.getElementById('weAddBtn');
+    if(addBtn)addBtn.addEventListener('click',function(){
+      var s=document.getElementById('weAddStep').value;
+      var a=document.getElementById('weAddAnswer').value.trim();
+      var wt=Number(document.getElementById('weAddWeight').value)||0;
+      var n=document.getElementById('weAddNote').value.trim();
+      if(!a){alert('Введите вариант ответа.');return;}
+      var w=loadWeights();
+      w.push({id:'w-'+Date.now().toString(36),stepId:s,answer:a,weight:wt,note:n});
+      saveWeights(w);audit('add-weight',s+' / '+a+' = '+wt);
+      renderWeightEditor();renderAuditLog();
+    });
+    var resetBtn=host.querySelector('[data-we-reset]');
+    if(resetBtn)resetBtn.addEventListener('click',function(){
+      if(!confirm('Сбросить веса прескоринга к дефолту? Текущие значения будут утеряны.'))return;
+      saveWeights(DEFAULT_WEIGHTS.slice());audit('reset-weights','полный сброс');renderWeightEditor();renderAuditLog();
+    });
+    var expBtn=host.querySelector('[data-we-export]');
+    if(expBtn)expBtn.addEventListener('click',function(){
+      var blob=new Blob([JSON.stringify(loadWeights(),null,2)],{type:'application/json'});
+      var a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='quiz-weights.json';
+      document.body.appendChild(a);a.click();a.remove();URL.revokeObjectURL(a.href);
+    });
+  }
+
+  function renderAuditLog(){
+    var host=document.getElementById('quizAuditLog');if(!host)return;
+    var log=read(AK,[])||[];
+    if(!log.length){host.innerHTML='<div class="qa-empty">Аудит-лог пуст. Изменения весов будут появляться здесь.</div>';return;}
+    host.innerHTML=log.slice(0,50).map(function(e){
+      var d=new Date(e.ts).toLocaleString('ru-RU');
+      return '<div class="qa-row"><span>'+esc(d)+'</span><span>'+esc(e.user)+'</span><span><b>'+esc(e.action)+':</b> '+esc(e.detail)+'</span></div>';
+    }).join('');
+  }
+
+  // ---- Матрица маршрутизации (ТЗ §3.3.3) ----
+  var DEFAULT_MATRIX=[
+    {id:'r-new-hot-big',status:'Новый',zone:'Hot',condition:'сумма ≥ 100 000',route:'CJM.Sales.Fast'},
+    {id:'r-new-warm',status:'Новый',zone:'Warm',condition:'—',route:'CJM.Sales.Standard'},
+    {id:'r-new-cold',status:'Новый',zone:'Cold',condition:'—',route:'CJM.Nurture.Email'},
+    {id:'r-rep-hot-own',status:'Повторный',zone:'Hot',condition:'свой канал выгоднее (UE A/B)',route:'CJM.Repeat.Own'},
+    {id:'r-rep-hot-cf',status:'Повторный',zone:'Hot',condition:'ЦФ выгоднее (UE A/B)',route:'CJM.Repeat.CF'},
+    {id:'r-rep-warm',status:'Повторный',zone:'Warm',condition:'—',route:'CJM.Repeat.Standard'},
+    {id:'r-block',status:'Любой',zone:'Block',condition:'нет согласия / стоп-факторы',route:'CJM.Reject'}
+  ];
+  function loadMatrix(){var m=read(MK,null);return Array.isArray(m)&&m.length?m:DEFAULT_MATRIX.slice();}
+  function saveMatrix(m){write(MK,m);}
+
+  function renderSsrMatrix(){
+    var host=document.getElementById('ssrMatrixEditor');if(!host)return;
+    var dec=read(DK,null);
+    var pinned=dec
+      ? '<div class="ssr-mx-pinned">📌 Решение из юнит-экономики: <b>'+esc(dec.winner==='A'?'Передача в Центр Финансов':'Своя монетизация')+'</b> → роутер по умолчанию ставит <b>'+esc(dec.route)+'</b> для сегмента «Повторные · Hot». Зафиксировано '+esc(new Date(dec.ts).toLocaleString('ru-RU'))+'.</div>'
+      : '<div class="ssr-mx-pinned empty">Решение Own/CF ещё не зафиксировано. Перейдите на вкладку «Юнит-экономика», раздел A/B «Повторные», и нажмите «Зафиксировать решение в Smart Safe Router».</div>';
+    var statusOpts=['Новый','Повторный','Любой'].map(function(s){return '<option value="'+s+'">'+s+'</option>';}).join('');
+    var zoneOpts=['Hot','Warm','Cold','Block'].map(function(z){return '<option value="'+z+'">'+z+'</option>';}).join('');
+    var matrix=loadMatrix();
+    var rows=matrix.map(function(r){
+      return '<tr data-rid="'+esc(r.id)+'">'+
+        '<td><select data-mx-field="status">'+statusOpts.replace('value="'+r.status+'"','value="'+r.status+'" selected')+'</select></td>'+
+        '<td><select data-mx-field="zone">'+zoneOpts.replace('value="'+r.zone+'"','value="'+r.zone+'" selected')+'</select></td>'+
+        '<td><input data-mx-field="condition" type="text" value="'+esc(r.condition)+'"></td>'+
+        '<td><input data-mx-field="route" type="text" value="'+esc(r.route)+'"></td>'+
+        '<td><button type="button" class="ssr-del" data-mx-del="'+esc(r.id)+'" title="Удалить">×</button></td>'+
+      '</tr>';
+    }).join('');
+    host.innerHTML=pinned+
+      '<div class="ssr-mx">'+
+        '<table class="ssr-mx-tbl"><thead><tr><th>Статус</th><th>Зона</th><th>Условие</th><th>Маршрут (узел CJM)</th><th></th></tr></thead><tbody>'+rows+'</tbody></table>'+
+        '<div class="ssr-mx-tools">'+
+          '<button type="button" data-mx-add>+ добавить правило</button>'+
+          '<button type="button" data-mx-reset>Сбросить к дефолту</button>'+
+          '<button type="button" class="primary" data-mx-export>Экспорт JSON</button>'+
+        '</div>'+
+      '</div>';
+    host.querySelectorAll('[data-mx-field]').forEach(function(inp){
+      inp.addEventListener('change',function(){
+        var tr=inp.closest('tr');var id=tr.getAttribute('data-rid');
+        var m=loadMatrix();var item=m.find(function(x){return x.id===id;});
+        if(!item)return;item[inp.getAttribute('data-mx-field')]=inp.value;
+        saveMatrix(m);
+      });
+    });
+    host.querySelectorAll('[data-mx-del]').forEach(function(b){
+      b.addEventListener('click',function(){
+        var id=b.getAttribute('data-mx-del');
+        saveMatrix(loadMatrix().filter(function(x){return x.id!==id;}));
+        renderSsrMatrix();
+      });
+    });
+    var add=host.querySelector('[data-mx-add]');
+    if(add)add.addEventListener('click',function(){
+      var m=loadMatrix();m.push({id:'r-'+Date.now().toString(36),status:'Новый',zone:'Warm',condition:'—',route:'CJM.New.Route'});
+      saveMatrix(m);renderSsrMatrix();
+    });
+    var rst=host.querySelector('[data-mx-reset]');
+    if(rst)rst.addEventListener('click',function(){
+      if(!confirm('Сбросить матрицу маршрутизации к дефолту?'))return;
+      saveMatrix(DEFAULT_MATRIX.slice());renderSsrMatrix();
+    });
+    var exp=host.querySelector('[data-mx-export]');
+    if(exp)exp.addEventListener('click',function(){
+      var blob=new Blob([JSON.stringify(loadMatrix(),null,2)],{type:'application/json'});
+      var a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='ssr-matrix.json';
+      document.body.appendChild(a);a.click();a.remove();URL.revokeObjectURL(a.href);
+    });
+  }
+
+  function renderSsrLog(){
+    var host=document.getElementById('ssrEventLog');if(!host)return;
+    var log=read(LK,[])||[];
+    if(!log.length){host.innerHTML='<div class="sl-empty">Журнал пуст. Пройдите квиз — события маршрутизации появятся здесь.</div>';return;}
+    host.innerHTML=log.slice(0,50).map(function(e){
+      var d=new Date(e.ts).toLocaleString('ru-RU');
+      return '<div class="sl-row"><span>'+esc(d)+'</span><span>'+esc(e.quiz_id)+'</span><span>score '+esc(e.score)+'</span><span><b>'+esc(e.route)+'</b> · zone '+esc(e.zone||'-')+'</span></div>';
+    }).join('');
+  }
+
+  // Логирование события маршрутизации (вызывается прототипом квиза).
+  window.__ssrLogRoute=function(payload){
+    var log=read(LK,[])||[];
+    log.unshift(Object.assign({ts:Date.now(),quiz_id:'q-'+Date.now().toString(36).slice(-6)},payload||{}));
+    write(LK,log.slice(0,500));
+    renderSsrLog();
+  };
+
+  // Подсветка активного узла CJM в существующей блок-схеме renderRoutingDiagram(). Если в DOM есть
+  // элементы [data-route] — отметим тот, что совпадает с переданным маршрутом.
+  window.__ssrHighlightRoute=function(route){
+    document.querySelectorAll('[data-route]').forEach(function(el){
+      el.classList.toggle('ssr-active',el.getAttribute('data-route')===route);
+    });
+  };
+
+  // Подхват решения из UE: при event'е перерисуем матрицу (там pinned-плашка).
+  window.addEventListener('ssr-repeat-decision',function(){renderSsrMatrix();});
+
+  // Инициализация и реакция на смену вкладок.
+  function initAll(){renderWeightEditor();renderAuditLog();renderSsrMatrix();renderSsrLog();}
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',initAll);
+  else initAll();
+  document.querySelectorAll('.tab[data-tab="quiz"],.tab[data-tab="routing"]').forEach(function(t){
+    t.addEventListener('click',function(){requestAnimationFrame(initAll);});
+  });
+})();
+
+/* ---- TZ §3.2.4 + §3.3.6: подцепляемся к существующему симулятору квиза.
+   Каждый раз когда renderQuizProto() финализирует прохождение, фиксируем событие. ---- */
+(function(){
+  if(typeof renderQuizProto!=='function')return;
+  var orig=renderQuizProto;
+  var lastLoggedStep=-1;
+  window.renderQuizProto=function(){
+    var st=(typeof QUIZ_PROTO_STATE!=='undefined')?QUIZ_PROTO_STATE:null;
+    orig.apply(this,arguments);
+    if(st&&st.done&&lastLoggedStep!==st.step){
+      lastLoggedStep=st.step;
+      try{
+        var grade=quizGradeFor(st.score);
+        var route=quizRouteFor(st.profile,grade);
+        if(typeof window.__ssrLogRoute==='function'){
+          window.__ssrLogRoute({score:st.score,route:route.code,zone:grade.label,profile:st.profile});
+        }
+        if(typeof window.__ssrHighlightRoute==='function'){
+          window.__ssrHighlightRoute(route.code);
+        }
+      }catch(e){}
+    }
+    if(st&&!st.done)lastLoggedStep=-1;
+  };
+})();
+
