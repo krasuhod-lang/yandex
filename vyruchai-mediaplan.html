@@ -997,6 +997,111 @@ table.sortable thead th[aria-sort="descending"]::after{content:" ▼";font-size:
 .ue2-summary-list{margin:0;padding-left:18px;display:flex;flex-direction:column;gap:7px}
 .ue2-summary-list li{font-size:13.5px;line-height:1.5;color:var(--text)}
 
+/* ---- TZ-расширения: пресеты/слоты, светофор, A/B, инсайты, объяснение ---- */
+.ue2-preset-bar{gap:10px}
+.ue2-preset-actions{display:flex;gap:8px;flex-wrap:wrap}
+.ue2-preset-btn{border:1px solid var(--line-strong);background:var(--surface);color:var(--text);border-radius:980px;padding:8px 14px;font:inherit;font-size:12.5px;font-weight:650;cursor:pointer;transition:border-color .15s,color .15s,background .15s}
+.ue2-preset-btn:hover{border-color:var(--blue);color:var(--blue)}
+.ue2-preset-btn.primary{background:var(--text);color:var(--surface);border-color:var(--text)}
+.ue2-preset-btn.primary:hover{opacity:.9;color:var(--surface)}
+.ue2-slot-row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.ue2-slot-name{flex:1;min-width:180px;border:1px solid var(--line-strong);background:var(--surface);color:var(--text);border-radius:8px;padding:8px 12px;font:inherit;font-size:13px}
+.ue2-slot-chips{display:flex;gap:8px;flex-wrap:wrap}
+.ue2-slot-chip{display:inline-flex;align-items:center;gap:6px;background:var(--surface-2);border:1px solid var(--line);border-radius:980px;padding:4px 10px;font-size:12px}
+.ue2-slot-chip b{font-weight:700}
+.ue2-slot-chip button{background:transparent;border:0;color:var(--blue);font:inherit;font-size:11.5px;cursor:pointer;padding:0 2px}
+.ue2-slot-chip button:hover{text-decoration:underline}
+.ue2-compare-row{display:flex;gap:14px;flex-wrap:wrap;align-items:center}
+.ue2-compare-row label{display:inline-flex;align-items:center;gap:6px;font-size:12.5px;color:var(--muted);font-weight:600}
+.ue2-compare-row select{border:1px solid var(--line-strong);background:var(--surface);color:var(--text);border-radius:8px;padding:6px 10px;font:inherit;font-size:12.5px}
+.ue2-muted{color:var(--muted);font-size:12px}
+
+/* Светофорные карточки */
+.ue2-tz-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
+@media(max-width:1100px){.ue2-tz-grid{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:560px){.ue2-tz-grid{grid-template-columns:1fr}}
+.ue2-tz-card{border:1px solid var(--line);border-radius:var(--radius-sm);padding:14px;display:flex;flex-direction:column;gap:10px;background:var(--surface);border-left:4px solid var(--line-strong)}
+.ue2-tz-card.tone-green{border-left-color:var(--green)}
+.ue2-tz-card.tone-yellow{border-left-color:var(--orange)}
+.ue2-tz-card.tone-red{border-left-color:var(--red)}
+.ue2-tz-head{display:flex;align-items:center;gap:8px}
+.ue2-tz-head h3{margin:0;font-size:14.5px;letter-spacing:-.01em}
+.ue2-tz-status{margin-left:auto;font-size:11.5px;font-weight:700;text-transform:uppercase;letter-spacing:.04em}
+.ue2-tz-dot{display:inline-block;width:10px;height:10px;border-radius:50%;background:var(--line-strong)}
+.ue2-tz-dot.tone-green{background:var(--green)}
+.ue2-tz-dot.tone-yellow{background:var(--orange)}
+.ue2-tz-dot.tone-red{background:var(--red)}
+.ue2-tz-metrics{display:grid;grid-template-columns:repeat(2,1fr);gap:6px 12px}
+.ue2-tz-metrics>div{display:flex;flex-direction:column;font-size:12px;color:var(--muted)}
+.ue2-tz-metrics>div b{font-size:14px;color:var(--text);font-variant-numeric:tabular-nums}
+.ue2-tz-metrics .tone-green{color:var(--green)}
+.ue2-tz-metrics .tone-red{color:var(--red)}
+.ue2-tz-metrics .tone-yellow{color:var(--orange)}
+.ue2-thresh-mini{font-size:12px;color:var(--muted)}
+.ue2-thresh-mini b{color:var(--text)}
+
+/* Бар-чарт RPL/Margin */
+.ue2-bar-chart{display:flex;flex-direction:column;gap:10px}
+.ue2-bar-row{display:grid;grid-template-columns:120px 1fr 1fr;gap:12px;align-items:center}
+@media(max-width:760px){.ue2-bar-row{grid-template-columns:1fr}}
+.ue2-bar-name{font-size:13px;font-weight:700}
+.ue2-bar-group{display:flex;flex-direction:column;gap:4px}
+.ue2-bar-label{font-size:11.5px;color:var(--muted);font-variant-numeric:tabular-nums}
+.ue2-bar-track{height:14px;background:var(--surface-2);border-radius:7px;overflow:hidden;border:1px solid var(--line)}
+.ue2-bar-fill{height:100%;background:var(--line-strong);transition:width .25s var(--ease)}
+.ue2-bar-fill.tone-green{background:var(--green)}
+.ue2-bar-fill.tone-yellow{background:var(--orange)}
+.ue2-bar-fill.tone-red{background:var(--red)}
+
+/* A/B карточка для повторных */
+.ue2-ab-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media(max-width:760px){.ue2-ab-grid{grid-template-columns:1fr}}
+.ue2-ab-side{border:1px solid var(--line);border-radius:var(--radius-sm);padding:14px;display:flex;flex-direction:column;gap:10px;background:var(--surface-2)}
+.ue2-ab-side.is-winner{border-color:var(--green);box-shadow:0 0 0 2px color-mix(in srgb,var(--green) 18%,transparent)}
+.ue2-ab-side h4{margin:0;font-size:14px;font-weight:700}
+.ue2-ab-fields{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.ue2-ab-fields label{display:flex;flex-direction:column;font-size:11.5px;color:var(--muted);gap:3px}
+.ue2-ab-fields input{border:1px solid var(--line-strong);background:var(--surface);color:var(--text);border-radius:8px;padding:6px 8px;font:inherit;font-size:12.5px;font-variant-numeric:tabular-nums;font-weight:700;text-align:right}
+.ue2-ab-margin{font-size:13px;color:var(--muted)}
+.ue2-ab-margin b{font-size:16px;font-variant-numeric:tabular-nums}
+.ue2-ab-margin .tone-green{color:var(--green)}
+.ue2-ab-margin .tone-red{color:var(--red)}
+.ue2-ab-bars{display:flex;flex-direction:column;gap:8px}
+.ue2-ab-bar{display:grid;grid-template-columns:100px 1fr 120px;gap:10px;align-items:center;font-size:13px}
+.ue2-ab-bar b{text-align:right;font-variant-numeric:tabular-nums}
+.ue2-ab-winner{padding:12px 14px;border-radius:var(--radius-sm);background:color-mix(in srgb,var(--green) 8%,var(--surface-2));border:1px solid color-mix(in srgb,var(--green) 30%,var(--line));font-size:13.5px}
+.ue2-ab-winner b{font-weight:800}
+.ue2-ab-table{width:100%;border-collapse:collapse;font-size:12.5px}
+.ue2-ab-table th,.ue2-ab-table td{border:1px solid var(--line);padding:6px 10px;text-align:left}
+.ue2-ab-table th{background:var(--surface-2);font-weight:700}
+.ue2-ab-foot{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+
+/* Инсайты */
+.ue2-insights{margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:6px}
+.ue2-insights li{display:flex;align-items:flex-start;gap:8px;padding:8px 10px;border-radius:8px;background:var(--surface-2);border:1px solid var(--line);font-size:13px;line-height:1.45}
+.ue2-ins-tag{display:inline-flex;align-items:center;padding:2px 8px;border-radius:980px;background:var(--surface);border:1px solid var(--line-strong);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);flex-shrink:0}
+
+/* Сравнение split-view */
+.ue2-cmp-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media(max-width:880px){.ue2-cmp-grid{grid-template-columns:1fr}}
+.ue2-cmp-col{border:1px solid var(--line);border-radius:var(--radius-sm);padding:14px;background:var(--surface-2)}
+.ue2-cmp-col h3{margin:0 0 10px;font-size:15px}
+.ue2-cmp-kpis{display:grid;grid-template-columns:repeat(2,1fr);gap:6px;font-size:12.5px;color:var(--muted);margin-bottom:10px}
+.ue2-cmp-kpis b{color:var(--text);font-variant-numeric:tabular-nums}
+.ue2-cmp-table{width:100%;border-collapse:collapse;font-size:12px}
+.ue2-cmp-table th,.ue2-cmp-table td{border:1px solid var(--line);padding:5px 8px;text-align:left}
+.ue2-cmp-table th{background:var(--surface);font-weight:700}
+
+/* Модалка «Как считаем?» */
+.ue2-explain-card{width:min(820px,100%);max-height:92vh}
+.ue2-explain-actions{display:flex;gap:8px;align-items:center}
+.ue2-explain-body{display:flex;flex-direction:column;gap:10px}
+.ue2-explain-body h4{margin:6px 0 0;font-size:14px;font-weight:700}
+.ue2-explain-tbl{width:100%;border-collapse:collapse;font-size:12.5px}
+.ue2-explain-tbl th,.ue2-explain-tbl td{border:1px solid var(--line);padding:6px 10px;text-align:left}
+.ue2-explain-tbl th{background:var(--surface-2);font-weight:700}
+.ue2-explain-steps td:nth-child(2) b{font-variant-numeric:tabular-nums}
+
 /* ---- Старые стили (используются ниже в дашборде и модальном окне плана) ---- */
 .ue-hero{background:linear-gradient(165deg,var(--surface),var(--surface-2))}
 .ue-hero-actions{display:flex;gap:10px;flex-wrap:wrap}

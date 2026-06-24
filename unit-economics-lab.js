@@ -13,6 +13,12 @@
   'use strict';
 
   var STORE_KEY = 'ue_segments_v1';
+  var SLOTS_KEY = 'ue_segments_slots_v1';      // именованные сценарии пользователя (≤ 5)
+  var COMPARE_KEY = 'ue_segments_compare_v1';  // {a:slotId, b:slotId} для split-view
+  var THRESH_KEY = 'ue_segments_thresholds_v1';// настраиваемые пороги светофора
+  var REPEAT_AB_KEY = 'ue_repeat_ab_v1';       // параметры A/B повторных (CF vs Own)
+  var INSIGHTS_KEY = 'ue_insights_rules_v1';   // JSON-конфиг правил выводов
+  var COHORT_SIZE = 1000;                       // эталонная когорта по ТЗ
 
   // ---- Сегменты и стартовые значения (из ТЗ) ----
   var SEGMENTS = [
@@ -98,6 +104,83 @@
     return base;
   }
   function clamp(v, a, b) { return Math.min(b, Math.max(a, v)); }
+
+  // ---- Пресеты сценариев (ТЗ §2.2.2) ----
+  // Базируется на DEFAULT_PARAMS, в пресетах двигаются только ключевые ручки воронки/CAC.
+  function presetParams(kind) {
+    var p = deepCopy(DEFAULT_PARAMS);
+    if (kind === 'pessimistic') {
+      p.crVisitLead = 5;  p.crLeadClickout = 26; p.crClickoutIssue = 26; p.crCross = 6;
+      p.seg.new.cac = 3200;  p.seg.repeat.cac = 600;  p.seg.overdue.cac = 1100; p.seg.sleep.cac = 480;
+      p.seg.new.ret1 = 18;   p.seg.repeat.ret1 = 35; p.seg.overdue.ret1 = 25; p.seg.sleep.ret1 = 20;
+    } else if (kind === 'optimistic') {
+      p.crVisitLead = 11; p.crLeadClickout = 44; p.crClickoutIssue = 44; p.crCross = 16;
+      p.seg.new.cac = 2000;  p.seg.repeat.cac = 320;  p.seg.overdue.cac = 600;  p.seg.sleep.cac = 240;
+      p.seg.new.ret1 = 32;   p.seg.repeat.ret1 = 55; p.seg.overdue.ret1 = 45; p.seg.sleep.ret1 = 38;
+    }
+    return p;
+  }
+  var PRESETS = [
+    { id: 'pessimistic', name: 'Пессимистичный' },
+    { id: 'base',        name: 'База' },
+    { id: 'optimistic',  name: 'Оптимистичный' }
+  ];
+
+  // ---- Конфиг порогов «светофора» (ТЗ §2.4.2) ----
+  var DEFAULT_THRESHOLDS = {
+    ltvCacGreen: 3.0,      // 🟢 при LTV/CAC ≥ green и марже > 0
+    paybackGreenMax: 6,    // 🟢 при Payback ≤ N мес.
+    paybackYellowMax: 12   // 🟡 при Payback ≤ N мес. (свыше — 🔴)
+  };
+  function loadThresholds() {
+    try { var raw = localStorage.getItem(THRESH_KEY); if (!raw) return Object.assign({}, DEFAULT_THRESHOLDS); return Object.assign({}, DEFAULT_THRESHOLDS, JSON.parse(raw)); }
+    catch (e) { return Object.assign({}, DEFAULT_THRESHOLDS); }
+  }
+  function saveThresholds(t) { try { localStorage.setItem(THRESH_KEY, JSON.stringify(t)); } catch (e) {} }
+
+  // ---- Параметры A/B для сегмента «Повторные» (ТЗ §2.5) ----
+  var DEFAULT_REPEAT_AB = {
+    cfCommission: 1800,    // ₽, комиссия ЦФ за оформленную сделку
+    cfApproval: 65,        // %, доля одобренных ЦФ заявок
+    ownAov: 9000,          // ₽, средний чек собственной монетизации
+    ownMargin: 25,         // %, ставка маржинальности
+    ownServiceCost: 150,   // ₽, издержки на обслуживание лида
+    repeatOrders: 1.4      // среднее число повторных сделок на лида сегмента в год
+  };
+  function loadRepeatAB() {
+    try { var raw = localStorage.getItem(REPEAT_AB_KEY); if (!raw) return Object.assign({}, DEFAULT_REPEAT_AB); return Object.assign({}, DEFAULT_REPEAT_AB, JSON.parse(raw)); }
+    catch (e) { return Object.assign({}, DEFAULT_REPEAT_AB); }
+  }
+  function saveRepeatAB(o) { try { localStorage.setItem(REPEAT_AB_KEY, JSON.stringify(o)); } catch (e) {} }
+
+  // ---- Конфиг правил автовыводов (ТЗ §2.4.3) ----
+  // Каждое правило — JSON: { scope:'seg'|'portfolio', when:{...}, text:'...' }
+  // when для seg: { romiGt, romiLt, ltvCacLt, paybackGt, marginLt } — все опциональны (AND).
+  var DEFAULT_INSIGHTS_RULES = [
+    { scope: 'seg', when: { ltvCacGte: 3, romiGte: 50 }, text: 'Сегмент {name} — самый рентабельный: ROMI = {romi}%, Payback = {payback} → масштабировать.' },
+    { scope: 'seg', when: { marginLte: 0 }, text: 'Сегмент {name} убыточен на лид (маржа {margin} ₽) → снизить CAC канала или отключить.' },
+    { scope: 'seg', when: { ltvCacLt: 1.5 }, text: 'Сегмент {name}: LTV/CAC = {ltvCac} ниже минимально допустимого — пересмотреть CAC и retention.' },
+    { scope: 'portfolio', when: { blendedLtvCacGte: 3 }, text: 'Портфель в зелёной зоне: Blended LTV/CAC = {blendedRatio}. Можно увеличивать закупку трафика.' },
+    { scope: 'portfolio', when: { blendedLtvCacLt: 3 }, text: 'Портфель под таргетом: Blended LTV/CAC = {blendedRatio}. Сократить CAC у худшего сегмента и повысить retention.' }
+  ];
+  function loadInsightsRules() {
+    try { var raw = localStorage.getItem(INSIGHTS_KEY); if (!raw) return deepCopy(DEFAULT_INSIGHTS_RULES); return JSON.parse(raw); }
+    catch (e) { return deepCopy(DEFAULT_INSIGHTS_RULES); }
+  }
+  function saveInsightsRules(r) { try { localStorage.setItem(INSIGHTS_KEY, JSON.stringify(r)); } catch (e) {} }
+
+  // ---- Слоты пользовательских сценариев (ТЗ §2.2.2) ----
+  function loadSlots() {
+    try { var raw = localStorage.getItem(SLOTS_KEY); if (!raw) return []; return JSON.parse(raw) || []; }
+    catch (e) { return []; }
+  }
+  function saveSlots(list) { try { localStorage.setItem(SLOTS_KEY, JSON.stringify((list || []).slice(0, 5))); } catch (e) {} }
+  function loadCompare() {
+    try { var raw = localStorage.getItem(COMPARE_KEY); if (!raw) return { a: '', b: '' }; return JSON.parse(raw); }
+    catch (e) { return { a: '', b: '' }; }
+  }
+  function saveCompare(c) { try { localStorage.setItem(COMPARE_KEY, JSON.stringify(c || {})); } catch (e) {} }
+
   function num(n) { return Math.round(Number(n) || 0).toLocaleString('ru-RU'); }
   function money(n) { return num(n) + ' ₽'; }
   function money1(n) { return (Number(n) || 0).toLocaleString('ru-RU', { maximumFractionDigits: 1 }) + ' ₽'; }
@@ -112,6 +195,7 @@
   /* ============================== РАСЧЁТЫ ============================== */
 
   // Метрики на один лид: gross/net revenue per lead, конверсия лида в выдачу.
+  // ТЗ §2.4.1: RPL = Σ выручки / число лидов; здесь rpl = ожидаемая выручка на ОДИН лид с учётом CR.
   function leadEconomics(p) {
     var gross = p.epl + (p.crCross / 100) * p.crossEpl;
     var net = gross * (1 - p.revShare / 100) - p.opex;
@@ -135,10 +219,16 @@
     var ltvCac = s.cac > 0 ? ltv2 / s.cac : 0;
     // Срок окупаемости (месяцы): линейная интерполяция по точкам 0 / 12 / 24 мес.
     var payback = paybackMonths(ltv0, ltv1, ltv2, s.cac);
+    // ТЗ §2.4.1: RPL (Revenue per Lead) = выручка сегмента / число лидов. Берём LTV₂ как
+    // ожидаемую совокупную выручку с одного привлечённого лида за 2 года.
+    var rpl = ltv2;
+    // Маржа на лида = RPL − CAC − COGS_на_лида. В нашей модели COGS_на_лида = OPEX (на лида).
+    var marginPerLead = rpl - s.cac - p.opex;
     return {
       seg: s, segId: segId, name: SEGMENTS.find(function(x){return x.id===segId;}).name,
       ltv0: ltv0, ltv1: ltv1, ltv2: ltv2, cac: s.cac, roi: roi, ltvCac: ltvCac,
-      payback: payback, crSegment: crSegment, share: s.share
+      payback: payback, crSegment: crSegment, share: s.share,
+      rpl: rpl, marginPerLead: marginPerLead
     };
   }
 
@@ -183,6 +273,124 @@
     };
   }
 
+  // ---- Светофор сегмента (ТЗ §2.4.2) ----
+  // 🟢 — маржа > 0 И LTV/CAC ≥ green И Payback ≤ paybackGreenMax
+  // 🟡 — один из критериев не выполнен (но маржа > 0)
+  // 🔴 — маржа ≤ 0
+  function segmentLight(e, th) {
+    if (!th) th = loadThresholds();
+    if (e.marginPerLead <= 0) return { tone: 'red',    label: 'Убыточен' };
+    var okRatio = e.ltvCac >= th.ltvCacGreen;
+    var okPb = isFinite(e.payback) && e.payback <= th.paybackGreenMax;
+    if (okRatio && okPb) return { tone: 'green', label: 'Рентабелен' };
+    return { tone: 'yellow', label: 'Под наблюдением' };
+  }
+
+  // ---- A/B экономика повторных: Центр Финансов vs Своя монетизация (ТЗ §2.5) ----
+  function repeatAB(p, ab) {
+    if (!ab) ab = loadRepeatAB();
+    var leadsApproved = (p.crLeadClickout / 100) * (p.crClickoutIssue / 100) * (p.seg.repeat.funnelMul || 1);
+    // A. Передача в Центр Финансов: доход = комиссия × одобрение × CR_клиента; издержки сервиса = 0
+    var marginA = ab.cfCommission * (ab.cfApproval / 100) * leadsApproved - p.seg.repeat.cac;
+    // B. Своя монетизация: доход = AOV × ставка маржинальности × повторные сделки; издержки = сервис на лида
+    var revenueB = ab.ownAov * (ab.ownMargin / 100) * ab.repeatOrders;
+    var marginB = revenueB - ab.ownServiceCost - p.seg.repeat.cac;
+    var winner = marginA >= marginB ? 'A' : 'B';
+    var delta = Math.abs(marginA - marginB);
+    return { marginA: marginA, marginB: marginB, winner: winner, delta: delta, leadsApproved: leadsApproved, params: ab };
+  }
+
+  // ---- Автовыводы по правилам (ТЗ §2.4.3) ----
+  function compileInsights(k, th, rules) {
+    if (!rules) rules = loadInsightsRules();
+    var out = [];
+    rules.forEach(function (rule) {
+      if (rule.scope === 'seg') {
+        k.perSeg.forEach(function (e) {
+          if (matchSeg(e, rule.when)) out.push({ scope: 'seg', name: e.name, text: fillTokens(rule.text, segTokens(e)) });
+        });
+      } else if (rule.scope === 'portfolio') {
+        if (matchPortfolio(k, rule.when)) out.push({ scope: 'portfolio', text: fillTokens(rule.text, portfolioTokens(k)) });
+      }
+    });
+    // Гарантируем минимум: ≥1 вывод на сегмент + ≥1 общий по портфелю (ТЗ §2.4.3)
+    SEGMENTS.forEach(function (s) {
+      var e = k.perSeg.find(function (x) { return x.segId === s.id; });
+      if (!e) return;
+      if (!out.some(function (o) { return o.scope === 'seg' && o.name === e.name; })) {
+        var lt = segmentLight(e, th);
+        var hint = lt.tone === 'green' ? 'удержать долю и нарастить'
+          : (lt.tone === 'yellow' ? 'наблюдать: один из KPI вне таргета' : 'снизить CAC или ограничить долю');
+        out.push({ scope: 'seg', name: e.name, text: 'Сегмент ' + e.name + ': ROMI ' + Math.round(e.roi) + '%, LTV/CAC ' + e.ltvCac.toFixed(2) + ' → ' + hint + '.' });
+      }
+    });
+    if (!out.some(function (o) { return o.scope === 'portfolio'; })) {
+      out.push({ scope: 'portfolio', text: 'Портфель: Blended LTV/CAC = ' + k.blendedRatio.toFixed(2) + ' при таргете ≥ ' + th.ltvCacGreen + '.' });
+    }
+    return out;
+  }
+  function matchSeg(e, w) {
+    if (!w) return true;
+    if (w.romiGte != null && !(e.roi >= w.romiGte)) return false;
+    if (w.romiLt  != null && !(e.roi <  w.romiLt))  return false;
+    if (w.ltvCacGte != null && !(e.ltvCac >= w.ltvCacGte)) return false;
+    if (w.ltvCacLt  != null && !(e.ltvCac <  w.ltvCacLt))  return false;
+    if (w.paybackGt != null && !(isFinite(e.payback) && e.payback > w.paybackGt)) return false;
+    if (w.marginLte != null && !(e.marginPerLead <= w.marginLte)) return false;
+    return true;
+  }
+  function matchPortfolio(k, w) {
+    if (!w) return true;
+    if (w.blendedLtvCacGte != null && !(k.blendedRatio >= w.blendedLtvCacGte)) return false;
+    if (w.blendedLtvCacLt  != null && !(k.blendedRatio <  w.blendedLtvCacLt))  return false;
+    return true;
+  }
+  function segTokens(e) {
+    return {
+      name: e.name, romi: Math.round(e.roi), ltvCac: e.ltvCac.toFixed(2),
+      payback: paybackText(e.payback), margin: Math.round(e.marginPerLead),
+      rpl: Math.round(e.rpl), cac: Math.round(e.cac)
+    };
+  }
+  function portfolioTokens(k) {
+    return {
+      blendedRatio: k.blendedRatio.toFixed(2),
+      blendedCac: Math.round(k.blendedCac),
+      avgArpu: Math.round(k.avgArpu)
+    };
+  }
+  function fillTokens(tpl, tok) {
+    return String(tpl || '').replace(/\{(\w+)\}/g, function (_, k) {
+      return tok[k] == null ? '{' + k + '}' : tok[k];
+    });
+  }
+
+  // ---- Прозрачный алгоритм: пошаговый расчёт на эталонной когорте 1 000 лидов (ТЗ §2.3) ----
+  function cohortBreakdown(p, segId) {
+    var s = p.seg[segId];
+    var e = segmentEconomics(p, segId);
+    var leads = COHORT_SIZE;
+    var clickouts = leads * (p.crLeadClickout / 100) * Math.sqrt(s.funnelMul || 1);
+    var issues = clickouts * (p.crClickoutIssue / 100) * Math.sqrt(s.funnelMul || 1);
+    var le = leadEconomics(p);
+    var grossRevenue = issues * le.gross;
+    var revShareCost = grossRevenue * (p.revShare / 100);
+    var opexCost = leads * p.opex;
+    var netRevenue = grossRevenue - revShareCost - opexCost;
+    var cacTotal = leads * s.cac;
+    var marginTotal = netRevenue - cacTotal;
+    var romi = cacTotal > 0 ? marginTotal / cacTotal * 100 : 0;
+    return {
+      segId: segId, segName: e.name, leads: leads, clickouts: clickouts, issues: issues,
+      grossRevenue: grossRevenue, revShareCost: revShareCost, opexCost: opexCost,
+      netRevenue: netRevenue, cacTotal: cacTotal, marginTotal: marginTotal, romi: romi,
+      cr1: p.crLeadClickout * Math.sqrt(s.funnelMul || 1),
+      cr2: p.crClickoutIssue * Math.sqrt(s.funnelMul || 1),
+      gross: le.gross, cac: s.cac, opex: p.opex, revShare: p.revShare,
+      rplCohort: netRevenue / leads, marginPerLead: marginTotal / leads
+    };
+  }
+
   /* ============================== РЕНДЕР ============================== */
 
   var params = load();
@@ -195,16 +403,23 @@
       '<div class="ue2">' +
         '<aside class="ue2-side">' + sidebarHtml() + '</aside>' +
         '<div class="ue2-main">' +
+          presetBarHtml() +
           kpiHtml() +
+          tzSegmentLightHtml() +
+          rplBarChartHtml() +
+          repeatABHtml() +
+          insightsHtml() +
           segmentMatrixHtml() +
           '<div class="ue2-row">' +
             funnelCardHtml() +
             cohortCardHtml() +
           '</div>' +
           waterfallCardHtml() +
+          compareSplitHtml() +
           summaryHtml() +
         '</div>' +
-      '</div>';
+      '</div>' +
+      explainModalHtml();
     wire();
     drawCharts();
   }
@@ -272,7 +487,7 @@
     return '<div class="ue2-side-head"><h3>Панель управления</h3>' +
       '<button class="ue2-reset" type="button" id="ueResetParams">Сбросить</button></div>' +
       '<p class="ue2-side-lead">Все вводные из листа «Вводные» Excel-модели. Двигайте ползунки или вводите значение — все KPI, графики и P&amp;L пересчитываются мгновенно.</p>' +
-      common + funnel + cross + segs;
+      common + funnel + cross + thresholdsSidebarHtml() + segs;
   }
 
   /* ---------- Top cards (сводные KPI) ---------- */
@@ -640,6 +855,340 @@
 
   /* ============================== СОБЫТИЯ ============================== */
 
+  /* ====================== ТЗ-расширения: пресеты, светофор, A/B, инсайты, объяснение ====================== */
+
+  // ---- Пресеты + слоты пользовательских сценариев + кнопка «Как считаем?» ----
+  function presetBarHtml() {
+    var slots = loadSlots();
+    var cmp = loadCompare();
+    var slotOpts = function (selected) {
+      return '<option value="">— нет —</option>' +
+        slots.map(function (s) { return '<option value="' + esc(s.id) + '"' + (selected === s.id ? ' selected' : '') + '>' + esc(s.name) + '</option>'; }).join('');
+    };
+    var slotChips = slots.length
+      ? slots.map(function (s) { return '<span class="ue2-slot-chip"><b>' + esc(s.name) + '</b><button type="button" data-ue-load-slot="' + esc(s.id) + '">загрузить</button><button type="button" data-ue-del-slot="' + esc(s.id) + '" title="Удалить">×</button></span>'; }).join('')
+      : '<span class="ue2-muted">Пока нет сохранённых сценариев. Сохраните текущий, чтобы быстро сравнивать варианты.</span>';
+
+    return '<div class="ue2-card ue2-preset-bar">' +
+      '<div class="ue2-card-head ue2-row-between">' +
+        '<div><h2>Лаборатория сценариев</h2>' +
+          '<p>Пресеты, сохранённые сценарии и сравнение бок о бок. Все изменения применяются мгновенно (&lt; 300 мс) — без перезагрузки страницы.</p></div>' +
+        '<div class="ue2-preset-actions">' +
+          PRESETS.map(function (p) { return '<button class="ue2-preset-btn" type="button" data-ue-preset="' + p.id + '">' + esc(p.name) + '</button>'; }).join('') +
+          '<button class="ue2-preset-btn primary" type="button" id="ueExplainOpen">Как считаем?</button>' +
+        '</div>' +
+      '</div>' +
+      '<div class="ue2-slot-row">' +
+        '<input class="ue2-slot-name" id="ueSlotName" type="text" placeholder="Имя сценария (макс. 5 слотов)" maxlength="40">' +
+        '<button class="ue2-preset-btn" type="button" id="ueSlotSave">Сохранить как сценарий</button>' +
+        '<button class="ue2-preset-btn" type="button" id="ueCompareToggle">Split-view: сравнить два сценария</button>' +
+      '</div>' +
+      '<div class="ue2-slot-chips">' + slotChips + '</div>' +
+      '<div class="ue2-compare-row">' +
+        '<label>Сценарий A <select id="ueCmpA">' + slotOpts(cmp.a) + '</select></label>' +
+        '<label>Сценарий B <select id="ueCmpB">' + slotOpts(cmp.b) + '</select></label>' +
+      '</div>' +
+    '</div>';
+  }
+
+  // ---- Карточки сегментов со светофором, RPL / Margin / LTV/CAC / Payback / ROMI (ТЗ §2.4.1-2) ----
+  function tzSegmentLightHtml() {
+    var k = blendedKpis(params);
+    var th = loadThresholds();
+    var cards = k.perSeg.map(function (e) {
+      var lt = segmentLight(e, th);
+      var icon = lt.tone === 'green' ? '🟢' : (lt.tone === 'yellow' ? '🟡' : '🔴');
+      return '<div class="ue2-tz-card tone-' + lt.tone + '">' +
+        '<div class="ue2-tz-head"><span class="ue2-tz-dot tone-' + lt.tone + '"></span>' +
+          '<h3>' + esc(e.name) + '</h3>' +
+          '<span class="ue2-tz-status">' + icon + ' ' + esc(lt.label) + '</span></div>' +
+        '<div class="ue2-tz-metrics">' +
+          '<div><span>Доход на лида (RPL)</span><b>' + money(e.rpl) + '</b></div>' +
+          '<div><span>Маржа на лида</span><b class="tone-' + (e.marginPerLead > 0 ? 'green' : 'red') + '">' + money(e.marginPerLead) + '</b></div>' +
+          '<div><span>LTV / CAC</span><b class="tone-' + ltvCacTone(e.ltvCac) + '">' + ratio(e.ltvCac) + '</b></div>' +
+          '<div><span>Payback</span><b class="tone-' + paybackTone(e.payback) + '">' + paybackText(e.payback) + '</b></div>' +
+          '<div><span>ROMI</span><b class="tone-' + (e.roi >= 0 ? 'green' : 'red') + '">' + pct(e.roi) + '</b></div>' +
+          '<div><span>CAC</span><b>' + money(e.cac) + '</b></div>' +
+        '</div>' +
+      '</div>';
+    }).join('');
+    return '<div class="ue2-card">' +
+      '<div class="ue2-card-head ue2-row-between">' +
+        '<div><h2>Сегменты · светофор рентабельности</h2>' +
+          '<p>RPL / Маржа на лида / LTV/CAC / Payback / ROMI. Пороги светофора редактируются в боковой панели.</p></div>' +
+        '<div class="ue2-thresh-mini">Таргет LTV/CAC ≥ <b>' + th.ltvCacGreen + '</b> · Payback 🟢 ≤ <b>' + th.paybackGreenMax + '</b> мес.</div>' +
+      '</div>' +
+      '<div class="ue2-tz-grid">' + cards + '</div>' +
+    '</div>';
+  }
+
+  // ---- Бар-чарт RPL/Margin per Lead со светофорной заливкой (ТЗ §2.6) ----
+  function rplBarChartHtml() {
+    var k = blendedKpis(params);
+    var th = loadThresholds();
+    var maxV = Math.max(1, Math.max.apply(null, k.perSeg.map(function (e) { return Math.max(Math.abs(e.rpl), Math.abs(e.marginPerLead)); })));
+    var rows = k.perSeg.map(function (e) {
+      var lt = segmentLight(e, th);
+      var rplW = Math.max(2, Math.abs(e.rpl) / maxV * 100);
+      var mgW = Math.max(2, Math.abs(e.marginPerLead) / maxV * 100);
+      var mgTone = e.marginPerLead > 0 ? 'green' : 'red';
+      return '<div class="ue2-bar-row tone-' + lt.tone + '">' +
+        '<div class="ue2-bar-name">' + esc(e.name) + '</div>' +
+        '<div class="ue2-bar-group">' +
+          '<div class="ue2-bar-label">RPL: ' + money(e.rpl) + '</div>' +
+          '<div class="ue2-bar-track"><div class="ue2-bar-fill tone-' + lt.tone + '" style="width:' + rplW + '%"></div></div>' +
+        '</div>' +
+        '<div class="ue2-bar-group">' +
+          '<div class="ue2-bar-label">Margin/Lead: ' + money(e.marginPerLead) + '</div>' +
+          '<div class="ue2-bar-track"><div class="ue2-bar-fill tone-' + mgTone + '" style="width:' + mgW + '%"></div></div>' +
+        '</div>' +
+      '</div>';
+    }).join('');
+    return '<div class="ue2-card">' +
+      '<div class="ue2-card-head"><h2>RPL vs Margin per Lead по сегментам</h2>' +
+        '<p>Заливка — цвет светофора сегмента. Маржа красная, если &lt; 0.</p></div>' +
+      '<div class="ue2-bar-chart">' + rows + '</div>' +
+    '</div>';
+  }
+
+  // ---- A/B для повторных: Центр Финансов vs Своя монетизация (ТЗ §2.5) ----
+  function repeatABHtml() {
+    var ab = loadRepeatAB();
+    var r = repeatAB(params, ab);
+    var maxV = Math.max(Math.abs(r.marginA), Math.abs(r.marginB), 1);
+    var wA = Math.max(4, Math.abs(r.marginA) / maxV * 100);
+    var wB = Math.max(4, Math.abs(r.marginB) / maxV * 100);
+    var winnerText = r.winner === 'A'
+      ? '🏆 При текущих параметрах выгоднее <b>Центр Финансов</b>: ΔМаржа = ' + money(r.delta) + ' на лида.'
+      : '🏆 При текущих параметрах выгоднее <b>Своя монетизация</b>: ΔМаржа = ' + money(r.delta) + ' на лида.';
+    return '<div class="ue2-card ue2-repeat-ab">' +
+      '<div class="ue2-card-head"><h2>Повторные · «Центр Финансов» vs «Своя монетизация»</h2>' +
+        '<p>Сравнение маржи A/B на той же когорте повторных. Решение можно зафиксировать в Smart Safe Router (вкладка «CJM»).</p></div>' +
+      '<div class="ue2-ab-grid">' +
+        '<div class="ue2-ab-side' + (r.winner === 'A' ? ' is-winner' : '') + '">' +
+          '<h4>A · Передача в Центр Финансов</h4>' +
+          '<div class="ue2-ab-fields">' +
+            '<label>Комиссия ЦФ, ₽ <input type="number" min="0" step="50" data-ue-ab="cfCommission" value="' + ab.cfCommission + '"></label>' +
+            '<label>Одобрение ЦФ, % <input type="number" min="0" max="100" step="0.5" data-ue-ab="cfApproval" value="' + ab.cfApproval + '"></label>' +
+          '</div>' +
+          '<div class="ue2-ab-margin">Маржа на лида: <b class="tone-' + (r.marginA >= 0 ? 'green' : 'red') + '">' + money(r.marginA) + '</b></div>' +
+        '</div>' +
+        '<div class="ue2-ab-side' + (r.winner === 'B' ? ' is-winner' : '') + '">' +
+          '<h4>B · Своя монетизация</h4>' +
+          '<div class="ue2-ab-fields">' +
+            '<label>AOV, ₽ <input type="number" min="0" step="100" data-ue-ab="ownAov" value="' + ab.ownAov + '"></label>' +
+            '<label>Маржинальность, % <input type="number" min="0" max="100" step="0.5" data-ue-ab="ownMargin" value="' + ab.ownMargin + '"></label>' +
+            '<label>Сервис на лид, ₽ <input type="number" min="0" step="10" data-ue-ab="ownServiceCost" value="' + ab.ownServiceCost + '"></label>' +
+            '<label>Повторных сделок/год <input type="number" min="0" step="0.1" data-ue-ab="repeatOrders" value="' + ab.repeatOrders + '"></label>' +
+          '</div>' +
+          '<div class="ue2-ab-margin">Маржа на лида: <b class="tone-' + (r.marginB >= 0 ? 'green' : 'red') + '">' + money(r.marginB) + '</b></div>' +
+        '</div>' +
+      '</div>' +
+      '<div class="ue2-ab-bars">' +
+        '<div class="ue2-ab-bar"><span>A · ЦФ</span><div class="ue2-bar-track"><div class="ue2-bar-fill tone-' + (r.marginA >= 0 ? 'green' : 'red') + '" style="width:' + wA + '%"></div></div><b>' + money(r.marginA) + '</b></div>' +
+        '<div class="ue2-ab-bar"><span>B · Своя</span><div class="ue2-bar-track"><div class="ue2-bar-fill tone-' + (r.marginB >= 0 ? 'green' : 'red') + '" style="width:' + wB + '%"></div></div><b>' + money(r.marginB) + '</b></div>' +
+      '</div>' +
+      '<div class="ue2-ab-winner">' + winnerText + '</div>' +
+      '<table class="ue2-ab-table"><thead><tr><th>Параметр</th><th>A · ЦФ</th><th>B · Своя</th></tr></thead>' +
+        '<tbody>' +
+          '<tr><td>Маржа на лида</td><td>' + money(r.marginA) + '</td><td>' + money(r.marginB) + '</td></tr>' +
+          '<tr><td>Доход</td><td>' + money(ab.cfCommission * (ab.cfApproval / 100) * r.leadsApproved) + '</td><td>' + money(ab.ownAov * (ab.ownMargin / 100) * ab.repeatOrders) + '</td></tr>' +
+          '<tr><td>Издержки</td><td>0 ₽ (комиссия ЦФ)</td><td>' + money(ab.ownServiceCost) + ' (сервис)</td></tr>' +
+          '<tr><td>CAC (общий)</td><td>' + money(params.seg.repeat.cac) + '</td><td>' + money(params.seg.repeat.cac) + '</td></tr>' +
+        '</tbody>' +
+      '</table>' +
+      '<div class="ue2-ab-foot">' +
+        '<button class="ue2-preset-btn primary" type="button" id="ueRouterFix">Зафиксировать решение в Smart Safe Router</button>' +
+        '<span class="ue2-muted">Запишет выбор Own/CF в правила маршрутизации (используется на вкладке CJM).</span>' +
+      '</div>' +
+    '</div>';
+  }
+
+  // ---- Блок «Выводы» — автоинсайты (ТЗ §2.4.3) ----
+  function insightsHtml() {
+    var k = blendedKpis(params);
+    var th = loadThresholds();
+    var rules = loadInsightsRules();
+    var items = compileInsights(k, th, rules);
+    var list = items.map(function (it) {
+      var tag = it.scope === 'portfolio' ? '<span class="ue2-ins-tag">портфель</span>' : '<span class="ue2-ins-tag">' + esc(it.name || '') + '</span>';
+      return '<li>' + tag + ' ' + it.text + '</li>';
+    }).join('');
+    return '<div class="ue2-card">' +
+      '<div class="ue2-card-head ue2-row-between">' +
+        '<div><h2>Выводы · auto-insights</h2>' +
+          '<p>Текст формируется по правилам из JSON-конфига. Каждый сегмент получает минимум 1 рекомендацию + 1 общий вывод по портфелю.</p></div>' +
+        '<button class="ue2-preset-btn" type="button" id="ueInsightsEdit">Изменить правила (JSON)</button>' +
+      '</div>' +
+      '<ul class="ue2-insights">' + list + '</ul>' +
+    '</div>';
+  }
+
+  // ---- Split-view: сравнение двух сохранённых сценариев ----
+  function compareSplitHtml() {
+    var cmp = loadCompare();
+    var slots = loadSlots();
+    if (!cmp.a || !cmp.b) return '';
+    var a = slots.find(function (s) { return s.id === cmp.a; });
+    var b = slots.find(function (s) { return s.id === cmp.b; });
+    if (!a || !b) return '';
+    var kA = blendedKpis(a.params);
+    var kB = blendedKpis(b.params);
+    var th = loadThresholds();
+    function colHtml(name, k) {
+      var perSeg = k.perSeg.map(function (e) {
+        var lt = segmentLight(e, th);
+        return '<tr><td>' + esc(e.name) + '</td><td><span class="ue2-tz-dot tone-' + lt.tone + '"></span></td><td>' + money(e.rpl) + '</td><td>' + money(e.marginPerLead) + '</td><td>' + ratio(e.ltvCac) + '</td><td>' + pct(e.roi) + '</td><td>' + paybackText(e.payback) + '</td></tr>';
+      }).join('');
+      return '<div class="ue2-cmp-col"><h3>' + esc(name) + '</h3>' +
+        '<div class="ue2-cmp-kpis">' +
+          '<div>Blended CAC: <b>' + money(k.blendedCac) + '</b></div>' +
+          '<div>Avg ARPU: <b>' + money(k.avgArpu) + '</b></div>' +
+          '<div>LTV/CAC: <b class="tone-' + ltvCacTone(k.blendedRatio) + '">' + ratio(k.blendedRatio) + '</b></div>' +
+          '<div>Payback: <b>' + paybackText(k.payback) + '</b></div>' +
+        '</div>' +
+        '<table class="ue2-cmp-table"><thead><tr><th>Сегмент</th><th>🚦</th><th>RPL</th><th>Margin</th><th>LTV/CAC</th><th>ROMI</th><th>Payback</th></tr></thead><tbody>' + perSeg + '</tbody></table>' +
+      '</div>';
+    }
+    return '<div class="ue2-card ue2-cmp-card">' +
+      '<div class="ue2-card-head"><h2>Split-view · сравнение сценариев</h2>' +
+        '<p>Выберите два сохранённых сценария в верхней панели — таблица обновится автоматически.</p></div>' +
+      '<div class="ue2-cmp-grid">' + colHtml(a.name, kA) + colHtml(b.name, kB) + '</div>' +
+    '</div>';
+  }
+
+  // ---- Модалка «Как считаем?» (ТЗ §2.3) ----
+  function explainModalHtml() {
+    return '<div id="ueExplainModal" class="ue-modal" hidden>' +
+      '<div class="ue-modal-backdrop" data-ue-explain-close></div>' +
+      '<div class="ue-modal-card ue2-explain-card" role="dialog" aria-modal="true" aria-labelledby="ueExplainTitle">' +
+        '<div class="ue-modal-head">' +
+          '<h3 id="ueExplainTitle">Как считаем? · прозрачный алгоритм</h3>' +
+          '<div class="ue2-explain-actions">' +
+            '<label class="ue2-seg-select">Сегмент <select id="ueExplainSeg">' +
+              SEGMENTS.map(function (s) { return '<option value="' + s.id + '">' + esc(s.name) + '</option>'; }).join('') +
+            '</select></label>' +
+            '<button class="ue2-preset-btn" type="button" id="ueExplainPng">Экспорт PNG</button>' +
+            '<button class="ue-modal-x" type="button" data-ue-explain-close>Закрыть</button>' +
+          '</div>' +
+        '</div>' +
+        '<div id="ueExplainBody" class="ue2-explain-body"></div>' +
+      '</div>' +
+    '</div>';
+  }
+
+  function renderExplainBody(segId) {
+    var body = document.getElementById('ueExplainBody');
+    if (!body) return;
+    var c = cohortBreakdown(params, segId);
+    var fmtN = function (v) { return Math.round(v).toLocaleString('ru-RU'); };
+    var formulas = [
+      ['RPL (Revenue per Lead)', 'Σ выручки сегмента ÷ число лидов'],
+      ['Маржа на лида', 'RPL − CAC − COGS_на_лида'],
+      ['LTV',  'LTV₀ + LTV₁·(1−d) + LTV₂·(1−d)² (когортно)'],
+      ['CAC', 'Затраты на привлечение ÷ число привлечённых лидов'],
+      ['ROMI', '(Маржа − CAC × лиды) ÷ (CAC × лиды) × 100%'],
+      ['Payback (мес.)', 'Месяц, в котором накопленный LTV покрывает CAC']
+    ];
+    var formulasHtml = '<table class="ue2-explain-tbl"><thead><tr><th>Метрика</th><th>Формула</th></tr></thead><tbody>' +
+      formulas.map(function (f) { return '<tr><td>' + esc(f[0]) + '</td><td>' + esc(f[1]) + '</td></tr>'; }).join('') +
+    '</tbody></table>';
+
+    var stepRows = [
+      ['1. База когорты', fmtN(c.leads) + ' лидов', 'Эталонная когорта по ТЗ — 1 000 лидов'],
+      ['2. × CR Lead→Click-out (' + c.cr1.toFixed(1) + '%)', fmtN(c.clickouts) + ' click-out', 'CR с поправкой funnelMul сегмента'],
+      ['3. × CR Click-out→Выдача (' + c.cr2.toFixed(1) + '%)', fmtN(c.issues) + ' выдач', 'CR с поправкой funnelMul'],
+      ['4. × Gross EPL (' + fmtN(c.gross) + ' ₽)', fmtN(c.grossRevenue) + ' ₽ валовая выручка', 'EPL + cross-sell'],
+      ['5. − Rev Share (' + c.revShare + '%)', '−' + fmtN(c.revShareCost) + ' ₽', 'Доля партнёра'],
+      ['6. − OPEX (' + fmtN(c.opex) + ' ₽ × ' + fmtN(c.leads) + ' лидов)', '−' + fmtN(c.opexCost) + ' ₽', 'Операционные издержки'],
+      ['7. = Net Revenue', fmtN(c.netRevenue) + ' ₽', 'Чистая выручка когорты'],
+      ['8. − CAC (' + fmtN(c.cac) + ' ₽ × ' + fmtN(c.leads) + ' лидов)', '−' + fmtN(c.cacTotal) + ' ₽', 'Стоимость привлечения когорты'],
+      ['9. = Маржа когорты', fmtN(c.marginTotal) + ' ₽', 'Net Revenue − CAC'],
+      ['10. ROMI', c.romi.toFixed(1) + '%', 'Маржа ÷ CAC_total × 100%'],
+      ['11. RPL', fmtN(c.rplCohort) + ' ₽', 'Net Revenue ÷ 1 000 лидов'],
+      ['12. Маржа на лида', fmtN(c.marginPerLead) + ' ₽', 'Маржа когорты ÷ 1 000 лидов']
+    ];
+    var stepsHtml = '<table class="ue2-explain-tbl ue2-explain-steps"><thead><tr><th>Шаг</th><th>Значение</th><th>Источник параметра</th></tr></thead><tbody>' +
+      stepRows.map(function (r) { return '<tr><td>' + esc(r[0]) + '</td><td><b>' + esc(r[1]) + '</b></td><td class="ue2-muted">' + esc(r[2]) + '</td></tr>'; }).join('') +
+    '</tbody></table>';
+
+    body.innerHTML =
+      '<p class="ue-modal-sub">Сегмент: <b>' + esc(c.segName) + '</b>. Пример пересчитывается при изменении любого ползунка — это и есть «прозрачный алгоритм».</p>' +
+      '<h4>Формулы</h4>' + formulasHtml +
+      '<h4>Пошаговый расчёт на эталонной когорте 1 000 лидов</h4>' + stepsHtml +
+      '<p class="ue2-muted">Источники: вводные «Общие метрики» и «Метрики воронки» (ручной ввод дашборда, по ТЗ — CRM/ручной ввод/CJM).</p>';
+  }
+
+  // Экспорт модалки в PNG (ТЗ §2.3.3) через SVG → canvas → PNG.
+  function exportExplainPng() {
+    var card = document.querySelector('#ueExplainModal .ue-modal-card');
+    if (!card) return;
+    // Сериализуем HTML модалки в SVG foreignObject, затем рисуем на canvas.
+    var rect = card.getBoundingClientRect();
+    var w = Math.ceil(rect.width), h = Math.ceil(rect.height);
+    var clone = card.cloneNode(true);
+    // Уберём кнопки экспорта/закрытия из клонированного скриншота.
+    clone.querySelectorAll('button,.ue-modal-x').forEach(function (b) { b.remove(); });
+    var style = '';
+    try {
+      // Соберём базовые стили текста, чтобы PNG выглядел читабельно (минимально).
+      style = 'body,div,table,h3,h4,p,td,th,b,span{font-family:-apple-system,Segoe UI,Roboto,sans-serif;color:#111}' +
+        'table{border-collapse:collapse;width:100%;font-size:12px}td,th{border:1px solid #ddd;padding:6px 8px;text-align:left}' +
+        'h3,h4{margin:8px 0}.ue-modal-card{padding:18px;background:#fff}';
+    } catch (e) {}
+    var html =
+      '<svg xmlns="http://www.w3.org/2000/svg" width="' + w + '" height="' + h + '">' +
+        '<foreignObject width="100%" height="100%">' +
+          '<div xmlns="http://www.w3.org/1999/xhtml"><style>' + style + '</style>' + clone.outerHTML + '</div>' +
+        '</foreignObject>' +
+      '</svg>';
+    var blob = new Blob([html], { type: 'image/svg+xml;charset=utf-8' });
+    var url = URL.createObjectURL(blob);
+    var img = new Image();
+    img.onload = function () {
+      try {
+        var canvas = document.createElement('canvas');
+        canvas.width = w * 2; canvas.height = h * 2;
+        var ctx = canvas.getContext('2d');
+        ctx.fillStyle = '#fff';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.setTransform(2, 0, 0, 2, 0, 0);
+        ctx.drawImage(img, 0, 0);
+        canvas.toBlob(function (b) {
+          var a = document.createElement('a');
+          a.href = URL.createObjectURL(b);
+          a.download = 'ue-explain-' + new Date().toISOString().slice(0, 10) + '.png';
+          document.body.appendChild(a); a.click(); a.remove();
+          URL.revokeObjectURL(a.href); URL.revokeObjectURL(url);
+        }, 'image/png');
+      } catch (err) {
+        // Fallback: если canvas заблокирован (CORS/foreignObject), скачиваем SVG.
+        var a2 = document.createElement('a');
+        a2.href = url;
+        a2.download = 'ue-explain-' + new Date().toISOString().slice(0, 10) + '.svg';
+        document.body.appendChild(a2); a2.click(); a2.remove();
+      }
+    };
+    img.onerror = function () { URL.revokeObjectURL(url); alert('Не удалось сформировать PNG. SVG-копия скачана.'); };
+    img.src = url;
+  }
+
+  // ---- Доп. секция сайдбара: пороги светофора (ТЗ §2.4.2) ----
+  function thresholdsSidebarHtml() {
+    var th = loadThresholds();
+    return '<div class="ue2-side-group">' +
+      '<h4>Пороги светофора</h4>' +
+      '<div class="ue2-slider"><div class="ue2-slider-head"><label>LTV/CAC «зелёный» <span class="ue2-unit">≥</span></label>' +
+        '<input type="number" class="ue2-num" data-ue-thresh="ltvCacGreen" min="1" max="10" step="0.1" value="' + th.ltvCacGreen + '"></div></div>' +
+      '<div class="ue2-slider"><div class="ue2-slider-head"><label>Payback «зелёный» <span class="ue2-unit">≤ мес.</span></label>' +
+        '<input type="number" class="ue2-num" data-ue-thresh="paybackGreenMax" min="1" max="36" step="1" value="' + th.paybackGreenMax + '"></div></div>' +
+      '<div class="ue2-slider"><div class="ue2-slider-head"><label>Payback «жёлтый» <span class="ue2-unit">≤ мес.</span></label>' +
+        '<input type="number" class="ue2-num" data-ue-thresh="paybackYellowMax" min="1" max="60" step="1" value="' + th.paybackYellowMax + '"></div></div>' +
+    '</div>';
+  }
+
+  /* ====================== СОБЫТИЯ ====================== */
+
   function setParam(path, value) {
     var v = Number(value);
     if (!isFinite(v)) return;
@@ -659,9 +1208,17 @@
     var main = document.querySelector('#ueLab .ue2-main');
     if (!main) return;
     main.innerHTML =
-      kpiHtml() + segmentMatrixHtml() +
+      presetBarHtml() +
+      kpiHtml() +
+      tzSegmentLightHtml() +
+      rplBarChartHtml() +
+      repeatABHtml() +
+      insightsHtml() +
+      segmentMatrixHtml() +
       '<div class="ue2-row">' + funnelCardHtml() + cohortCardHtml() + '</div>' +
-      waterfallCardHtml() + summaryHtml();
+      waterfallCardHtml() +
+      compareSplitHtml() +
+      summaryHtml();
     wireMainOnly();
     drawCharts();
   }
@@ -679,6 +1236,126 @@
       var fs2 = document.getElementById('ueFunnelSeg'); if (fs2) fs2.value = activeFunnelSeg;
       renderFunnel(); drawWaterfall();
     });
+    wireTzControls();
+  }
+
+  // Привязка управлений новых ТЗ-блоков (пресеты, слоты, A/B, инсайты, объяснение).
+  function wireTzControls() {
+    // Пресеты
+    document.querySelectorAll('[data-ue-preset]').forEach(function (b) {
+      b.addEventListener('click', function () {
+        var kind = b.getAttribute('data-ue-preset');
+        params = kind === 'base' ? deepCopy(DEFAULT_PARAMS) : presetParams(kind);
+        save(params); render();
+      });
+    });
+    // Сохранение слотов
+    var saveBtn = document.getElementById('ueSlotSave');
+    if (saveBtn) saveBtn.addEventListener('click', function () {
+      var name = (document.getElementById('ueSlotName') || {}).value || '';
+      name = String(name).trim();
+      if (!name) { alert('Введите имя сценария.'); return; }
+      var slots = loadSlots();
+      if (slots.length >= 5) { alert('Достигнут лимит 5 слотов. Удалите ненужный.'); return; }
+      slots.push({ id: 'sl-' + Date.now().toString(36), name: name, params: deepCopy(params), ts: Date.now() });
+      saveSlots(slots); partialRefresh();
+    });
+    document.querySelectorAll('[data-ue-load-slot]').forEach(function (b) {
+      b.addEventListener('click', function () {
+        var slots = loadSlots();
+        var s = slots.find(function (x) { return x.id === b.getAttribute('data-ue-load-slot'); });
+        if (!s) return;
+        params = mergeParams(deepCopy(DEFAULT_PARAMS), s.params);
+        save(params); render();
+      });
+    });
+    document.querySelectorAll('[data-ue-del-slot]').forEach(function (b) {
+      b.addEventListener('click', function () {
+        var id = b.getAttribute('data-ue-del-slot');
+        saveSlots(loadSlots().filter(function (x) { return x.id !== id; }));
+        partialRefresh();
+      });
+    });
+    // Split-view (сравнение)
+    var cmpA = document.getElementById('ueCmpA');
+    var cmpB = document.getElementById('ueCmpB');
+    function applyCmp() { saveCompare({ a: cmpA ? cmpA.value : '', b: cmpB ? cmpB.value : '' }); partialRefresh(); }
+    if (cmpA) cmpA.addEventListener('change', applyCmp);
+    if (cmpB) cmpB.addEventListener('change', applyCmp);
+    var cmpToggle = document.getElementById('ueCompareToggle');
+    if (cmpToggle) cmpToggle.addEventListener('click', function () {
+      var slots = loadSlots();
+      if (slots.length < 2) { alert('Сохраните минимум 2 сценария, чтобы сравнить их бок о бок.'); return; }
+      var cmp = loadCompare();
+      if (!cmp.a) cmp.a = slots[0].id;
+      if (!cmp.b) cmp.b = slots[Math.min(1, slots.length - 1)].id;
+      saveCompare(cmp); partialRefresh();
+    });
+    // Пороги светофора
+    document.querySelectorAll('[data-ue-thresh]').forEach(function (inp) {
+      inp.addEventListener('input', function () {
+        var th = loadThresholds();
+        var k = inp.getAttribute('data-ue-thresh');
+        var v = Number(inp.value);
+        if (isFinite(v)) th[k] = v;
+        saveThresholds(th); partialRefresh();
+      });
+    });
+    // A/B повторных
+    document.querySelectorAll('[data-ue-ab]').forEach(function (inp) {
+      inp.addEventListener('input', function () {
+        var ab = loadRepeatAB();
+        var k = inp.getAttribute('data-ue-ab');
+        var v = Number(inp.value);
+        if (isFinite(v)) ab[k] = v;
+        saveRepeatAB(ab); partialRefresh();
+      });
+    });
+    // Зафиксировать решение A/B в роутере (ТЗ §2.5.2 + §3.3.4)
+    var rfix = document.getElementById('ueRouterFix');
+    if (rfix) rfix.addEventListener('click', function () {
+      var r = repeatAB(params);
+      try {
+        var route = r.winner === 'A' ? 'CJM.Repeat.CF' : 'CJM.Repeat.Own';
+        localStorage.setItem('ssr_repeat_decision_v1', JSON.stringify({
+          winner: r.winner, route: route, marginA: r.marginA, marginB: r.marginB, ts: Date.now()
+        }));
+        // Уведомим вкладку CJM, если она открыта
+        if (typeof window !== 'undefined' && typeof window.dispatchEvent === 'function') {
+          window.dispatchEvent(new CustomEvent('ssr-repeat-decision', { detail: { winner: r.winner, route: route } }));
+        }
+        rfix.textContent = '✓ Решение зафиксировано (' + route + ')';
+        setTimeout(function () { rfix.textContent = 'Зафиксировать решение в Smart Safe Router'; }, 2200);
+      } catch (e) {}
+    });
+    // Правила выводов (JSON-редактор)
+    var insBtn = document.getElementById('ueInsightsEdit');
+    if (insBtn) insBtn.addEventListener('click', function () {
+      var current = JSON.stringify(loadInsightsRules(), null, 2);
+      var next = prompt('Правила автовыводов (JSON). Поля when: ltvCacGte, ltvCacLt, romiGte, romiLt, paybackGt, marginLte, blendedLtvCacGte, blendedLtvCacLt. Плейсхолдеры в тексте: {name},{romi},{ltvCac},{payback},{margin},{rpl},{cac},{blendedRatio},{blendedCac},{avgArpu}.', current);
+      if (next == null) return;
+      try {
+        var parsed = JSON.parse(next);
+        if (!Array.isArray(parsed)) throw new Error('Ожидается массив правил.');
+        saveInsightsRules(parsed); partialRefresh();
+      } catch (err) { alert('Невалидный JSON: ' + err.message); }
+    });
+    // Модалка «Как считаем?»
+    var open = document.getElementById('ueExplainOpen');
+    var modal = document.getElementById('ueExplainModal');
+    if (open && modal) open.addEventListener('click', function () {
+      modal.hidden = false;
+      var sel = document.getElementById('ueExplainSeg');
+      var segId = sel && sel.value ? sel.value : 'new';
+      renderExplainBody(segId);
+    });
+    if (modal) modal.querySelectorAll('[data-ue-explain-close]').forEach(function (c) {
+      c.addEventListener('click', function () { modal.hidden = true; });
+    });
+    var selExp = document.getElementById('ueExplainSeg');
+    if (selExp) selExp.addEventListener('change', function () { renderExplainBody(selExp.value); });
+    var png = document.getElementById('ueExplainPng');
+    if (png) png.addEventListener('click', exportExplainPng);
   }
 
   function wire() {
