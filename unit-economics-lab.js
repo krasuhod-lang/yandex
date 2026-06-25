@@ -212,6 +212,8 @@
     paybackGreenMax: 24,
     paybackYellowMax: 36
   };
+  var LEGACY_PAYBACK_GREEN_MAX = 2;
+  var LEGACY_PAYBACK_YELLOW_MAX = 12;
   function loadThresholds() {
     try {
       var raw = localStorage.getItem(THRESH_KEY);
@@ -221,8 +223,8 @@
       // Миграция старой цели «окупиться за 2 месяца»: если пользователь не задавал
       // новый реальный горизонт вручную, возвращаем дефолт 24 месяца.
       if (saved._realPaybackV2 !== true) {
-        if ((Number(merged.paybackGreenMax) || 0) <= 2) merged.paybackGreenMax = DEFAULT_THRESHOLDS.paybackGreenMax;
-        if ((Number(merged.paybackYellowMax) || 0) <= 12) merged.paybackYellowMax = DEFAULT_THRESHOLDS.paybackYellowMax;
+        if ((Number(merged.paybackGreenMax) || 0) <= LEGACY_PAYBACK_GREEN_MAX) merged.paybackGreenMax = DEFAULT_THRESHOLDS.paybackGreenMax;
+        if ((Number(merged.paybackYellowMax) || 0) <= LEGACY_PAYBACK_YELLOW_MAX) merged.paybackYellowMax = DEFAULT_THRESHOLDS.paybackYellowMax;
         merged._realPaybackV2 = true;
         saveThresholds(merged);
       }
@@ -385,6 +387,7 @@
     // Между 0 и 12 мес растёт линейно от 0 до LTV₁.
     if (ltv1 >= cac) {
       var t = cac / Math.max(0.0001, ltv1);
+      // Модель помесячная: субмесячную окупаемость не обещаем, минимум отображения — 1 месяц.
       return clamp(t * 12, 1, 12);
     }
     // Между 12 и 24 мес добираем от LTV₁ до LTV₂.
@@ -728,7 +731,7 @@
     if (p < 1) return '≈ ' + Math.max(1, Math.round(p * 30)).toLocaleString('ru-RU') + ' дн.';
     if (p < 12) return p.toLocaleString('ru-RU', { maximumFractionDigits: 1 }) + ' мес.';
     var years = Math.floor(p / 12);
-    var months = Math.floor(p - years * 12);
+    var months = Math.floor(p % 12);
     return years.toLocaleString('ru-RU') + ' ' + yearWord(years) + (months > 0 ? ' ' + months + ' мес.' : '');
   }
   function paybackTone(p) {
@@ -1156,6 +1159,13 @@
       : (r.tot.margin >= 0
         ? 'Зона контроля: проект в плюсе, но Blended LTV/CAC ещё не достиг таргета 2.5x.'
         : 'Убыток: на базе ' + nfmt(r.N) + ' пользователей расходы превышают доход. Нужны рычаги To-Be.');
+    var tobeDefaults = applyMode(DEFAULT_PARAMS, 'tobe');
+    var tobeMix = [
+      tobeDefaults.seg.repeat.share,
+      tobeDefaults.seg.new.share,
+      tobeDefaults.seg.overdue.share,
+      tobeDefaults.seg.sleep.share
+    ].join('/');
     var breakeven =
       '<div class="ue2-scn-block ue2-scn-breakeven tone-' + tone + '">' +
         '<h3>Точка безубыточности · при каких цифрах сходится</h3>' +
@@ -1164,8 +1174,8 @@
           '<li>Маржа = 0 при blended CAC ≈ <b>' + money(r.tot.leads > 0 ? (r.tot.revenue - r.tot.opexTotal) / r.tot.leads : 0) + '</b> на лида ' +
             '(текущий blended ≈ ' + money(r.tot.leads > 0 ? r.tot.cacTotal / r.tot.leads : 0) + ').</li>' +
           '<li>Допустимый рост CAC до нуля прибыли: <b>×' + (Number(r.cacBreakevenMult) || 0).toLocaleString('ru-RU', { maximumFractionDigits: 2 }) + '</b> от текущего.</li>' +
-          '<li>Целевые рычаги To-Be: CR&nbsp;Visit→Lead Нового +20% (квиз) → CAC 1200→700&nbsp;₽; ' +
-            'EPL&nbsp;БФЛ 10 000&nbsp;₽ при CR&nbsp;35%; банковский/CPA-кросс 60%; Traffic&nbsp;Mix 40/30/20/10 → Blended&nbsp;LTV/CAC&nbsp;&gt;&nbsp;2.5x.</li>' +
+          '<li>Целевые рычаги To-Be: CR&nbsp;Visit→Lead Нового +' + pct(QUIZ_UPLIFT * 100) + ' (квиз) → CAC 1200→' + money(tobeDefaults.seg.new.cac) + '; ' +
+            'EPL&nbsp;БФЛ ' + money(tobeDefaults.eplBfl) + ' при CR&nbsp;' + pct(tobeDefaults.crLeadBfl) + '; банковский/CPA-кросс ' + pct(tobeDefaults.crCrossBank) + '; Traffic&nbsp;Mix ' + tobeMix + ' → Blended&nbsp;LTV/CAC&nbsp;&gt;&nbsp;' + ratio(DEFAULT_THRESHOLDS.ltvCacGreen) + '.</li>' +
         '</ul>' +
       '</div>';
 
