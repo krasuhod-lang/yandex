@@ -4,6 +4,9 @@
   var STORAGE_KEY='cjm_unit_dashboard_v1';
   var PAYBACK_KEY='cjm_payback_inputs_v1';
   var MODE_KEY='cjm_unit_mode_v1';
+  var CF_CHECK_ENDPOINT='POST /api/v1/cf/check-hash';
+  var PAYBACK_CONVERSION_RATE=0.02;
+  var PAYBACK_CPA=1500;
   var COLORS=['var(--blue)','var(--orange)','var(--violet)','var(--green)'];
   var charts={};
 
@@ -102,7 +105,7 @@
   ];
 
   function $(id){return document.getElementById(id);}
-  function esc(value){return String(value==null?'':value).replace(/[&<>"'\/]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;','/':'&#x2F;'}[c];});}
+  function esc(value){return String(value==null?'':value).replace(/[&<>"'\/`]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;','/':'&#x2F;','`':'&#96;'}[c];});}
   function read(key,fb){try{var raw=localStorage.getItem(key);return raw?JSON.parse(raw):fb;}catch(e){console.warn('CJM dashboard: cannot read localStorage key',key,e);return fb;}}
   function write(key,value){try{localStorage.setItem(key,JSON.stringify(value));}catch(e){}}
   function fmt(v){return Math.round(Number(v)||0).toLocaleString('ru-RU');}
@@ -243,7 +246,7 @@
     var flow=[
       ['Входящий трафик','SEO · Директ · PR · Push'],
       ['Lead Capture','Телефон, сумма, согласие 152-ФЗ'],
-      ['S2S API ЦФ','POST /api/v1/cf/check-hash'],
+      ['S2S API ЦФ',CF_CHECK_ENDPOINT],
       ['Smart Safe Router','8 статусов → правила Offers Engine'],
       ['Витрина / действие','ЦФ, CPA, БФЛ, банк или отказ']
     ];
@@ -282,7 +285,7 @@
   function persistPayback(){write(PAYBACK_KEY,paybackValues());}
   function renderPayback(){
     var v=paybackValues();
-    var cr=0.02,cpa=1500;
+    var cr=PAYBACK_CONVERSION_RATE,cpa=PAYBACK_CPA;
     var total=v.sleeping+v.rejected+v.new;
     var revenue=total*cr*cpa;
     $('cjmPaybackRevenue').textContent=rub(revenue);
