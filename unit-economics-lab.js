@@ -78,7 +78,7 @@
   // ---- Целевая модель «To-Be» (Router & Quiz). Накладывается ПОВЕРХ базовых
   //      вводных при mode === 'tobe'. Источник правды — ТЗ-1 §2:
   //   • Реструктуризация трафика: Повторные 40 / Новые 30 / Просроченные 20 / Спящие 10.
-  //   • Квиз: +20% к CR Visit→Lead Нового → CAC Нового 1200 → 700 ₽; квиз пред-квалифицирует
+  //   • Квиз: +20% к CR Visit→Lead Нового → CAC Нового 1200 → 700 ₽; квиз преквалифицирует
   //     лиды, поэтому растут downstream-конверсии и средний EPL (динамические тарифы).
   //   • Smart Safe Router: «Просроченные» маршрутизируются на офферы БФЛ, фикс-EPL 10 000 ₽.
   //   Калибровка даёт Blended LTV/CAC ≈ 2.6x (> 2.5x таргета инвесткомитета).
@@ -91,7 +91,7 @@
     p.isRouterActive = true;
     // §2.2 Квиз: +20% к CR Visit→Lead (объём лидов Нового растёт, CAC падает 1200→700).
     p.crVisitLead = Math.round(base.crVisitLead * (1 + QUIZ_UPLIFT) * 10) / 10;
-    // Квиз и витрина источников пред-квалифицируют трафик → выше downstream-конверсии;
+    // Квиз и витрина источников преквалифицируют трафик → выше downstream-конверсии;
     // внешние источники (БФЛ/CPA/банки) дают более высокий подтверждённый EPL.
     p.crLeadClickout = 80;
     p.crClickoutIssue = 80;
@@ -220,7 +220,7 @@
       var merged = Object.assign({}, DEFAULT_THRESHOLDS, saved);
       // Миграция старой цели «окупиться за 2 месяца»: если пользователь не задавал
       // новый реальный горизонт вручную, возвращаем дефолт 24 месяца.
-      if (!saved || saved._realPaybackV2 !== true) {
+      if (saved._realPaybackV2 !== true) {
         if ((Number(merged.paybackGreenMax) || 0) <= 2) merged.paybackGreenMax = DEFAULT_THRESHOLDS.paybackGreenMax;
         if ((Number(merged.paybackYellowMax) || 0) <= 12) merged.paybackYellowMax = DEFAULT_THRESHOLDS.paybackYellowMax;
         merged._realPaybackV2 = true;
@@ -363,7 +363,8 @@
     var roi = s.cac > 0 ? (ltv2 - s.cac) / s.cac * 100 : 0;
     var ltvCac = s.cac > 0 ? ltv2 / s.cac : 0;
     // Срок окупаемости (месяцы): классическая линейная интерполяция накопленного LTV
-    // по горизонту 0 / 12 / 24 мес. Доход не считаем «мгновенным» в нулевой месяц.
+    // по горизонту 0 / 12 / 24 мес. В нулевой месяц накопленный доход = 0;
+    // с первого месяца он начинает равномерно накапливаться до LTV₁ к 12-му месяцу.
     var payback = paybackMonths(ltv0, ltv1, ltv2, s.cac);
     // ТЗ §2.4.1: RPL (Revenue per Lead) = выручка сегмента / число лидов. Берём LTV₂ как
     // ожидаемую совокупную выручку с одного привлечённого лида за 2 года.
