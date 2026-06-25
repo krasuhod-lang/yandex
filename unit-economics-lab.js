@@ -224,6 +224,7 @@
         if ((Number(merged.paybackGreenMax) || 0) <= 2) merged.paybackGreenMax = DEFAULT_THRESHOLDS.paybackGreenMax;
         if ((Number(merged.paybackYellowMax) || 0) <= 12) merged.paybackYellowMax = DEFAULT_THRESHOLDS.paybackYellowMax;
         merged._realPaybackV2 = true;
+        saveThresholds(merged);
       }
       return merged;
     }
@@ -727,8 +728,7 @@
     if (p < 1) return '≈ ' + Math.max(1, Math.round(p * 30)).toLocaleString('ru-RU') + ' дн.';
     if (p < 12) return p.toLocaleString('ru-RU', { maximumFractionDigits: 1 }) + ' мес.';
     var years = Math.floor(p / 12);
-    var months = Math.round(p - years * 12);
-    if (months === 12) { years += 1; months = 0; }
+    var months = Math.floor(p - years * 12);
     return years.toLocaleString('ru-RU') + ' ' + yearWord(years) + (months > 0 ? ' ' + months + ' мес.' : '');
   }
   function paybackTone(p) {
@@ -1025,7 +1025,8 @@
       // Промежуточные шаги воронки (для таблицы).
       var clickouts, issues;
       if (isBfl) {
-        clickouts = leads * (p.crLeadBfl || 10) / 100; // квал. БФЛ-лиды
+        var bflLeadCr = p.crLeadBfl == null ? DEFAULT_PARAMS.crLeadBfl : p.crLeadBfl;
+        clickouts = leads * bflLeadCr / 100;           // квал. БФЛ-лиды
         issues = clickouts;                            // квалифицированный лид = «выдача» дохода
       } else {
         var mulSqrt = Math.sqrt(sp.funnelMul || 1);
