@@ -457,7 +457,8 @@
     });
   }
 
-  // CJM ветки — Target (ЦФ), Rejected (CPA), Non-core (банк), Overdue (БФЛ).
+  // CJM ветки — Target (ЦФ, внутренний маршрут без выручки Выручай.ру),
+  // Rejected (CPA), Non-core (банк), Overdue (БФЛ).
   function buildCjm(channels, base, inputs) {
     var monthCount = (base.months || []).length || 1;
     var totalApprovals = sum(base.approvals || []);
@@ -475,16 +476,13 @@
     var overdueUsers = (base.cjmOverdueUsers || 0) || 92000;
 
     var primaryIssued = totalApprovals * (inputs.issuedToApprovalRate || 0.76);
-    var targetRevenue = primaryIssued * ((base.totals && base.totals.revenue) || 0) /
-      Math.max(1, totalApprovals * (inputs.issuedToApprovalRate || 0.76));
-
     var branches = [
       {
         id: 'target', name: 'Целевые (ЦФ)',
         traffic: totalVisits * matchRate,
         approvals: primaryIssued,
-        revenue: targetRevenue,
-        payout: inputs.partners.payout.pdl || inputs.partnerPayout || 2400,
+        revenue: 0,
+        payout: 0,
         cost: marketingSpend * 0.55,
         cr_to_deal: primaryIssued > 0 ? primaryIssued / Math.max(1, totalVisits * matchRate) : 0
       },

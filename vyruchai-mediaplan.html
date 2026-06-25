@@ -1090,6 +1090,17 @@ table.sortable thead th[aria-sort="descending"]::after{content:" ▼";font-size:
 .ue2-decision-tag{align-self:flex-start;font-size:10.5px;font-weight:800;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);background:var(--surface);border:1px solid var(--line);border-radius:980px;padding:2px 8px}
 .ue2-decision-proof{margin-top:auto;border-top:1px dashed var(--line);padding-top:8px;font-size:12px;color:var(--muted);line-height:1.4}
 .ue2-decision-proof b{color:var(--text);font-variant-numeric:tabular-nums}
+.ue2-footnote-wrap{position:relative;display:inline-flex;align-items:center;gap:8px;margin-top:6px}
+.ue2-footnote-btn{width:26px;height:26px;border-radius:50%;border:1px solid var(--line-strong);background:var(--surface);color:var(--orange);font-weight:900;display:inline-grid;place-items:center;line-height:1;box-shadow:var(--shadow-soft)}
+.ue2-footnote-label{font-size:12.5px;color:var(--muted);font-weight:650}
+.ue2-footnote-panel{position:absolute;left:0;top:34px;z-index:8;width:min(760px,calc(100vw - 64px));max-height:min(70vh,680px);overflow:auto;border:1px solid var(--line);border-radius:var(--radius-sm);background:var(--surface);box-shadow:var(--shadow);padding:18px 20px;display:none}
+.ue2-footnote-wrap:hover .ue2-footnote-panel,.ue2-footnote-wrap:focus-within .ue2-footnote-panel{display:block}
+.ue2-footnote-panel h3{margin:0 0 8px;font-size:15px}
+.ue2-footnote-panel h4{margin:14px 0 6px;font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
+.ue2-footnote-panel p{margin:0 0 8px;font-size:12.5px;color:var(--text);line-height:1.5}
+.ue2-footnote-panel ul,.ue2-footnote-panel ol{margin:0;padding-left:18px;display:grid;gap:6px}
+.ue2-footnote-panel li{font-size:12.5px;line-height:1.45}
+.ue2-footnote-panel b{font-weight:800}
 .ue2-answer-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
 @media(max-width:880px){.ue2-answer-grid{grid-template-columns:1fr}}
 .ue2-answer-grid>div{border:1px solid var(--line);border-radius:var(--radius-xs);background:var(--surface);padding:13px 15px}
@@ -1293,7 +1304,7 @@ table.sortable thead th[aria-sort="descending"]::after{content:" ▼";font-size:
       <div class="overview-lead">
         <div class="card lead-card">
           <h1>Экономика роста, окупаемости и управляемого риска</h1>
-          <p class="lead">«Выручай.ру» — финансовый маркетплейс-посредник между клиентом и МФО, банками и страховыми (модель Сравни.ру / Банки.ру). Мы не выдаём деньги сами: зарабатываем CPA-комиссию и долю от выдачи, поэтому ключевые драйверы — трафик, качество match-сценариев, доля повторов и unit-экономика каналов.</p>
+          <p class="lead">«Выручай.ру» — финансовый маркетплейс-посредник между клиентом и МФО, банками и страховыми (модель Сравни.ру / Банки.ру). Мы не выдаём деньги сами: зарабатываем CPA-комиссию и долю от выдачи у внешних организаций. Если клиент подходит Центрофинансу и уходит в ЦФ, это 0 ₽ выручки Выручай.ру — внутренний эффект проекта ЦФ, экономия CAC и защита базы.</p>
         </div>
       </div>
       <h2 class="divider-title">Ключевые показатели бизнес-модели</h2>
@@ -1561,7 +1572,7 @@ table.sortable thead th[aria-sort="descending"]::after{content:" ▼";font-size:
 
     <section id="tab-unit" class="panel">
       <div class="card ue-hero">
-        <div class="card-title"><div><span class="eyebrow">Юнит-экономика · бизнес-модель Выручай.ру</span><h2>Где зарабатываем, как зарабатываем, как масштабировать</h2><p>Четыре источника денег и четыре рычага управления результатом. <b>Где зарабатываем</b> — Новые, Повторные, Просроченные, Спящие; каждый сегмент со своим RPL, CAC и LTV. <b>Как зарабатываем</b> — комиссия Центрофинанса по успешным выдачам плюс монетизация отказников через Smart Safe Router (БФЛ и CPA-витрина). <b>Как масштабировать</b> — Квиз поднимает CR Visit→Lead Новых, Router забирает выручку у отказников и снижает Blended CAC. <b>Как управлять</b> — переключатель As-Is / To-Be, ползунки CAC и конверсий, светофор по каждому сегменту, фиксация решений в роутере.</p></div></div>
+        <div class="card-title"><div><span class="eyebrow">Юнит-экономика · бизнес-модель Выручай.ру</span><h2>Где зарабатываем, как зарабатываем, как масштабировать</h2><p>Четыре источника денег и четыре рычага управления результатом. <b>Где зарабатываем</b> — только внешние партнёрские ветки: БФЛ, банки, CPA-витрина и кросс-продажи. <b>Целевые клиенты Центрофинанса</b> отдаются в ЦФ без выручки Выручай.ру: это внутренняя синергия проекта ЦФ и экономия его CAC, а не доход маркетплейса. <b>Как масштабировать</b> — Квиз поднимает CR Visit→Lead Новых, Router монетизирует отказников и снижает Blended CAC. <b>Как управлять</b> — переключатель As-Is / To-Be, ползунки CAC и конверсий, светофор по каждому сегменту, фиксация решений в роутере.</p></div></div>
       </div>
       <div id="ueLab" data-source="segments-v2" aria-live="polite"></div>
       <div id="uePlanModal" class="ue-modal" hidden>

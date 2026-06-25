@@ -211,7 +211,7 @@
 
   // ---- Параметры A/B для сегмента «Повторные» (ТЗ §2.5) ----
   var DEFAULT_REPEAT_AB = {
-    cfCommission: 1800,    // ₽, комиссия ЦФ за оформленную сделку
+    cfCommission: 0,       // ₽, ЦФ — внутренний маршрут без выручки Выручай.ру
     cfApproval: 65,        // %, доля одобренных ЦФ заявок
     ownAov: 9000,          // ₽, средний чек собственной монетизации
     ownMargin: 25,         // %, ставка маржинальности
@@ -219,7 +219,12 @@
     repeatOrders: 1.4      // среднее число повторных сделок на лида сегмента в год
   };
   function loadRepeatAB() {
-    try { var raw = localStorage.getItem(REPEAT_AB_KEY); if (!raw) return Object.assign({}, DEFAULT_REPEAT_AB); return Object.assign({}, DEFAULT_REPEAT_AB, JSON.parse(raw)); }
+    try {
+      var raw = localStorage.getItem(REPEAT_AB_KEY);
+      var obj = raw ? Object.assign({}, DEFAULT_REPEAT_AB, JSON.parse(raw)) : Object.assign({}, DEFAULT_REPEAT_AB);
+      obj.cfCommission = 0;
+      return obj;
+    }
     catch (e) { return Object.assign({}, DEFAULT_REPEAT_AB); }
   }
   function saveRepeatAB(o) { try { localStorage.setItem(REPEAT_AB_KEY, JSON.stringify(o)); } catch (e) {} }
@@ -371,7 +376,7 @@
   function repeatAB(p, ab) {
     if (!ab) ab = loadRepeatAB();
     var leadsApproved = (p.crLeadClickout / 100) * (p.crClickoutIssue / 100) * (p.seg.repeat.funnelMul || 1);
-    // A. Передача в Центр Финансов: доход = комиссия × одобрение × CR_клиента; издержки сервиса = 0
+    // A. Передача в Центр Финансов: внешняя выручка Выручай.ру = 0 ₽; считаем только CAC как альтернативную стоимость.
     var marginA = ab.cfCommission * (ab.cfApproval / 100) * leadsApproved - p.seg.repeat.cac;
     // B. Своя монетизация: доход = AOV × ставка маржинальности × повторные сделки; издержки = сервис на лида
     var revenueB = ab.ownAov * (ab.ownMargin / 100) * ab.repeatOrders;
@@ -678,7 +683,55 @@
       '<div class="ue2-kpi-mini-row">' + perSegHtml + '</div>';
   }
 
-  /* ---------- Управленческий вывод: что говорить генеральному ---------- */
+  function managementFootnoteHtml(k, th, talkTrack, decision) {
+    return '<div class="ue2-footnote-wrap">' +
+      '<button type="button" class="ue2-footnote-btn" aria-label="Открыть сноску с комментариями, терминами и формулами">!</button>' +
+      '<span class="ue2-footnote-label">Сноска: комментарии, что говорить, термины и формулы</span>' +
+      '<div class="ue2-footnote-panel" role="note">' +
+        '<h3>Подробная сноска к управленческому выводу</h3>' +
+        '<p><b>Главная оговорка по деньгам:</b> если клиент подходит Центрофинансу и мы отдаём его в ЦФ, Выручай.ру не признаёт выручку. Это внутренний проект Центрофинанса: эффектом считаем экономию CAC, удержание клиента и защиту от каннибализации. Выручка Выручай.ру возникает только там, где лид продаётся или передаётся внешней организации: БФЛ, банк, CPA-партнёр, страхование, карта, HR/рефинансирование.</p>' +
+        '<h4>Что говорить генеральному</h4>' +
+        '<ul>' +
+          '<li><b>Мы не запускаем проект «вслепую»:</b> As-Is показывает ограничения, To-Be показывает условия окупаемости.</li>' +
+          '<li><b>Квиз нужен не ради UX:</b> он снижает CAC Новых и собирает сигналы для маршрутизации по CJM.</li>' +
+          '<li><b>Router защищает деньги:</b> целевых клиентов ЦФ отдаём в ЦФ без выручки Выручай.ру; непрофильных, отказных и просроченных монетизируем через внешних партнёров.</li>' +
+          '<li><b>Главный фокус бюджета:</b> сначала внешне монетизируемые ветки с положительной маржей, потом масштаб Новых после подтверждения CAC/CR.</li>' +
+        '</ul>' +
+        '<h4>Какие решения зафиксировать</h4>' +
+        '<ol>' +
+          '<li>Утвердить To-Be пилот на 10 000 пользователей как базовый сценарий проверки.</li>' +
+          '<li>Поставить go/no-go: LTV/CAC ≥ ' + ratio(th.ltvCacGreen) + ', маржа/лид &gt; 0, payback ≤ ' + esc(th.paybackGreenMax) + ' мес.</li>' +
+          '<li>Для целевых ЦФ зафиксировать правило: маршрут в ЦФ = 0 ₽ выручки Выручай.ру, но экономия CAC/защита базы ЦФ.</li>' +
+          '<li>Для Повторных сравнивать Own vs CF и не путать внутренний эффект ЦФ с внешней выручкой маркетплейса.</li>' +
+          '<li>Для Просроченных запускать отдельную БФЛ/CPA-витрину, не смешивая её с основной выдачей ЦФ.</li>' +
+          '<li>Для Новых открыть бюджет только под квиз-преквалификацию и дневной контроль CAC.</li>' +
+        '</ol>' +
+        '<h4>Термины</h4>' +
+        '<ul>' +
+          '<li><b>CAC</b> — стоимость привлечения лида/клиента: маркетинговые расходы ÷ количество лидов или выдач.</li>' +
+          '<li><b>LTV₂</b> — дисконтированная выручка с лида за 2 года с учётом повторов, удержания и кросс-продаж.</li>' +
+          '<li><b>LTV/CAC</b> — запас окупаемости: сколько рублей LTV приходится на 1 ₽ CAC; целевой порог здесь ≥ ' + ratio(th.ltvCacGreen) + '.</li>' +
+          '<li><b>RPL / ARPU</b> — выручка на лида / пользователя. Для ЦФ-target в модели внешняя ARPU Выручай.ру равна 0 ₽.</li>' +
+          '<li><b>ROMI</b> — окупаемость маркетинга: маржа ÷ маркетинговые расходы × 100%.</li>' +
+          '<li><b>Smart Safe Router</b> — правила CJM, которые определяют: отдать в ЦФ, скрыть конкурентов, показать внешнюю CPA-витрину или отправить в БФЛ/HR.</li>' +
+          '<li><b>БФЛ</b> — внешняя ветка банкротства физлиц/реструктуризации; это платный партнёрский лид, не продукт ЦФ.</li>' +
+        '</ul>' +
+        '<h4>Формулы</h4>' +
+        '<ul>' +
+          '<li><b>Выручка Выручай.ру</b> = Σ внешние ветки × payout партнёра. Ветка ЦФ-target = 0 ₽.</li>' +
+          '<li><b>Средняя выручка на лид</b> = Σ доля ветки × ARPU ветки, где ARPU ЦФ-target = 0 ₽.</li>' +
+          '<li><b>Маржа на лид</b> = средняя выручка на лид − CPL.</li>' +
+          '<li><b>Blended CAC</b> = (маркетинговый расход − внешняя партнёрская выручка rejected/non-core/overdue) ÷ целевые конверсии.</li>' +
+          '<li><b>Payback</b> — первый месяц, когда накопленная маржа когорты становится ≥ 0.</li>' +
+        '</ul>' +
+        '<h4>Текущая интерпретация</h4>' +
+        '<p>' + esc(talkTrack) + '</p>' +
+        '<p><b>Решение:</b> ' + esc(decision) + ' Текущий Blended LTV/CAC: <b>' + ratio(k.blendedRatio) + '</b>.</p>' +
+      '</div>' +
+    '</div>';
+  }
+
+  /* ---------- Управленческий вывод ---------- */
   function managementDecisionHtml() {
     var k = blendedKpis(params);
     var th = loadThresholds();
@@ -691,8 +744,8 @@
       ? 'Запускать управляемый To-Be пилот: масштаб — только через прибыльные ветки, не «заливать» весь трафик одинаково.'
       : 'As-Is в масштаб не запускать: сначала включить Quiz + Smart Safe Router и довести экономику до зелёного коридора.';
     var talkTrack = currentMode === 'tobe'
-      ? 'Мы не продаём идею квиза как интерфейс. Мы показываем, что квиз и Router — это экономический фильтр: снижают CAC Новых, выводят Повторных в лучший канал и монетизируют Просроченных через БФЛ/CPA.'
-      : 'По текущей модели ответ честный: без маршрутизации и квиза экономика не является инвестиционным кейсом. Решение — не спорить с цифрами, а запускать только рычаги, которые переводят портфель в To-Be.';
+      ? 'Мы не продаём идею квиза как интерфейс. Мы показываем, что квиз и Router — это экономический фильтр: снижают CAC Новых, целевых клиентов ЦФ отдаёт без выручки Выручай.ру, а деньги зарабатывает на внешних ветках БФЛ/CPA/банков.'
+      : 'По текущей модели ответ честный: без маршрутизации и квиза экономика не является инвестиционным кейсом. Решение — не спорить с цифрами, а запускать только рычаги, где выручка появляется от внешних партнёров, а ЦФ-target считать внутренней синергией.';
 
     var card = function (toneCard, title, metric, decisionText, proof) {
       return '<article class="ue2-decision-card tone-' + toneCard + '">' +
@@ -702,8 +755,8 @@
         '<div class="ue2-decision-proof">' + proof + '</div>' +
       '</article>';
     };
-    var repeatRoute = ab.winner === 'A' ? 'Центр Финансов' : 'своя монетизация';
-    var repeatProof = 'LTV/CAC <b>' + ratio(eRepeat.ltvCac) + '</b>, маржа/лид <b>' + money(eRepeat.marginPerLead) + '</b>; A/B показывает приоритет: <b>' + esc(repeatRoute) + '</b>.';
+    var repeatRoute = ab.winner === 'A' ? 'Центр Финансов (0 ₽ выручки Выручай.ру)' : 'своя монетизация';
+    var repeatProof = 'LTV/CAC <b>' + ratio(eRepeat.ltvCac) + '</b>, маржа/лид <b>' + money(eRepeat.marginPerLead) + '</b>; A/B показывает маршрут: <b>' + esc(repeatRoute) + '</b>.';
     var overdueProof = 'LTV/CAC <b>' + ratio(eOverdue.ltvCac) + '</b>, маржа/лид <b>' + money(eOverdue.marginPerLead) + '</b>; Router переводит рискованный интент в БФЛ/CPA вместо потери лида.';
     var newProof = 'LTV/CAC <b>' + ratio(eNew.ltvCac) + '</b>, маржа/лид <b>' + money(eNew.marginPerLead) + '</b>; рост только через квиз, лимит CAC и контроль CR Visit→Lead.';
     var sleepProof = 'LTV/CAC <b>' + ratio(eSleep.ltvCac) + '</b>, маржа/лид <b>' + money(eSleep.marginPerLead) + '</b>; использовать дешёвую реактивацию, без дорогой закупки.';
@@ -712,7 +765,7 @@
       '<div class="ue2-card-head">' +
         '<span class="eyebrow">Управленческий вывод · решение по запуску</span>' +
         '<h2>Где «секс» экономики: Повторные + Просроченные через Router; Новые — только через квиз и CAC-лимит</h2>' +
-        '<p>' + esc(talkTrack) + '</p>' +
+        managementFootnoteHtml(k, th, talkTrack, decision) +
       '</div>' +
       '<div class="ue2-decision-hero">' +
         '<div><span>Главное решение</span><b>' + esc(decision) + '</b></div>' +
@@ -723,21 +776,6 @@
         card(segmentLight(eOverdue, th).tone, 'Удар №2 · Просроченные', 'монетизировать, не списывать', 'Не пытаться продавить классическую выдачу. Отдельная ветка БФЛ/рефинанс/HR превращает «непроходной» поток в доход.', overdueProof) +
         card(segmentLight(eNew, th).tone, 'Новые', 'пилот под лимитами', 'Запускать не как широкий медиабюджет, а как управляемый тест квиза: режем CAC, повышаем CR и быстро отключаем неокупаемые источники.', newProof) +
         card(segmentLight(eSleep, th).tone, 'Спящие', 'дешёвая реактивация', 'Держать как low-cost CRM-контур: прогрев, обновление данных, возврат в квиз; платный трафик сюда не масштабировать.', sleepProof) +
-      '</div>' +
-      '<div class="ue2-answer-grid">' +
-        '<div><h3>Что сказать генеральному</h3><ul>' +
-          '<li><b>Мы не запускаем проект «вслепую»:</b> As-Is показывает ограничения, To-Be показывает условия окупаемости.</li>' +
-          '<li><b>Квиз нужен не ради UX:</b> он снижает CAC Новых и собирает сигналы для маршрутизации по CJM.</li>' +
-          '<li><b>Router защищает деньги:</b> каждый статус клиента получает свой оффер, поэтому нецелевой или просроченный трафик не сгорает.</li>' +
-          '<li><b>Главный фокус бюджета:</b> сначала Повторные и Просроченные, потом масштаб Новых после подтверждения CAC/CR.</li>' +
-        '</ul></div>' +
-        '<div><h3>Какие решения зафиксировать</h3><ol>' +
-          '<li>Утвердить To-Be пилот на 10 000 пользователей как базовый сценарий проверки.</li>' +
-          '<li>Поставить go/no-go: LTV/CAC ≥ ' + ratio(th.ltvCacGreen) + ', маржа/лид > 0, payback ≤ ' + esc(th.paybackGreenMax) + ' мес.</li>' +
-          '<li>Для Повторных зафиксировать A/B-правило Own vs CF в роутере.</li>' +
-          '<li>Для Просроченных запускать отдельную БФЛ/CPA-витрину, не смешивая с основной выдачей.</li>' +
-          '<li>Для Новых открыть бюджет только под квиз-преквалификацию и дневной контроль CAC.</li>' +
-        '</ol></div>' +
       '</div>' +
     '</div>';
   }
@@ -1384,7 +1422,7 @@
     var wA = Math.max(4, Math.abs(r.marginA) / maxV * 100);
     var wB = Math.max(4, Math.abs(r.marginB) / maxV * 100);
     var winnerText = r.winner === 'A'
-      ? 'При текущих параметрах выгоднее <b>Центр Финансов</b>: ΔМаржа = ' + money(r.delta) + ' на лида.'
+      ? 'При текущих параметрах внутренний маршрут <b>Центр Финансов</b> меньше просаживает маржу: ΔМаржа = ' + money(r.delta) + ' на лида. Денежной выручки Выручай.ру здесь нет.'
       : 'При текущих параметрах выгоднее <b>Своя монетизация</b>: ΔМаржа = ' + money(r.delta) + ' на лида.';
     return '<div class="ue2-card ue2-repeat-ab">' +
       '<div class="ue2-card-head"><h2>Повторные · «Центр Финансов» vs «Своя монетизация»</h2>' +
@@ -1393,7 +1431,7 @@
         '<div class="ue2-ab-side' + (r.winner === 'A' ? ' is-winner' : '') + '">' +
           '<h4>A · Передача в Центр Финансов</h4>' +
           '<div class="ue2-ab-fields">' +
-            '<label>Комиссия ЦФ, ₽ <input type="number" min="0" step="50" data-ue-ab="cfCommission" value="' + ab.cfCommission + '"></label>' +
+            '<label>Внешняя выручка ЦФ, ₽ <input type="number" min="0" step="50" data-ue-ab="cfCommission" value="' + ab.cfCommission + '" readonly></label>' +
             '<label>Одобрение ЦФ, % <input type="number" min="0" max="100" step="0.5" data-ue-ab="cfApproval" value="' + ab.cfApproval + '"></label>' +
           '</div>' +
           '<div class="ue2-ab-margin">Маржа на лида: <b class="tone-' + (r.marginA >= 0 ? 'green' : 'red') + '">' + money(r.marginA) + '</b></div>' +
@@ -1417,8 +1455,8 @@
       '<table class="ue2-ab-table"><thead><tr><th>Параметр</th><th>A · ЦФ</th><th>B · Своя</th></tr></thead>' +
         '<tbody>' +
           '<tr><td>Маржа на лида</td><td>' + money(r.marginA) + '</td><td>' + money(r.marginB) + '</td></tr>' +
-          '<tr><td>Доход</td><td>' + money(ab.cfCommission * (ab.cfApproval / 100) * r.leadsApproved) + '</td><td>' + money(ab.ownAov * (ab.ownMargin / 100) * ab.repeatOrders) + '</td></tr>' +
-          '<tr><td>Издержки</td><td>0 ₽ (комиссия ЦФ)</td><td>' + money(ab.ownServiceCost) + ' (сервис)</td></tr>' +
+          '<tr><td>Доход</td><td>' + money(ab.cfCommission * (ab.cfApproval / 100) * r.leadsApproved) + ' <span class="ue2-t-sub">по умолчанию 0 ₽ для Выручай.ру</span></td><td>' + money(ab.ownAov * (ab.ownMargin / 100) * ab.repeatOrders) + '</td></tr>' +
+          '<tr><td>Издержки</td><td>0 ₽ сервис; CAC остаётся альтернативной стоимостью</td><td>' + money(ab.ownServiceCost) + ' (сервис)</td></tr>' +
           '<tr><td>CAC (общий)</td><td>' + money(params.seg.repeat.cac) + '</td><td>' + money(params.seg.repeat.cac) + '</td></tr>' +
         '</tbody>' +
       '</table>' +
@@ -1777,6 +1815,7 @@
         var ab = loadRepeatAB();
         var k = inp.getAttribute('data-ue-ab');
         var v = Number(inp.value);
+        if (k === 'cfCommission') v = 0;
         if (isFinite(v)) ab[k] = v;
         saveRepeatAB(ab); partialRefresh();
       });
