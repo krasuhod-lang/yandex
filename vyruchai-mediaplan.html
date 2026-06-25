@@ -17,12 +17,12 @@
   --font-mono:"JetBrains Mono","SF Mono",ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
   --bg:#f5f5f7;--surface:#ffffff;--surface-2:#fbfbfd;--surface-3:#f0f0f5;
   --text:#1d1d1f;--muted:#6e6e73;--faint:#a1a1a6;--line:#e3e3e8;--line-strong:#d2d2d7;
-  --blue:#0071e3;--green:#1d9d52;--orange:#c2680a;--red:#e0162b;--violet:#6e5dc6;
+  --blue:#0071e3;--green:#1d9d52;--orange:#c2680a;--red:#e0162b;--violet:#6e5dc6;--yellow:#f5b400;
   --shadow:0 24px 60px rgba(17,17,22,.12);--shadow-soft:0 4px 18px rgba(17,17,22,.05);--shadow-hover:0 18px 44px rgba(17,17,22,.1);
   --radius:24px;--radius-sm:16px;--radius-xs:12px;--gap:20px;--pad:24px;--pad-sm:18px;--max:1480px;
   --ease:cubic-bezier(.4,0,.2,1);
 }
-[data-theme="dark"]{color-scheme:dark;--bg:#000;--surface:#1c1c1e;--surface-2:#232325;--surface-3:#2c2c2e;--text:#f5f5f7;--muted:#a1a1a6;--faint:#6e6e73;--line:#34343a;--line-strong:#3a3a42;--blue:#0a84ff;--green:#30d158;--orange:#ff9f0a;--red:#ff453a;--violet:#9a86ff;--shadow:0 28px 70px rgba(0,0,0,.5);--shadow-soft:0 6px 22px rgba(0,0,0,.32);--shadow-hover:0 22px 56px rgba(0,0,0,.46)}
+[data-theme="dark"]{color-scheme:dark;--bg:#000;--surface:#1c1c1e;--surface-2:#232325;--surface-3:#2c2c2e;--text:#f5f5f7;--muted:#a1a1a6;--faint:#6e6e73;--line:#34343a;--line-strong:#3a3a42;--blue:#0a84ff;--green:#30d158;--orange:#ff9f0a;--red:#ff453a;--violet:#9a86ff;--yellow:#ffd60a;--shadow:0 28px 70px rgba(0,0,0,.5);--shadow-soft:0 6px 22px rgba(0,0,0,.32);--shadow-hover:0 22px 56px rgba(0,0,0,.46)}
 *{box-sizing:border-box}
 html{scroll-behavior:smooth}
 body{margin:0;background:radial-gradient(1200px 700px at 50% -10%,#ffffff 0,#f5f5f7 44%,#ececf1 100%);color:var(--text);font-family:var(--font);font-size:15px;line-height:1.5;font-feature-settings:"cv11","ss01","ss03","calt";font-variant-numeric:tabular-nums;letter-spacing:-0.005em;-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility}
@@ -1275,7 +1275,15 @@ table.sortable thead th[aria-sort="descending"]::after{content:" ▼";font-size:
 .ue-block-lead{font-size:13.5px;color:var(--muted);line-height:1.5;margin:0}
 
 /* ---------- Focused CJM & Unit Economics dashboard ---------- */
-.original-app-hidden{display:none!important}
+/* App version switching: by default new is shown, legacy hidden.
+   When body has data-app-version="legacy" we flip visibility. */
+.original-app-hidden{display:none}
+body[data-app-version="legacy"] #cjmDashboard{display:none}
+body[data-app-version="legacy"] .original-app-hidden{display:block}
+.version-switch{display:inline-flex;gap:4px;padding:4px;border:1px solid var(--line);border-radius:980px;background:var(--surface-2)}
+.version-switch button{appearance:none;border:0;background:transparent;color:var(--muted);font:inherit;font-weight:700;font-size:13px;padding:7px 14px;border-radius:980px;cursor:pointer;transition:background .18s var(--ease),color .18s var(--ease)}
+.version-switch button.active{background:var(--blue);color:#fff}
+.version-switch button:not(.active):hover{color:var(--text)}
 .cjm-app .brand-sub{max-width:720px}
 .cjm-app main{gap:24px}
 .cjm-tabs{max-width:var(--max);margin:0 auto;padding:6px 24px 10px;display:flex;gap:2px;overflow:auto;scrollbar-width:none}
@@ -1368,6 +1376,28 @@ table.sortable thead th[aria-sort="descending"]::after{content:" ▼";font-size:
 .cjm-ssr-segment-grid .ssr-cell{border:1px solid var(--line);border-radius:var(--radius-sm);padding:13px 14px;background:var(--surface-2)}
 .cjm-ssr-segment-grid .ssr-cell h3{margin:0 0 5px;font-size:13px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;font-weight:800}
 .cjm-ssr-segment-grid .ssr-cell p{margin:0;font-size:13px;color:var(--text);line-height:1.45}
+/* JTBD per-segment blocks on CJM tab */
+.cjm-jtbd-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;margin-top:14px}
+@media(max-width:920px){.cjm-jtbd-grid{grid-template-columns:1fr}}
+.cjm-jtbd-grid .jtbd-cell{border:1px solid var(--line);border-radius:var(--radius-sm);padding:13px 14px;background:var(--surface-2)}
+.cjm-jtbd-grid .jtbd-cell h3{margin:0 0 6px;font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;font-weight:800}
+.cjm-jtbd-grid .jtbd-cell p,.cjm-jtbd-grid .jtbd-cell ul{margin:0;font-size:13.5px;color:var(--text);line-height:1.5}
+.cjm-jtbd-grid .jtbd-cell ul{padding-left:18px}
+.cjm-jtbd-empty{padding:14px;border:1px dashed var(--line-strong);border-radius:var(--radius-sm);color:var(--muted);font-size:13px;text-align:center}
+/* Smart Safe Router diagram on CJM tab — branch dimming */
+#cjmRouteDiagram .ssr-branch{transition:opacity .25s var(--ease)}
+#cjmRouteDiagram.has-active .ssr-branch:not(.is-active){opacity:.32}
+#cjmRouteDiagram.has-active .ssr-branch.is-active{opacity:1}
+/* Пример расчёта tab */
+.cjm-calc-flow{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:10px;margin-top:14px}
+@media(max-width:1100px){.cjm-calc-flow{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media(max-width:600px){.cjm-calc-flow{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.cjm-calc-step{border:1px solid var(--line);border-radius:var(--radius-sm);background:var(--surface-2);padding:12px 14px;display:flex;flex-direction:column;gap:4px}
+.cjm-calc-step .cs-name{font-size:11px;color:var(--muted);font-weight:800;text-transform:uppercase;letter-spacing:.05em}
+.cjm-calc-step .cs-val{font-size:20px;font-weight:700;font-variant-numeric:tabular-nums;letter-spacing:-.02em}
+.cjm-calc-step .cs-sub{font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums}
+.cjm-calc-step.cs-revenue{border-color:var(--green);background:color-mix(in srgb,var(--green) 8%,var(--surface-2))}
+.cjm-calc-step.cs-revenue .cs-val{color:var(--green)}
 </style>
 </head>
 <body>
@@ -1379,6 +1409,10 @@ table.sortable thead th[aria-sort="descending"]::after{content:" ▼";font-size:
         <div><div class="brand-title">CJM & Юнит-экономика Выручай.ру</div><div class="brand-sub">Единый SPA-дашборд: путь клиента, Smart Safe Router, CAC/LTV/ROMI и калькулятор микса трафика</div></div>
       </div>
       <div class="filters" aria-label="Глобальные фильтры CJM">
+        <div class="version-switch" role="group" aria-label="Версия дашборда">
+          <button type="button" data-app-version="legacy">Старая версия</button>
+          <button type="button" data-app-version="new" class="active">Новая версия</button>
+        </div>
         <button class="theme" id="cjmThemeToggle" type="button" aria-label="Сменить тему">Тема</button>
       </div>
     </div>
@@ -1386,16 +1420,15 @@ table.sortable thead th[aria-sort="descending"]::after{content:" ▼";font-size:
     <nav class="cjm-tabs tabs" id="cjmInnerTabs" aria-label="Разделы выбранного сегмента">
       <button class="cjm-tab active" type="button" data-cjm-tab="funnel">Воронка 10 000</button>
       <button class="cjm-tab" type="button" data-cjm-tab="cjm">CJM · Путь клиента</button>
+      <button class="cjm-tab" type="button" data-cjm-tab="calc">Пример расчёта</button>
       <button class="cjm-tab" type="button" data-cjm-tab="unit">Юнит-экономика</button>
-      <button class="cjm-tab" type="button" data-cjm-tab="ssr">Маршрутизация SSR</button>
-      <button class="cjm-tab" type="button" data-cjm-tab="payback">Окупаемость</button>
     </nav>
   </header>
   <main>
     <section class="card cjm-hero">
       <span class="eyebrow" id="cjmHeroEyebrow">Раздел сайта · CJM &amp; Юнит-экономика</span>
       <h1 id="cjmHeroTitle" style="margin:0;font-size:clamp(30px,3.4vw,48px);line-height:1.03;letter-spacing:-.045em">CJM &amp; Юнит-экономика</h1>
-      <p class="lead" id="cjmHeroLead">Выберите сегмент сверху — внутри откроется переключатель из 5 вкладок: воронка на 10 000 пользователей с ручными показателями, путь клиента, юнит-экономика, маршрутизация SSR и окупаемость. Отдельная вкладка «📊 Сводная матрица» показывает все 4 сегмента рядом.</p>
+      <p class="lead" id="cjmHeroLead">Выберите сегмент сверху — внутри откроется переключатель из 4 вкладок: воронка на 10 000 пользователей с ручными показателями, путь клиента со Smart Safe Router, пример расчёта выручки и юнит-экономика. Отдельная вкладка «📊 Сводная матрица» показывает все 5 сегментов рядом.</p>
     </section>
 
     <!-- Per-segment panels -->
@@ -1408,8 +1441,17 @@ table.sortable thead th[aria-sort="descending"]::after{content:" ▼";font-size:
       </div>
     </section>
     <section id="cjm-tab-cjm" class="cjm-panel">
-      <div class="cjm-section-head"><div><h2>CJM · Путь клиента</h2><p>Источник → API-роутинг → витрина → монетизация и JTBD.</p></div></div>
+      <div class="cjm-section-head"><div><h2>CJM · Путь клиента</h2><p>JTBD по сегментам и сквозная блок-схема Smart Safe Router. При выборе сегмента сверху подсветится соответствующая ветка маршрутизации.</p></div></div>
       <div id="cjmJourneyHost"></div>
+      <div class="card">
+        <div class="card-title"><div><h2>Блок-схема Smart Safe Router</h2><p>Сквозной путь от точки входа до выдачи в ЦФ или монетизации через витрину. Выбранная ветка подсвечена, остальные — приглушены.</p></div></div>
+        <div class="route-diagram-wrap"><div class="route-diagram" id="cjmRouteDiagram"></div></div>
+      </div>
+    </section>
+    <section id="cjm-tab-calc" class="cjm-panel">
+      <div class="cjm-section-head"><div><h2>Пример расчёта · Выручка с воронки 10 000</h2><p>Полная цепочка от первых визитов до денег: визиты → лиды → одобрения → выдачи → выручка по выбранному сегменту, плюс сводка по всем сегментам.</p></div></div>
+      <div class="card" id="cjmCalcSegmentCard"></div>
+      <div class="card"><div class="card-title"><div><h2>Сводка по всем сегментам</h2><p>Сколько денег принесёт каждый сегмент при базе 10 000 визитов</p></div></div><div class="ue2-table-wrap"><table class="ue2-scn-table" id="cjmCalcTable"></table></div></div>
     </section>
     <section id="cjm-tab-unit" class="cjm-panel">
       <div class="cjm-section-head"><div><h2>Юнит-экономика</h2><p>KPI, светофор LTV/CAC, детализация воронки и симуляция As-Is / To-Be.</p></div><div class="cjm-switch" role="group" aria-label="Режим модели"><button type="button" data-cjm-mode="asIs" class="active">As-Is</button><button type="button" data-cjm-mode="toBe">To-Be +5% CR</button></div></div>
@@ -1418,20 +1460,6 @@ table.sortable thead th[aria-sort="descending"]::after{content:" ▼";font-size:
         <div class="card"><div class="card-title"><div><h2>Таблица воронки</h2><p>CR% и абсолютные значения на базе 10 000 визитов</p></div></div><div class="ue2-table-wrap"><table class="ue2-scn-table" id="cjmUnitFunnel"></table></div></div>
         <div class="card chart-card"><div class="card-title"><div><h2>As-Is / To-Be</h2><p>Абсолютная выдача и эффект от улучшения конверсии</p></div></div><div class="chart-box"><canvas id="cjmUnitChart"></canvas></div></div>
       </div>
-    </section>
-    <section id="cjm-tab-ssr" class="cjm-panel">
-      <div class="cjm-section-head"><div><h2>Маршрутизация SSR</h2><p>Smart Safe Router и правила Offers Engine для выбранного сегмента.</p></div></div>
-      <div class="card" id="cjmSsrSegmentCard"></div>
-      <div class="card"><div class="card-title"><div><h2>Decision Tree (все 8 статусов)</h2><p>Разрешённые и заблокированные категории офферов</p></div></div><div class="ue2-table-wrap"><table class="ue2-scn-table" id="cjmSsrTable"></table></div></div>
-      <div class="card"><div class="card-title"><div><h2>Блок-схема сквозного пути</h2><p>Miro-style визуализация прохождения трафика через Smart Safe Router</p></div></div><div class="cjm-route-flow" id="cjmRouteFlow"></div></div>
-    </section>
-    <section id="cjm-tab-payback" class="cjm-panel">
-      <div class="cjm-section-head"><div><h2>Окупаемость</h2><p>Калькулятор внешней выручки. Действующие клиенты ЦФ — внутренняя синергия, в расчёт выручки маркетплейса не включаются.</p></div></div>
-      <div class="grid two">
-        <div class="card"><div class="card-title"><div><h2>Ручной ввод объёма</h2><p>(Отказники + Спящие/БФЛ + Новые) × CR 2% × CPA 1 500 ₽</p></div></div><div class="cjm-payback-inputs" id="cjmPaybackInputs"></div></div>
-        <div class="card"><div class="card-title"><div><h2>Прогноз внешней выручки</h2><p>Пересчёт без перезагрузки, значения сохраняются в localStorage</p></div></div><div class="metric-value" id="cjmPaybackRevenue">0 ₽</div><p class="metric-sub" id="cjmPaybackFormula"></p><div class="ue2-kpi-mini-row" id="cjmPaybackBreakdown"></div></div>
-      </div>
-      <div class="card"><div class="card-title"><div><h2>Рекомендации по бюджету</h2><p>Автоматические подсказки с учётом LTV/CAC и payback</p></div></div><ul class="cjm-rec-list" id="cjmRecommendations"></ul></div>
     </section>
 
     <!-- Cross-segment matrix panel -->
@@ -1455,6 +1483,10 @@ table.sortable thead th[aria-sort="descending"]::after{content:" ▼";font-size:
         <div><div class="brand-title">Выручай.ру</div><div class="brand-sub">Операционный дашборд: PnL, CJM, юнит-экономика</div></div>
       </div>
       <div class="filters" aria-label="Фильтры верхнего уровня">
+        <div class="version-switch" role="group" aria-label="Версия дашборда">
+          <button type="button" data-app-version="legacy" class="active">Старая версия</button>
+          <button type="button" data-app-version="new">Новая версия</button>
+        </div>
         <select aria-label="Канал"><option>Все каналы</option><option>SEO</option><option>Яндекс.Директ</option><option value="PR">Соцсети / PR</option><option>Повторный</option></select>
         <select aria-label="Сценарий"><option>Все сценарии</option><option>До зарплаты</option><option>Есть долги</option><option>Хочу машину</option><option>Накопления</option><option>Страхование</option></select>
         <button class="theme" id="themeToggle" aria-label="Сменить тему">Тема</button>
