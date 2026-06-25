@@ -89,30 +89,58 @@
       return p;
     }
     p.isRouterActive = true;
-    // §2.2 Квиз: +20% к CR Visit→Lead (объём лидов Нового растёт, CAC падает 1200→700).
+    // ─────────────────────────────────────────────────────────────────────────
+    // ЗА СЧЁТ ЧЕГО МЕТРИКИ РАСТУТ (действие → цифра → показатель → почему).
+    // Все сдвиги ниже — это не «нарисованная» выручка, а следствие конкретных
+    // продуктовых действий поверх As-Is базы. Каждый блок описывает рычаг.
+    // ─────────────────────────────────────────────────────────────────────────
+
+    // [Рычаг 1] КВИЗ-СЕНСЕЙ на входе (сегмент «Новый»).
+    // Действие: интерактивная преквалификация до формы лида.
+    // Цифра: CR Visit→Lead 8% → 9,6% (+20%, QUIZ_UPLIFT). Почему: квиз вовлекает и
+    // отсеивает нецелевых ещё до лида, поэтому до лида доходит более качественный трафик.
     p.crVisitLead = Math.round(base.crVisitLead * (1 + QUIZ_UPLIFT) * 10) / 10;
-    // Квиз и витрина источников преквалифицируют трафик → выше downstream-конверсии;
-    // внешние источники (БФЛ/CPA/банки) дают более высокий подтверждённый EPL.
+    // [Рычаг 1, продолжение] Преквалифицированный лид лучше конвертится дальше по воронке.
+    // Цифра: CR Lead→Clickout 55% → 80% и CR Clickout→Issue 55% → 80%. Почему: квиз уже
+    // собрал параметры запроса, поэтому пользователю показывается релевантный оффер и он
+    // реже отваливается на клик-ауте и одобрении.
     p.crLeadClickout = 80;
     p.crClickoutIssue = 80;
+    // [Рычаг 1, продолжение] Средний payout (EPL) растёт с 1600 → 3000 ₽. Почему: квиз
+    // позволяет включить динамические тарифы и направлять лид на внешние источники
+    // (БФЛ/CPA/банки) с более высокой подтверждённой выплатой, а не только на дешёвую выдачу.
     p.epl = 3000;
     p.crossEpl = 3000;
+    // [Рычаг 4] Кросс-сейл некредитных банковских продуктов (Банки/РКО) для «Повторных»/«Спящих».
+    // Цифра: CR кросс-сейла 5% → 60%. Почему: для уже знакомой базы предлагаем карты/РКО/страховки —
+    // короткий и дешёвый второй заход монетизации, который в As-Is не использовался.
     p.crCrossBank = 60;
+    // [Рычаг 3] Квалификация в лид БФЛ для «Просроченных».
+    // Цифра: CR Lead→БФЛ 10% → 35% и фикс-payout БФЛ 3000 → 10000 ₽. Почему: просроченный интент
+    // отправляем не на заведомо отказную выдачу, а на профильного партнёра БФЛ/рефинанс с высокой выплатой.
     p.crLeadBfl = 35;
     p.eplBfl = 10000;
-    // §2.1 Traffic Mix
+    // [Рычаг 5] РЕСТРУКТУРИЗАЦИЯ ТРАФИК-МИКСА (снижает Blended CAC без новых затрат).
+    // Действие: перераспределяем бюджет с дорогих Новых на дешёвых Повторных.
+    // Цифра: доли Новый 45→30, Повторный 25→40, Просроченный 20, Спящий 10. Почему: CAC повторного
+    // (450 ₽) кратно ниже CAC нового (1200 ₽), поэтому сам сдвиг долей тянет Blended CAC вниз.
     p.seg.new.share = 30;
     p.seg.repeat.share = 40;
     p.seg.overdue.share = 20;
     p.seg.sleep.share = 10;
-    // §2.2 Квиз → CAC Нового 1200 → 700 ₽
+    // [Рычаг 1, итог по CAC] CAC Нового 1200 → 700 ₽ (−42%). Почему: рост CR Visit→Lead на +20%
+    // означает, что тот же рекламный бюджет даёт больше лидов → стоимость одного лида падает.
     p.seg.new.cac = 700;
-    // CRM-уплифт повторных (удержание)
+    // [Рычаг 2] CRM-УПЛИФТ ПОВТОРНЫХ (удержание → выше LTV₂).
+    // Действие: триггерные коммуникации и кабинет для возвратных сделок.
+    // Цифра: retention 1y 45% → 55%, retention 2y 30% → 38%. Почему: удержанный клиент приносит
+    // дисконтированный доход в 12 и 24 мес, поэтому LTV₂ повторного сегмента растёт.
     p.seg.repeat.ret1 = 55;
     p.seg.repeat.ret2 = 38;
-    // Источник БФЛ/CPA монетизирует просроченный интент, поэтому платный CAC ниже.
+    // [Рычаг 3, итог по CAC] CAC Просроченного 800 → 650 ₽. Почему: профильный источник БФЛ/CPA
+    // монетизирует именно просроченный интент, поэтому платный трафик на него обходится дешевле.
     p.seg.overdue.cac = 650;
-    // §2.3 Smart Safe Router → БФЛ для «Просроченных»
+    // §2.3 Smart Safe Router → жёстко маршрутизирует «Просроченных» в ветку БФЛ.
     p.seg.overdue.router = 'bfl';
     p.seg.overdue.eplBfl = p.eplBfl;
     p.seg.overdue.crLeadBfl = p.crLeadBfl;
@@ -655,7 +683,7 @@
         sliderRow('epl',      'EPL',      '₽ за выдачу',    100, 3000, 10,  bp.epl,
           'Доход партнёрской программы за одобренную выдачу.') +
         sliderRow('opex',     'OPEX',     '₽ на лида',      0,   600,  5,   bp.opex,
-          'Технические и операционные расходы на обработку одного лида.') +
+          'Переменные технические и операционные расходы на обработку одного лида. Постоянный ФОТ команды и инфраструктура сюда НЕ входят — они учтены отдельной фиксированной строкой в общей PnL.') +
         sliderRow('revShare', 'Rev Share','%',              0,   80,   1,   bp.revShare,
           'Доля партнёра/паблишера в валовом доходе с одной выдачи.') +
         sliderRow('discount', 'Дисконт',  '%/год',          0,   60,   1,   bp.discount,
@@ -775,7 +803,7 @@
   function managementFootnoteHtml(k, th, talkTrack, decision) {
     return '<details class="ue2-footnote-wrap">' +
       '<summary class="ue2-footnote-btn" aria-label="Сноска: комментарии для руководства, термины, формулы и правила монетизации">!</summary>' +
-      '<span class="ue2-footnote-label">Сноска: комментарии, что говорить, термины и формулы</span>' +
+      '<span class="ue2-footnote-label">Сноска</span>' +
       '<div class="ue2-footnote-panel" role="note">' +
         '<h3>Подробная сноска к управленческому выводу</h3>' +
         '<p><b>Текущая модель:</b> это юнит-экономика привлечённого трафика, а не бухгалтерский отчёт. На входе учитываем поток из SEO, соцсетей/PR и рекламных источников вроде Яндекс.Директа; дальше сегментируем пользователей на Новых, Повторных, Просроченных и Спящих, прогоняем через квиз/роутер и считаем выручку только там, где есть внешний партнёрский payout.</p>' +
@@ -849,27 +877,51 @@
     var margin = totalRev - totalInvest;
     var isGreen = margin >= 0;
     
+    // Длина бара считается от самой большой величины строки (инвестиции или суммарная выручка)
+    // и применяется к гибкому треку, а НЕ ко всей строке — иначе бар перекрывал бы подпись и «уезжал».
     var maxVal = Math.max(totalInvest, totalRev, 1);
-    function barWidth(v) { return Math.max(1, (Math.abs(v) / maxVal) * 100) + '%'; }
+    function barWidth(v) { return clamp((Math.abs(v) / maxVal) * 100, 1, 100) + '%'; }
+
+    // Каждая строка = grid из трёх колонок: подпись (фикс.) · трек (растягивается) · сумма (по содержимому).
+    // Заливка-бар лежит внутри трека, поэтому её ширина в % всегда относится к свободному месту, без overflow.
+    function wfRow(num, label, valueText, fillStyle, fillW, opts) {
+      opts = opts || {};
+      var labelStyle = opts.bold ? ' style="font-weight:700;"' : '';
+      var rowStyle = opts.total ? ' style="margin-top:6px;padding-top:10px;border-top:1px solid var(--line);"' : '';
+      var fill = fillW === null
+        ? '<span class="ue2-wf-zero">Внутренняя синергия</span>'
+        : '<span class="ue2-wf-fill" style="' + fillStyle + 'width:' + fillW + '"></span>';
+      return '<div class="ue2-wf-row"' + rowStyle + '>' +
+        '<div class="ue2-wf-label"' + labelStyle + '>' + num + '. ' + esc(label) + '</div>' +
+        '<div class="ue2-wf-track">' + fill + '</div>' +
+        '<div class="ue2-wf-val"' + labelStyle + '>' + valueText + '</div>' +
+      '</div>';
+    }
 
     var styles = '<style>' +
-      '.ue2-wf-row { display: flex; align-items: center; margin-bottom: 8px; }' +
-      '.ue2-wf-label { width: 250px; font-weight: 500; }' +
-      '.ue2-wf-bar { color: #fff; padding: 4px 8px; border-radius: 4px; }' +
+      '.ue2-waterfall { margin-top: 16px; }' +
+      '.ue2-wf-row { display: grid; grid-template-columns: minmax(170px, 230px) 1fr minmax(96px, auto); align-items: center; gap: 12px; margin-bottom: 8px; }' +
+      '.ue2-wf-label { font-weight: 500; color: var(--text); }' +
+      '.ue2-wf-track { position: relative; height: 22px; background: var(--surface-2, rgba(127,127,127,.12)); border-radius: 5px; overflow: hidden; }' +
+      '.ue2-wf-fill { display: block; height: 100%; border-radius: 5px; min-width: 2px; }' +
+      '.ue2-wf-zero { display: inline-flex; align-items: center; height: 100%; padding-left: 8px; font-size: 12px; color: var(--faint); }' +
+      '.ue2-wf-val { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; font-weight: 600; }' +
+      '@media (max-width: 560px) { .ue2-wf-row { grid-template-columns: 1fr auto; } .ue2-wf-track { grid-column: 1 / -1; order: 3; } }' +
     '</style>';
 
     return '<div class="ue2-card">' + styles +
       '<div class="ue2-card-head">' +
         '<h2>PnL Waterfall · Окупаемость внешнего трафика</h2>' +
-        '<p>Мы тратим маркетинговый бюджет на Новых, отдаем лучших клиентов в ЦФ бесплатно, но все равно окупаем CAC за счет монетизации отказников, действующих и спящих через Роутер.</p>' +
+        '<p>Мы тратим маркетинговый бюджет на Новых, отдаём лучших клиентов в ЦФ бесплатно, но всё равно окупаем CAC за счёт монетизации отказников, действующих и спящих через Роутер.</p>' +
       '</div>' +
-      '<div class="ue2-waterfall" style="display:flex; flex-direction:column; margin-top:16px;">' +
-        '<div class="ue2-wf-row"><div class="ue2-wf-label">1. Инвестиции (CAC+OPEX)</div><div class="ue2-wf-bar" style="background:var(--red); width:'+barWidth(totalInvest)+'">-' + money(totalInvest) + '</div></div>' +
-        '<div class="ue2-wf-row"><div class="ue2-wf-label">2. Потеря (Одобренные ЦФ)</div><div class="ue2-wf-bar" style="background:#e5e7eb; color:#666; width:auto">0 ₽ (Внутренняя синергия)</div></div>' +
-        '<div class="ue2-wf-row"><div class="ue2-wf-label">3. Компенсация: Soft Reject МФО</div><div class="ue2-wf-bar" style="background:var(--blue); width:'+barWidth(rejectRev)+'">+' + money(rejectRev) + '</div></div>' +
-        '<div class="ue2-wf-row"><div class="ue2-wf-label">4. Компенсация: Банки/РКО</div><div class="ue2-wf-bar" style="background:var(--green); width:'+barWidth(crossRev)+'">+' + money(crossRev) + '</div></div>' +
-        '<div class="ue2-wf-row"><div class="ue2-wf-label">5. Компенсация: БФЛ/HR</div><div class="ue2-wf-bar" style="background:var(--orange); width:'+barWidth(overdueRev)+'">+' + money(overdueRev) + '</div></div>' +
-        '<div class="ue2-wf-row" style="margin-top:8px; padding-top:8px; border-top:1px solid #e5e7eb;"><div class="ue2-wf-label" style="font-weight:bold;">6. Итог (Чистая маржа)</div><div class="ue2-wf-bar" style="background:var(--'+(isGreen?'green':'red')+'); font-weight:bold; width:'+barWidth(margin)+'">' + (isGreen?'+':'') + money(margin) + '</div></div>' +
+      '<div class="ue2-waterfall">' +
+        wfRow(1, 'Инвестиции (CAC+OPEX)', '−' + money(totalInvest), 'background:var(--red);', barWidth(totalInvest)) +
+        wfRow(2, 'Одобренные ЦФ (передача)', '0 ₽', '', null) +
+        wfRow(3, 'Компенсация: Soft Reject МФО', '+' + money(rejectRev), 'background:var(--blue);', barWidth(rejectRev)) +
+        wfRow(4, 'Компенсация: Банки/РКО', '+' + money(crossRev), 'background:var(--green);', barWidth(crossRev)) +
+        wfRow(5, 'Компенсация: БФЛ/HR', '+' + money(overdueRev), 'background:var(--orange);', barWidth(overdueRev)) +
+        wfRow(6, 'Итог (Чистая маржа)', (isGreen ? '+' : '') + money(margin),
+          'background:var(--' + (isGreen ? 'green' : 'red') + ');', barWidth(margin), { bold: true, total: true }) +
       '</div>' +
     '</div>';
   }
