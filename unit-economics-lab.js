@@ -18,7 +18,26 @@
   var THRESH_KEY = 'ue_segments_thresholds_v1';// настраиваемые пороги светофора
   var REPEAT_AB_KEY = 'ue_repeat_ab_v1';       // параметры A/B повторных (CF vs Own)
   var INSIGHTS_KEY = 'ue_insights_rules_v1';   // JSON-конфиг правил выводов
+  var MODE_KEY = 'ue_segments_mode_v1';        // 'asis' | 'tobe' — переключатель модели
+  var TAB_KEY = 'ue_segments_tab_v1';          // активный таб внутри #ueLab
   var COHORT_SIZE = 1000;                       // эталонная когорта по ТЗ
+
+  // ---- Константы целевой модели «To-Be» (ТЗ-1 §2 + Дополнение №2 §7) ----
+  var USERS_BASE = 10000;        // фикс-база сценария окупаемости (10 000 пользователей)
+  var QUIZ_UPLIFT = 0.20;        // +20% к CR Visit→Lead Нового сегмента за счёт интерактивного Квиза
+  var EPL_BFL = 3000;            // фикс-доход (EPL) за квалифицированный лид БФЛ (Smart Safe Router)
+  var CR_LEAD_BFL = 10;          // %, конверсия трафика «Просроченных» в квалифицированный лид БФЛ
+  var SEG_PAYBACK_THRESHOLD = 1.2; // LTV/CAC, выше которого карточка сегмента подсвечивается зелёным в To-Be
+
+  // Табы модуля (ТЗ-Дополнение №2 §6). id → заголовок ленты.
+  var TABS = [
+    { id: 'overview', name: 'Обзор · KPI' },
+    { id: 'segments', name: 'Сегменты' },
+    { id: 'funnel',   name: 'Воронка & когорты' },
+    { id: 'pnl',      name: 'P&L & водопад' },
+    { id: 'scenario', name: 'Сценарий 10 000' },
+    { id: 'ab',       name: 'A/B & сравнение' }
+  ];
 
   // ---- Сегменты и стартовые значения (из ТЗ) ----
   var SEGMENTS = [
@@ -28,27 +47,67 @@
     { id: 'sleep',    name: 'Спящий',      short: 'Сонн.',  accent: 'var(--violet)' }
   ];
 
+  // Базовая («As-Is») модель: все вводные откалиброваны так, чтобы общий Blended LTV/CAC ≈ 0.56x
+  // (проект убыточен) — это исходная точка для инвесткомитета. Целевые оптимизации (Quiz,
+  // Traffic Mix, Smart Safe Router → БФЛ) накладываются поверх через applyMode(mode='tobe')
+  // и поднимают Blended LTV/CAC до ≈ 2.6x. Значения не «исторический факт», а согласованный
+  // базовый сценарий, относительно которого считается эффект To-Be.
   var DEFAULT_PARAMS = {
     // Общие
-    epl: 800,
+    epl: 1600,
     opex: 120,
     revShare: 30,   // %
     discount: 20,   // %
-    // Воронка
+    // Воронка (As-Is базовые конверсии; To-Be поднимает их за счёт квиз-преквалификации)
     crVisitLead: 8,        // %
-    crLeadClickout: 35,    // %
-    crClickoutIssue: 35,   // %
+    crLeadClickout: 55,    // %
+    crClickoutIssue: 55,   // %
     // Кросс-сейл
     crCross: 10,           // %
-    crossEpl: 600,
+    crossEpl: 1200,
     // Сегменты: CAC, retention 1y, retention 2y, доля сегмента в общем трафике (%)
+    // Базовая («As-Is») модель: Blended LTV/CAC ≈ 0.56x — проект убыточен.
     seg: {
-      new:     { cac: 2500, ret1: 25, ret2: 15, share: 45, funnelMul: 1.00 },
+      new:     { cac: 1200, ret1: 25, ret2: 15, share: 45, funnelMul: 1.00 },
       repeat:  { cac:  450, ret1: 45, ret2: 30, share: 25, funnelMul: 1.30 },
       overdue: { cac:  800, ret1: 35, ret2: 20, share: 20, funnelMul: 0.85 },
       sleep:   { cac:  350, ret1: 30, ret2: 18, share: 10, funnelMul: 0.70 }
     }
   };
+
+  // ---- Целевая модель «To-Be» (Router & Quiz). Накладывается ПОВЕРХ базовых
+  //      вводных при mode === 'tobe'. Источник правды — ТЗ-1 §2:
+  //   • Реструктуризация трафика: Повторные 40 / Новые 30 / Просроченные 20 / Спящие 10.
+  //   • Квиз: +20% к CR Visit→Lead Нового → CAC Нового 1200 → 800 ₽; квиз пред-квалифицирует
+  //     лиды, поэтому растут downstream-конверсии и средний EPL (динамические тарифы).
+  //   • Smart Safe Router: «Просроченные» маршрутизируются на офферы БФЛ, фикс-EPL 3000 ₽.
+  //   Калибровка даёт Blended LTV/CAC ≈ 2.6x (> 2.5x таргета инвесткомитета).
+  function applyMode(base, mode) {
+    var p = deepCopy(base);
+    if (mode !== 'tobe') return p;
+    // §2.2 Квиз: +20% к CR Visit→Lead (объём лидов Нового растёт, CAC падает 1200→800).
+    p.crVisitLead = Math.round(base.crVisitLead * (1 + QUIZ_UPLIFT) * 10) / 10;
+    // Квиз пред-квалифицирует трафик → выше downstream-конверсии; динамические тарифы → выше EPL.
+    p.crLeadClickout = 70;
+    p.crClickoutIssue = 70;
+    p.epl = 2500;
+    p.crossEpl = 1600;
+    // §2.1 Traffic Mix
+    p.seg.new.share = 30;
+    p.seg.repeat.share = 40;
+    p.seg.overdue.share = 20;
+    p.seg.sleep.share = 10;
+    // §2.2 Квиз → CAC Нового 1200 → 800 ₽
+    p.seg.new.cac = 800;
+    // CRM-уплифт повторных (удержание)
+    p.seg.repeat.ret1 = 55;
+    p.seg.repeat.ret2 = 38;
+    // §2.3 Smart Safe Router → БФЛ для «Просроченных»
+    p.seg.overdue.router = 'bfl';
+    p.seg.overdue.eplBfl = EPL_BFL;
+    p.seg.overdue.crLeadBfl = CR_LEAD_BFL;
+    return p;
+  }
 
   // Шаги CJM-воронки по сегментам (тексты CTA отличаются согласно листам Excel).
   var FUNNEL_STEPS = {
@@ -92,6 +151,13 @@
     } catch (e) { return deepCopy(DEFAULT_PARAMS); }
   }
   function save(p) { try { localStorage.setItem(STORE_KEY, JSON.stringify(p)); } catch (e) {} }
+  function loadMode() { try { return localStorage.getItem(MODE_KEY) === 'tobe' ? 'tobe' : 'asis'; } catch (e) { return 'asis'; } }
+  function saveMode(m) { try { localStorage.setItem(MODE_KEY, m === 'tobe' ? 'tobe' : 'asis'); } catch (e) {} }
+  function loadTab() {
+    try { var t = localStorage.getItem(TAB_KEY); return TABS.some(function (x) { return x.id === t; }) ? t : 'overview'; }
+    catch (e) { return 'overview'; }
+  }
+  function saveTab(t) { try { localStorage.setItem(TAB_KEY, t); } catch (e) {} }
   function deepCopy(o) { return JSON.parse(JSON.stringify(o)); }
   function mergeParams(base, overlay) {
     Object.keys(overlay || {}).forEach(function (k) {
@@ -212,9 +278,18 @@
     // Сегментный коэффициент подстраивает CR под особенности CJM (повторные конвертят выше,
     // спящие — ниже). LTV_0 — ценность лида сегмента в нулевой период.
     var crSegment = le.crApprove * (s.funnelMul || 1);
-    var ltv0 = le.net * crSegment;
-    var ltv1 = ltv0 + (ltv0 * (s.ret1 / 100)) / (1 + d);
-    var ltv2 = ltv1 + (ltv0 * (s.ret2 / 100)) / Math.pow(1 + d, 2);
+    var ltv0, ltv1, ltv2;
+    if (s.router === 'bfl') {
+      // Smart Safe Router (ТЗ-1 §2.3): лиды сегмента продаются на офферы БФЛ по фикс-EPL.
+      // Доход реализуется сразу (lead-gen), без классической воронки выдач и без retention-хвоста.
+      var revBfl = (s.eplBfl || EPL_BFL) * (1 - p.revShare / 100);
+      ltv0 = revBfl; ltv1 = revBfl; ltv2 = revBfl;
+      crSegment = (s.crLeadBfl != null ? s.crLeadBfl : CR_LEAD_BFL) / 100;
+    } else {
+      ltv0 = le.net * crSegment;
+      ltv1 = ltv0 + (ltv0 * (s.ret1 / 100)) / (1 + d);
+      ltv2 = ltv1 + (ltv0 * (s.ret2 / 100)) / Math.pow(1 + d, 2);
+    }
     var roi = s.cac > 0 ? (ltv2 - s.cac) / s.cac * 100 : 0;
     var ltvCac = s.cac > 0 ? ltv2 / s.cac : 0;
     // Срок окупаемости (месяцы): линейная интерполяция по точкам 0 / 12 / 24 мес.
@@ -393,35 +468,84 @@
 
   /* ============================== РЕНДЕР ============================== */
 
-  var params = load();
+  var baseParams = load();         // редактируемая «As-Is» база (панель управления, слоты, пресеты)
+  var currentMode = loadMode();    // 'asis' | 'tobe'
+  var activeTab = loadTab();
+  var params = applyMode(baseParams, currentMode); // производные вводные активной модели (для расчётов/графиков)
   var activeFunnelSeg = 'new';
+  var scenarioUsers = USERS_BASE;
+
+  // Пересчитать производные вводные активной модели из базы (вызывается перед каждым рендером).
+  function refreshViewParams() { params = applyMode(baseParams, currentMode); }
 
   function render() {
     var host = document.getElementById('ueLab');
     if (!host) return;
+    refreshViewParams();
     host.innerHTML =
       '<div class="ue2">' +
         '<aside class="ue2-side">' + sidebarHtml() + '</aside>' +
-        '<div class="ue2-main">' +
-          presetBarHtml() +
-          kpiHtml() +
-          tzSegmentLightHtml() +
-          rplBarChartHtml() +
-          repeatABHtml() +
-          insightsHtml() +
-          segmentMatrixHtml() +
-          '<div class="ue2-row">' +
-            funnelCardHtml() +
-            cohortCardHtml() +
-          '</div>' +
-          waterfallCardHtml() +
-          compareSplitHtml() +
-          summaryHtml() +
-        '</div>' +
+        '<div class="ue2-main">' + mainHtml() + '</div>' +
       '</div>' +
       explainModalHtml();
     wire();
     drawCharts();
+  }
+
+  // Шапка модели (Toggle As-Is/To-Be) + лента табов + панель активного таба.
+  function mainHtml() {
+    return modeToggleHtml() + tabsNavHtml() +
+      '<div class="ue2-tabpanel" id="ueTabPanel" role="tabpanel">' + tabPanelHtml(activeTab) + '</div>';
+  }
+
+  // ---- Toggle [As-Is] / [To-Be] (ТЗ-1 §3.1) ----
+  function modeToggleHtml() {
+    var k = blendedKpis(params);
+    var tone = ltvCacTone(k.blendedRatio);
+    return '<div class="ue2-modebar">' +
+      '<div class="ue2-mode-switch" role="tablist" aria-label="Модель юнит-экономики">' +
+        '<button type="button" class="ue2-mode-btn' + (currentMode === 'asis' ? ' is-active' : '') + '"' +
+          ' role="tab" aria-selected="' + (currentMode === 'asis') + '" data-ue-mode="asis">Текущая модель · As-Is</button>' +
+        '<button type="button" class="ue2-mode-btn' + (currentMode === 'tobe' ? ' is-active' : '') + '"' +
+          ' role="tab" aria-selected="' + (currentMode === 'tobe') + '" data-ue-mode="tobe">Целевая · Router &amp; Quiz · To-Be</button>' +
+      '</div>' +
+      '<div class="ue2-mode-meta">' +
+        '<span class="ue2-mode-pill tone-' + tone + '">Blended LTV/CAC ' + ratio(k.blendedRatio) + '</span>' +
+        '<span class="ue2-mode-hint">' + (currentMode === 'tobe'
+          ? 'Целевой сценарий: Квиз снижает CAC, Smart Safe Router монетизирует «Просроченных» на БФЛ.'
+          : 'Базовая экономика проекта без оптимизаций — портфель убыточен.') + '</span>' +
+      '</div>' +
+    '</div>';
+  }
+
+  // ---- Лента табов (ARIA tablist) ----
+  function tabsNavHtml() {
+    var btns = TABS.map(function (t) {
+      var active = t.id === activeTab;
+      return '<button type="button" class="ue2-tab' + (active ? ' is-active' : '') + '"' +
+        ' role="tab" id="ueTab-' + t.id + '" aria-selected="' + active + '" aria-controls="ueTabPanel"' +
+        ' data-ue-tab="' + t.id + '" tabindex="' + (active ? '0' : '-1') + '">' + esc(t.name) + '</button>';
+    }).join('');
+    return '<div class="ue2-tabs" role="tablist" aria-label="Разделы юнит-экономики">' + btns + '</div>';
+  }
+
+  // ---- Контент активного таба (переиспользует существующие рендереры) ----
+  function tabPanelHtml(tab) {
+    switch (tab) {
+      case 'segments':
+        return tzSegmentLightHtml() + rplBarChartHtml() + segmentMatrixHtml();
+      case 'funnel':
+        return '<div class="ue2-row">' + funnelCardHtml() + cohortCardHtml() + '</div>';
+      case 'pnl':
+        return waterfallCardHtml() + summaryHtml();
+      case 'scenario':
+        return scenario10kHtml();
+      case 'ab':
+        return repeatABHtml() + insightsHtml() + presetBarHtml() + compareSplitHtml();
+      case 'overview':
+      default:
+        return kpiHtml() + tzSegmentLightHtml() + summaryHtml();
+    }
   }
 
   /* ---------- Sidebar (панель управления) ---------- */
@@ -443,36 +567,37 @@
   }
 
   function sidebarHtml() {
+    var bp = baseParams; // панель управления всегда редактирует «As-Is» базу
     var common =
       '<div class="ue2-side-group">' +
         '<h4>Общие метрики</h4>' +
-        sliderRow('epl',      'EPL',      '₽ за выдачу',    100, 3000, 10,  params.epl,
+        sliderRow('epl',      'EPL',      '₽ за выдачу',    100, 3000, 10,  bp.epl,
           'Доход партнёрской программы за одобренную выдачу.') +
-        sliderRow('opex',     'OPEX',     '₽ на лида',      0,   600,  5,   params.opex,
+        sliderRow('opex',     'OPEX',     '₽ на лида',      0,   600,  5,   bp.opex,
           'Технические и операционные расходы на обработку одного лида.') +
-        sliderRow('revShare', 'Rev Share','%',              0,   80,   1,   params.revShare,
+        sliderRow('revShare', 'Rev Share','%',              0,   80,   1,   bp.revShare,
           'Доля партнёра/паблишера в валовом доходе с одной выдачи.') +
-        sliderRow('discount', 'Дисконт',  '%/год',          0,   60,   1,   params.discount,
+        sliderRow('discount', 'Дисконт',  '%/год',          0,   60,   1,   bp.discount,
           'Ставка дисконтирования будущих когортных доходов.') +
       '</div>';
 
     var funnel =
       '<div class="ue2-side-group">' +
         '<h4>Метрики воронки</h4>' +
-        sliderRow('crVisitLead',    'CR Visit → Lead',      '%', 0, 30, 0.5, params.crVisitLead) +
-        sliderRow('crLeadClickout', 'CR Lead → Click-out',  '%', 0, 90, 1,   params.crLeadClickout) +
-        sliderRow('crClickoutIssue','CR Click-out → Выдача','%', 0, 90, 1,   params.crClickoutIssue) +
+        sliderRow('crVisitLead',    'CR Visit → Lead',      '%', 0, 30, 0.5, bp.crVisitLead) +
+        sliderRow('crLeadClickout', 'CR Lead → Click-out',  '%', 0, 90, 1,   bp.crLeadClickout) +
+        sliderRow('crClickoutIssue','CR Click-out → Выдача','%', 0, 90, 1,   bp.crClickoutIssue) +
       '</div>';
 
     var cross =
       '<div class="ue2-side-group">' +
         '<h4>Кросс-сейл</h4>' +
-        sliderRow('crCross',  'CR Cross-sell', '%',           0, 60,   1,  params.crCross) +
-        sliderRow('crossEpl', 'Доп. EPL',     '₽ за выдачу',  0, 3000, 10, params.crossEpl) +
+        sliderRow('crCross',  'CR Cross-sell', '%',           0, 60,   1,  bp.crCross) +
+        sliderRow('crossEpl', 'Доп. EPL',     '₽ за выдачу',  0, 3000, 10, bp.crossEpl) +
       '</div>';
 
     var segs = SEGMENTS.map(function (s) {
-      var sp = params.seg[s.id];
+      var sp = bp.seg[s.id];
       return '<div class="ue2-side-group ue2-seg-group" data-seg="' + s.id + '" style="--seg-accent:' + s.accent + '">' +
         '<h4><span class="ue2-seg-dot" style="background:' + s.accent + '"></span>Сегмент · ' + esc(s.name) + '</h4>' +
         segSliderRow(s.id, 'cac',       'CAC',         '₽',  0, 5000, 50, sp.cac) +
@@ -484,9 +609,13 @@
       '</div>';
     }).join('');
 
+    var modeNote = currentMode === 'tobe'
+      ? '<p class="ue2-side-note">Активна <b>целевая модель (To-Be)</b>: поверх этих вводных применяются Квиз, новый Traffic&nbsp;Mix и Smart&nbsp;Safe&nbsp;Router&nbsp;→&nbsp;БФЛ. Ползунки задают базовый («As-Is») сценарий.</p>'
+      : '';
     return '<div class="ue2-side-head"><h3>Панель управления</h3>' +
       '<button class="ue2-reset" type="button" id="ueResetParams">Сбросить</button></div>' +
       '<p class="ue2-side-lead">Все вводные из листа «Вводные» Excel-модели. Двигайте ползунки или вводите значение — все KPI, графики и P&amp;L пересчитываются мгновенно.</p>' +
+      modeNote +
       common + funnel + cross + thresholdsSidebarHtml() + segs;
   }
 
@@ -563,24 +692,45 @@
     }
   };
 
+  // Дополнительные «Плюсы» целевой модели (ТЗ-1 §3.3).
+  var SEGMENT_NOTES_TOBE = {
+    new: ['Оптимизация CAC за счёт квиза'],
+    overdue: ['Высокая маржинальность за счёт продажи лидов на БФЛ']
+  };
+
+  // Подпись Payback: для «зелёных» сегментов целевой модели (LTV/CAC > порога) — «до 2 мес» (ТЗ-1 §3.2).
+  function paybackDisplay(e) {
+    if (currentMode === 'tobe' && e.ltvCac > SEG_PAYBACK_THRESHOLD) return 'до 2 мес';
+    return paybackText(e.payback);
+  }
+
   function segmentMatrixHtml() {
     var cards = SEGMENTS.map(function (s) {
       var e = segmentEconomics(params, s.id);
       var t = ltvCacTone(e.ltvCac);
       var pTone = paybackTone(e.payback);
       var n = SEGMENT_NOTES[s.id];
-      var pros = n.pros.map(function (x) { return '<li>' + esc(x) + '</li>'; }).join('');
+      var prosArr = n.pros.slice();
+      // В целевой модели сегменты, преодолевшие порог окупаемости, подсвечиваются зелёным.
+      var passed = currentMode === 'tobe' && e.ltvCac > SEG_PAYBACK_THRESHOLD;
+      if (currentMode === 'tobe' && SEGMENT_NOTES_TOBE[s.id]) prosArr = SEGMENT_NOTES_TOBE[s.id].concat(prosArr);
+      var pros = prosArr.map(function (x, i) {
+        var hot = currentMode === 'tobe' && SEGMENT_NOTES_TOBE[s.id] && i < SEGMENT_NOTES_TOBE[s.id].length;
+        return '<li' + (hot ? ' class="ue2-pro-hot"' : '') + '>' + esc(x) + '</li>';
+      }).join('');
       var cons = n.cons.map(function (x) { return '<li>' + esc(x) + '</li>'; }).join('');
-      return '<div class="ue2-seg-card" style="--seg-accent:' + s.accent + '">' +
+      var pTone2 = passed ? 'green' : pTone;
+      return '<div class="ue2-seg-card' + (passed ? ' is-target-green' : '') + '" style="--seg-accent:' + s.accent + '">' +
         '<div class="ue2-seg-head"><span class="ue2-seg-dot" style="background:' + s.accent + '"></span>' +
           '<h3>' + esc(s.name) + '</h3>' +
+          (passed ? '<span class="ue2-seg-target-badge">окупается</span>' : '') +
           '<span class="ue2-seg-share">' + pct(e.share) + ' трафика</span></div>' +
         '<div class="ue2-seg-metrics">' +
           '<div><span>LTV₂</span><b>' + money(e.ltv2) + '</b></div>' +
           '<div><span>CAC</span><b>' + money(e.cac) + '</b></div>' +
           '<div><span>LTV/CAC</span><b class="tone-' + t + '">' + ratio(e.ltvCac) + '</b></div>' +
           '<div><span>ROMI</span><b class="tone-' + (e.roi >= 0 ? 'green' : 'red') + '">' + pct(e.roi) + '</b></div>' +
-          '<div><span>Payback</span><b class="tone-' + pTone + '">' + paybackText(e.payback) + '</b></div>' +
+          '<div><span>Payback</span><b class="tone-' + pTone2 + '">' + esc(paybackDisplay(e)) + '</b></div>' +
           '<div><span>CR лида → выдача</span><b>' + pct(e.crSegment * 100) + '</b></div>' +
         '</div>' +
         '<div class="ue2-seg-prosc">' +
@@ -593,6 +743,212 @@
       '<div class="ue2-card-head"><h2>Сегменты · выгоды и риски каждого</h2>' +
         '<p>Чекер через ЦФ — это <b>дополнительный</b> инструмент перенаправления трафика. Большая доля пользователей не находится в базе ЦФ, поэтому каждый сегмент остаётся ценным и не отсекается, а монетизируется через свой CJM-маршрут.</p></div>' +
       '<div class="ue2-seg-grid">' + cards + '</div>' +
+    '</div>';
+  }
+
+  /* ================= ТАБ «Сценарий 10 000 пользователей» ================= */
+  // Расчёт окупаемости на фиксированной базе привлечённого трафика N.
+  // Работает в обоих режимах Toggle: p — это уже производные вводные активной модели.
+  function scenario10k(p, N) {
+    N = (isFinite(N) && N > 0) ? N : USERS_BASE;
+    var totalShare = SEGMENTS.reduce(function (a, s) { return a + (p.seg[s.id].share || 0); }, 0) || 1;
+    var rows = SEGMENTS.map(function (s) {
+      var sp = p.seg[s.id];
+      var e = segmentEconomics(p, s.id);
+      var users = N * (sp.share || 0) / totalShare;
+      var isBfl = sp.router === 'bfl';
+      // Лиды: классика — visit→lead; БФЛ — visit→квал.лид (CR_lead_bfl).
+      var leadCr = isBfl ? (sp.crLeadBfl != null ? sp.crLeadBfl : CR_LEAD_BFL) : p.crVisitLead;
+      var leads = users * leadCr / 100;
+      // Промежуточные шаги воронки (для таблицы).
+      var clickouts, issues;
+      if (isBfl) {
+        clickouts = leads;            // лид сразу уходит на БФЛ-оффер (lead-gen)
+        issues = leads;               // квалифицированный лид = «выдача» дохода
+      } else {
+        var mulSqrt = Math.sqrt(sp.funnelMul || 1);
+        clickouts = leads * (p.crLeadClickout / 100) * mulSqrt;
+        issues = leads * e.crSegment; // = leads × CR_clickout × CR_issue × funnelMul
+      }
+      var revenue = leads * e.ltv2;             // выручка = лиды × доход на лида (LTV₂)
+      var cacTotal = leads * e.cac;             // маркетинговый расход на привлечение
+      var opexTotal = leads * p.opex;           // операционка на обработку лидов
+      var margin = revenue - cacTotal - opexTotal;
+      var romi = cacTotal > 0 ? margin / cacTotal * 100 : 0;
+      return {
+        seg: s, isBfl: isBfl, users: users, leads: leads, clickouts: clickouts, issues: issues,
+        revenue: revenue, cacTotal: cacTotal, opexTotal: opexTotal, margin: margin, romi: romi,
+        ltv2: e.ltv2, cac: e.cac, ltvCac: e.ltvCac, leadCr: leadCr
+      };
+    });
+    var tot = rows.reduce(function (a, r) {
+      a.users += r.users; a.leads += r.leads; a.clickouts += r.clickouts; a.issues += r.issues;
+      a.revenue += r.revenue; a.cacTotal += r.cacTotal; a.opexTotal += r.opexTotal; a.margin += r.margin;
+      return a;
+    }, { users: 0, leads: 0, clickouts: 0, issues: 0, revenue: 0, cacTotal: 0, opexTotal: 0, margin: 0 });
+    var spendTotal = tot.cacTotal + tot.opexTotal;
+    var romiTotal = tot.cacTotal > 0 ? tot.margin / tot.cacTotal * 100 : 0;
+    var k = blendedKpis(p);
+    var arpu = N > 0 ? tot.revenue / N : 0;       // выручка на привлечённого пользователя
+    var marginPerUser = N > 0 ? tot.margin / N : 0;
+    // Точка безубыточности: во сколько раз нужно изменить blended CAC, чтобы маржа = 0.
+    var cacBreakevenMult = tot.cacTotal > 0 ? (tot.revenue - tot.opexTotal) / tot.cacTotal : 0;
+    return {
+      N: N, rows: rows, tot: tot, spendTotal: spendTotal, romiTotal: romiTotal,
+      blendedRatio: k.blendedRatio, arpu: arpu, marginPerUser: marginPerUser,
+      cacBreakevenMult: cacBreakevenMult
+    };
+  }
+
+  function scenarioTone(margin, ratio) {
+    if (margin >= 0 && ratio > 2.5) return 'green';
+    if (margin >= 0 || ratio >= 1) return 'yellow';
+    return 'red';
+  }
+
+  function scenario10kHtml() {
+    return '<div class="ue2-card ue2-scenario-card">' +
+      '<div class="ue2-card-head ue2-row-between">' +
+        '<div><h2>Сценарий на 10 000 пользователей</h2>' +
+          '<p>Прогон фиксированной базы привлечённого трафика через юнит-экономику активной модели: ' +
+          'визиты → лиды → клик-ауты → выдачи / квал. лиды → доход → расход (CAC + OPEX) → маржа → ROMI. ' +
+          'Переключайте <b>As-Is / To-Be</b> сверху — видно, при каких цифрах экономика сходится.</p></div>' +
+        '<label class="ue2-seg-select">База пользователей' +
+          '<input type="number" id="ueScenarioN" class="ue2-num" min="100" max="10000000" step="100" value="' + scenarioUsers + '"></label>' +
+      '</div>' +
+      '<div id="ueScenarioBody">' + scenario10kBodyHtml() + '</div>' +
+    '</div>';
+  }
+
+  function nfmt(n) { return Math.round(Number(n) || 0).toLocaleString('ru-RU'); }
+
+  function scenario10kBodyHtml() {
+    var r = scenario10k(params, scenarioUsers);
+    var tone = scenarioTone(r.tot.margin, r.blendedRatio);
+    var modeLabel = currentMode === 'tobe' ? 'Целевая · To-Be' : 'Текущая · As-Is';
+
+    // --- Воронка на N (таблица) ---
+    var funnelRows = r.rows.map(function (x) {
+      return '<tr>' +
+        '<td class="ue2-t-name"><span class="ue2-seg-dot" style="background:' + x.seg.accent + '"></span>' + esc(x.seg.name) +
+          (x.isBfl ? ' <span class="ue2-bfl-tag">БФЛ</span>' : '') + '</td>' +
+        '<td class="ue2-t-num">' + nfmt(x.users) + '</td>' +
+        '<td class="ue2-t-num">' + nfmt(x.leads) + '<span class="ue2-t-sub">' + pct(x.leadCr) + '</span></td>' +
+        '<td class="ue2-t-num">' + nfmt(x.clickouts) + '</td>' +
+        '<td class="ue2-t-num">' + nfmt(x.issues) + (x.isBfl ? '<span class="ue2-t-sub">квал. лиды</span>' : '') + '</td>' +
+        '<td class="ue2-t-num">' + money(x.revenue) + '</td>' +
+      '</tr>';
+    }).join('');
+    var funnelTable =
+      '<div class="ue2-scn-block"><h3>Воронка на ' + nfmt(r.N) + ' пользователей</h3>' +
+      '<div class="ue2-table-wrap"><table class="ue2-scn-table">' +
+        '<thead><tr><th>Сегмент</th><th>Визиты</th><th>Лиды</th><th>Клик-ауты</th><th>Выдачи / квал. лиды</th><th>Доход</th></tr></thead>' +
+        '<tbody>' + funnelRows + '</tbody>' +
+        '<tfoot><tr><td class="ue2-t-name">Итого</td>' +
+          '<td class="ue2-t-num">' + nfmt(r.tot.users) + '</td>' +
+          '<td class="ue2-t-num">' + nfmt(r.tot.leads) + '</td>' +
+          '<td class="ue2-t-num">' + nfmt(r.tot.clickouts) + '</td>' +
+          '<td class="ue2-t-num">' + nfmt(r.tot.issues) + '</td>' +
+          '<td class="ue2-t-num">' + money(r.tot.revenue) + '</td></tr></tfoot>' +
+      '</table></div></div>';
+
+    // --- P&L на N (таблица) ---
+    var pnlRows = r.rows.map(function (x) {
+      return '<tr>' +
+        '<td class="ue2-t-name"><span class="ue2-seg-dot" style="background:' + x.seg.accent + '"></span>' + esc(x.seg.name) + '</td>' +
+        '<td class="ue2-t-num">' + money(x.revenue) + '</td>' +
+        '<td class="ue2-t-num">' + money(x.cacTotal) + '</td>' +
+        '<td class="ue2-t-num">' + money(x.opexTotal) + '</td>' +
+        '<td class="ue2-t-num tone-' + (x.margin >= 0 ? 'green' : 'red') + '">' + money(x.margin) + '</td>' +
+        '<td class="ue2-t-num tone-' + (x.romi >= 0 ? 'green' : 'red') + '">' + pct(x.romi) + '</td>' +
+      '</tr>';
+    }).join('');
+    var pnlTable =
+      '<div class="ue2-scn-block"><h3>P&amp;L на ' + nfmt(r.N) + ' пользователей · ' + modeLabel + '</h3>' +
+      '<div class="ue2-table-wrap"><table class="ue2-scn-table">' +
+        '<thead><tr><th>Сегмент</th><th>Доход</th><th>CAC</th><th>OPEX</th><th>Маржа</th><th>ROMI</th></tr></thead>' +
+        '<tbody>' + pnlRows + '</tbody>' +
+        '<tfoot><tr class="tone-' + tone + '"><td class="ue2-t-name">Итого</td>' +
+          '<td class="ue2-t-num">' + money(r.tot.revenue) + '</td>' +
+          '<td class="ue2-t-num">' + money(r.tot.cacTotal) + '</td>' +
+          '<td class="ue2-t-num">' + money(r.tot.opexTotal) + '</td>' +
+          '<td class="ue2-t-num tone-' + (r.tot.margin >= 0 ? 'green' : 'red') + '">' + money(r.tot.margin) + '</td>' +
+          '<td class="ue2-t-num tone-' + (r.romiTotal >= 0 ? 'green' : 'red') + '">' + pct(r.romiTotal) + '</td></tr></tfoot>' +
+      '</table></div></div>';
+
+    // --- Сводные плитки ---
+    var summary =
+      '<div class="ue2-scn-tiles">' +
+        scnTile('Выручка', money(r.tot.revenue), 'blue') +
+        scnTile('Расходы (CAC + OPEX)', money(r.spendTotal), 'orange') +
+        scnTile('Маржа', money(r.tot.margin), r.tot.margin >= 0 ? 'green' : 'red') +
+        scnTile('ROMI', pct(r.romiTotal), r.romiTotal >= 0 ? 'green' : 'red') +
+        scnTile('Blended LTV/CAC', ratio(r.blendedRatio), ltvCacTone(r.blendedRatio)) +
+        scnTile('Маржа на пользователя', money1(r.marginPerUser), r.marginPerUser >= 0 ? 'green' : 'red') +
+      '</div>';
+
+    // --- Блок окупаемости ---
+    var verdict = r.tot.margin >= 0 && r.blendedRatio > 2.5
+      ? '🟢 Сценарий окупается: маржа положительна, Blended LTV/CAC выше таргета инвесткомитета (&gt; 2.5x).'
+      : (r.tot.margin >= 0
+        ? '🟡 На грани: проект в плюсе, но Blended LTV/CAC ещё не достиг таргета 2.5x.'
+        : '🔴 Убыток: на базе ' + nfmt(r.N) + ' пользователей расходы превышают доход. Нужны рычаги To-Be.');
+    var breakeven =
+      '<div class="ue2-scn-block ue2-scn-breakeven tone-' + tone + '">' +
+        '<h3>Точка безубыточности · при каких цифрах сходится</h3>' +
+        '<p class="ue2-scn-verdict">' + verdict + '</p>' +
+        '<ul class="ue2-scn-thresholds">' +
+          '<li>Маржа = 0 при blended CAC ≈ <b>' + money(r.tot.leads > 0 ? (r.tot.revenue - r.tot.opexTotal) / r.tot.leads : 0) + '</b> на лида ' +
+            '(текущий blended ≈ ' + money(r.tot.leads > 0 ? r.tot.cacTotal / r.tot.leads : 0) + ').</li>' +
+          '<li>Допустимый рост CAC до нуля прибыли: <b>×' + (Number(r.cacBreakevenMult) || 0).toLocaleString('ru-RU', { maximumFractionDigits: 2 }) + '</b> от текущего.</li>' +
+          '<li>Целевые рычаги To-Be: CR&nbsp;Visit→Lead Нового +20% (квиз) → CAC 1200→800&nbsp;₽; ' +
+            'EPL&nbsp;БФЛ 3000&nbsp;₽ при CR&nbsp;10%; Traffic&nbsp;Mix 40/30/20/10 → Blended&nbsp;LTV/CAC&nbsp;&gt;&nbsp;2.5x.</li>' +
+        '</ul>' +
+      '</div>';
+
+    // --- Оценка реалистичности ---
+    var realism = scenarioRealismHtml();
+
+    return summary + funnelTable + pnlTable + breakeven + realism;
+  }
+
+  function scnTile(label, val, tone) {
+    return '<div class="ue2-scn-tile tone-' + tone + '">' +
+      '<span class="ue2-scn-tile-label">' + esc(label) + '</span>' +
+      '<span class="ue2-scn-tile-val">' + val + '</span></div>';
+  }
+
+  // Коридоры правдоподобности ключевых допущений (financial-marketplace mindset).
+  function scenarioRealismHtml() {
+    var checks = [
+      { name: 'Квиз +20% к CR Visit→Lead', tone: 'green',
+        note: 'Реалистично: интерактивный пред-скоринг типично даёт +15–30% к конверсии в лид.' },
+      { name: 'CAC Нового 1200 → 800 ₽', tone: 'green',
+        note: 'Достижимо за счёт роста CR при той же ставке закупки трафика.' },
+      { name: 'CR лид → квал. БФЛ 10%', tone: 'green',
+        note: 'Консервативно для «просрочки»: тёплый интент на банкротство/рефинанс.' },
+      { name: 'EPL БФЛ 3000 ₽ за лид', tone: 'yellow',
+        note: 'В рынке payout БФЛ 2500–5000 ₽; зависит от качества лида и партнёра.' },
+      { name: 'Traffic Mix 40/30/20/10', tone: 'yellow',
+        note: 'Требует зрелой CRM-базы: повторные 40% достижимы на горизонте 6–12 мес.' },
+      { name: 'Downstream CR 70% (To-Be)', tone: 'yellow',
+        note: 'Оптимистично: квиз-преквалификация поднимает клик-аут и выдачу, но проверять A/B.' }
+    ];
+    var items = checks.map(function (c) {
+      return '<li class="ue2-real-item tone-' + c.tone + '">' +
+        '<span class="ue2-real-dot"></span>' +
+        '<span class="ue2-real-name">' + esc(c.name) + '</span>' +
+        '<span class="ue2-real-note">' + esc(c.note) + '</span></li>';
+    }).join('');
+    return '<div class="ue2-scn-block ue2-scn-realism">' +
+      '<h3>Оценка реалистичности допущений</h3>' +
+      '<p>Светофор по «коридорам правдоподобности» — чтобы инвесткомитет видел не только красивые, но и достижимые цифры арбитража/финмаркетплейса.</p>' +
+      '<ul class="ue2-real-list">' + items + '</ul>' +
+      '<div class="ue2-scn-scenarios">' +
+        '<div class="ue2-scn-sc"><h5>Консервативный</h5><p>Только квиз (CAC↓). Просрочка в классике. Проект около нуля — Blended ≈ 1.0–1.4x.</p></div>' +
+        '<div class="ue2-scn-sc"><h5>Базовый</h5><p>Квиз + Router БФЛ, Mix частично сдвинут. Blended ≈ 1.8–2.2x, маржа в плюсе.</p></div>' +
+        '<div class="ue2-scn-sc ue2-scn-sc-target"><h5>Целевой (To-Be)</h5><p>Квиз + Router + Mix 40/30/20/10 + downstream-уплифт. Blended &gt; 2.5x, маржа уверенно положительна.</p></div>' +
+      '</div>' +
     '</div>';
   }
 
@@ -1195,35 +1551,80 @@
     if (path.indexOf('seg.') === 0) {
       var parts = path.split('.');
       var sid = parts[1], field = parts[2];
-      if (!params.seg[sid]) return;
-      params.seg[sid][field] = v;
+      if (!baseParams.seg[sid]) return;
+      baseParams.seg[sid][field] = v;
     } else {
-      params[path] = v;
+      baseParams[path] = v;
     }
-    save(params);
+    save(baseParams);
   }
 
   function partialRefresh() {
-    // Обновляем KPI, матрицу, графики и итог без перерисовки сайдбара (чтобы не терять фокус).
-    var main = document.querySelector('#ueLab .ue2-main');
-    if (!main) return;
-    main.innerHTML =
-      presetBarHtml() +
-      kpiHtml() +
-      tzSegmentLightHtml() +
-      rplBarChartHtml() +
-      repeatABHtml() +
-      insightsHtml() +
-      segmentMatrixHtml() +
-      '<div class="ue2-row">' + funnelCardHtml() + cohortCardHtml() + '</div>' +
-      waterfallCardHtml() +
-      compareSplitHtml() +
-      summaryHtml();
+    // Пересчитываем производные вводные активной модели и перерисовываем только панель таба
+    // (без сайдбара, чтобы не терять фокус ползунков).
+    refreshViewParams();
+    var panel = document.getElementById('ueTabPanel');
+    if (!panel) return;
+    // Модебар содержит blended-метрику — её тоже надо освежить.
+    var modebar = document.querySelector('#ueLab .ue2-modebar');
+    if (modebar) modebar.outerHTML = modeToggleHtml();
+    panel.innerHTML = tabPanelHtml(activeTab);
     wireMainOnly();
     drawCharts();
   }
 
   function wireMainOnly() {
+    // Переключатель модели As-Is / To-Be
+    document.querySelectorAll('#ueLab [data-ue-mode]').forEach(function (b) {
+      b.addEventListener('click', function () {
+        var m = b.getAttribute('data-ue-mode') === 'tobe' ? 'tobe' : 'asis';
+        if (m === currentMode) return;
+        currentMode = m; saveMode(m);
+        render();
+      });
+    });
+    // Лента табов (клик + клавиатура)
+    var tabBtns = Array.prototype.slice.call(document.querySelectorAll('#ueLab [data-ue-tab]'));
+    function activateTab(id) {
+      if (id === activeTab) return;
+      activeTab = id; saveTab(id);
+      document.querySelectorAll('#ueLab [data-ue-tab]').forEach(function (x) {
+        var on = x.getAttribute('data-ue-tab') === id;
+        x.classList.toggle('is-active', on);
+        x.setAttribute('aria-selected', on);
+        x.tabIndex = on ? 0 : -1;
+      });
+      refreshViewParams();
+      var panel = document.getElementById('ueTabPanel');
+      if (panel) panel.innerHTML = tabPanelHtml(activeTab);
+      wireMainOnly();
+      drawCharts();
+    }
+    tabBtns.forEach(function (b, i) {
+      b.addEventListener('click', function () { activateTab(b.getAttribute('data-ue-tab')); });
+      b.addEventListener('keydown', function (e) {
+        var idx = i;
+        if (e.key === 'ArrowRight' || e.key === 'ArrowDown') { idx = (i + 1) % tabBtns.length; }
+        else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') { idx = (i - 1 + tabBtns.length) % tabBtns.length; }
+        else if (e.key === 'Home') { idx = 0; }
+        else if (e.key === 'End') { idx = tabBtns.length - 1; }
+        else if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); activateTab(b.getAttribute('data-ue-tab')); return; }
+        else { return; }
+        e.preventDefault();
+        tabBtns[idx].focus();
+        activateTab(tabBtns[idx].getAttribute('data-ue-tab'));
+      });
+    });
+    // Калькулятор сценария на 10 000 пользователей
+    var nInp = document.getElementById('ueScenarioN');
+    if (nInp) nInp.addEventListener('input', function () {
+      var v = Math.round(Number(nInp.value));
+      if (!isFinite(v) || v < 100) v = 100;
+      if (v > 10000000) v = 10000000;
+      scenarioUsers = v;
+      var body = document.getElementById('ueScenarioBody');
+      if (body) body.innerHTML = scenario10kBodyHtml();
+    });
     var fs = document.getElementById('ueFunnelSeg');
     if (fs) fs.addEventListener('change', function () {
       activeFunnelSeg = fs.value;
@@ -1245,8 +1646,8 @@
     document.querySelectorAll('[data-ue-preset]').forEach(function (b) {
       b.addEventListener('click', function () {
         var kind = b.getAttribute('data-ue-preset');
-        params = kind === 'base' ? deepCopy(DEFAULT_PARAMS) : presetParams(kind);
-        save(params); render();
+        baseParams = kind === 'base' ? deepCopy(DEFAULT_PARAMS) : presetParams(kind);
+        save(baseParams); render();
       });
     });
     // Сохранение слотов
@@ -1257,7 +1658,7 @@
       if (!name) { alert('Введите имя сценария.'); return; }
       var slots = loadSlots();
       if (slots.length >= 5) { alert('Достигнут лимит 5 слотов. Удалите ненужный.'); return; }
-      slots.push({ id: 'sl-' + Date.now().toString(36), name: name, params: deepCopy(params), ts: Date.now() });
+      slots.push({ id: 'sl-' + Date.now().toString(36), name: name, params: deepCopy(baseParams), ts: Date.now() });
       saveSlots(slots); partialRefresh();
     });
     document.querySelectorAll('[data-ue-load-slot]').forEach(function (b) {
@@ -1265,8 +1666,8 @@
         var slots = loadSlots();
         var s = slots.find(function (x) { return x.id === b.getAttribute('data-ue-load-slot'); });
         if (!s) return;
-        params = mergeParams(deepCopy(DEFAULT_PARAMS), s.params);
-        save(params); render();
+        baseParams = mergeParams(deepCopy(DEFAULT_PARAMS), s.params);
+        save(baseParams); render();
       });
     });
     document.querySelectorAll('[data-ue-del-slot]').forEach(function (b) {
@@ -1374,8 +1775,8 @@
     });
     var reset = document.getElementById('ueResetParams');
     if (reset) reset.addEventListener('click', function () {
-      params = deepCopy(DEFAULT_PARAMS);
-      save(params);
+      baseParams = deepCopy(DEFAULT_PARAMS);
+      save(baseParams);
       render();
     });
     wireMainOnly();

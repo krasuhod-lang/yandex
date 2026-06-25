@@ -1537,7 +1537,8 @@ function renderContextualViews(){
   {id:'ltv-cac',roles:['Руководитель'],label:'Окупаемость рекламы',value:_u.romi.toFixed(1)+'%',sub:`маржа / стоимость лида · светофор: ${_romiStatus.recommendation}`,cls:_romiStatus.level==='success'?'positive':_romiStatus.level==='danger'?'negative':'',delta:_toDelta(_romiBadge)}
  ]));
  renderUnitRationale(_u,_um);
- document.getElementById('formulaList').innerHTML=filterByRole(formulaCatalog).map(x=>`<div class="mini-row" ${drillAttrs('formula',x.label)}><span>${escapeHtml(x.label)}</span><b>${escapeHtml(x.status)}</b></div>`).join('');
+ var _formulaListEl=document.getElementById('formulaList');
+ if(_formulaListEl)_formulaListEl.innerHTML=filterByRole(formulaCatalog).map(x=>`<div class="mini-row" ${drillAttrs('formula',x.label)}><span>${escapeHtml(x.label)}</span><b>${escapeHtml(x.status)}</b></div>`).join('');
  const filteredAlerts=filterContext(alertCatalog);
  document.getElementById('alertsGrid').innerHTML=(filteredAlerts.length?filteredAlerts:alertCatalog).map(a=>`<div class="card alert-card" ${drillAttrs('alert',a.id)}><div class="alert-head"><h3>${escapeHtml(a.entity)}</h3><span class="delta ${a.severity==='red'?'bad':a.severity==='yellow'?'warn':'good'}">${a.severity==='red'?'критично':a.severity==='yellow'?'внимание':'норма'}</span></div><div class="mini-row"><span>Первое обнаружение</span><b>${DATA_SOURCE.updatedAt}</b></div><p class="muted">${escapeHtml(a.reason)}</p><div class="actions"><button class="action" type="button" ${drillAttrs('alert',a.id)}>Разобрать сигнал</button></div></div>`).join('');
  const filteredExperiments=filterContext(experimentCatalog);
