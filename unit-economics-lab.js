@@ -25,8 +25,6 @@
   // ---- Константы целевой модели «To-Be» (ТЗ §2) ----
   var USERS_BASE = 10000;        // фикс-база сценария окупаемости (10 000 пользователей)
   var QUIZ_UPLIFT = 0.20;        // +20% к CR Visit→Lead Нового сегмента за счёт интерактивного Квиза
-  var EPL_BFL = 3000;            // фикс-доход (EPL) за квалифицированный лид БФЛ (Smart Safe Router)
-  var CR_LEAD_BFL = 10;          // %, конверсия трафика «Просроченных» в квалифицированный лид БФЛ
   // Порог «зелёного» статуса карточки сегмента: LTV/CAC ≥ 2.5x (ТЗ §4 — масштабируем).
   var SEG_PAYBACK_THRESHOLD = 2.5;
 
@@ -65,6 +63,11 @@
     // Кросс-сейл
     crCross: 10,           // %
     crossEpl: 1200,
+    // Настройки Smart Safe Router
+    cfRejectRate: 70,      // % отказов ЦФ (Soft Reject)
+    crCrossBank: 5,        // % кросс-сейл некредитных продуктов (Банки/РКО)
+    crLeadBfl: 10,         // % в квалифицированный лид БФЛ
+    eplBfl: 3000,          // Выплата БФЛ (EPL) в ₽
     // Сегменты: CAC, retention 1y, retention 2y, доля сегмента в общем трафике (%)
     // Базовая («As-Is») модель: Blended LTV/CAC ≈ 0.56x — проект убыточен.
     seg: {
@@ -84,7 +87,11 @@
   //   Калибровка даёт Blended LTV/CAC ≈ 2.6x (> 2.5x таргета инвесткомитета).
   function applyMode(base, mode) {
     var p = deepCopy(base);
-    if (mode !== 'tobe') return p;
+    if (mode !== 'tobe') {
+      p.isRouterActive = false;
+      return p;
+    }
+    p.isRouterActive = true;
     // §2.2 Квиз: +20% к CR Visit→Lead (объём лидов Нового растёт, CAC падает 1200→800).
     p.crVisitLead = Math.round(base.crVisitLead * (1 + QUIZ_UPLIFT) * 10) / 10;
     // Квиз пред-квалифицирует трафик → выше downstream-конверсии; динамические тарифы → выше EPL.
@@ -104,8 +111,8 @@
     p.seg.repeat.ret2 = 38;
     // §2.3 Smart Safe Router → БФЛ для «Просроченных»
     p.seg.overdue.router = 'bfl';
-    p.seg.overdue.eplBfl = EPL_BFL;
-    p.seg.overdue.crLeadBfl = CR_LEAD_BFL;
+    p.seg.overdue.eplBfl = p.eplBfl;
+    p.seg.overdue.crLeadBfl = p.crLeadBfl;
     return p;
   }
 
@@ -291,17 +298,48 @@
     // спящие — ниже). LTV_0 — ценность лида сегмента в нулевой период.
     var crSegment = le.crApprove * (s.funnelMul || 1);
     var ltv0, ltv1, ltv2;
-    if (s.router === 'bfl') {
-      // Smart Safe Router (ТЗ-1 §2.3): лиды сегмента продаются на офферы БФЛ по фикс-EPL.
-      // Доход реализуется сразу (lead-gen), без классической воронки выдач и без retention-хвоста.
-      var revBfl = (s.eplBfl || EPL_BFL) * (1 - p.revShare / 100);
-      ltv0 = revBfl; ltv1 = revBfl; ltv2 = revBfl;
-      crSegment = (s.crLeadBfl != null ? s.crLeadBfl : CR_LEAD_BFL) / 100;
+    var isBfl = s.router === 'bfl';
+
+    if (p.isRouterActive) {
+      if (segId === 'new') {
+        // Новый: Выдача ЦФ = 0 ₽. Маркетплейс зарабатывает только с отказников (Soft Reject).
+        var rejectRate = (p.cfRejectRate || 70) / 100;
+        var revReject = p.epl * (1 - p.revShare / 100);
+        ltv0 = rejectRate * revReject * crSegment;
+        ltv1 = ltv0 + (ltv0 * (s.ret1 / 100)) / (1 + d);
+        ltv2 = ltv1 + (ltv0 * (s.ret2 / 100)) / Math.pow(1 + d, 2);
+      } else if (segId === 'repeat' || segId === 'sleep') {
+        // Действующий и Спящий: Кредиты блокируются, заработок с кросс-сейла некредитных продуктов.
+        var crossBankRev = (p.crossEpl || 1200) * (1 - p.revShare / 100);
+        var crossCr = (p.crCrossBank || 5) / 100;
+        crSegment = crossCr;
+        ltv0 = crossBankRev * crossCr;
+        ltv1 = ltv0; // Без retention хвоста, так как это разовая продажа банковского продукта
+        ltv2 = ltv0;
+      } else if (segId === 'overdue' || isBfl) {
+        // Просроченный: Монетизация через БФЛ
+        var revBfl = (p.eplBfl || 3000) * (1 - p.revShare / 100);
+        crSegment = (p.crLeadBfl || 10) / 100;
+        ltv0 = revBfl * crSegment;
+        ltv1 = ltv0;
+        ltv2 = ltv0;
+        isBfl = true;
+      }
     } else {
-      ltv0 = le.net * crSegment;
-      ltv1 = ltv0 + (ltv0 * (s.ret1 / 100)) / (1 + d);
-      ltv2 = ltv1 + (ltv0 * (s.ret2 / 100)) / Math.pow(1 + d, 2);
+      if (isBfl) {
+        // Поддержка принудительной маршрутизации в БФЛ в классической воронке (если явно включено)
+        var revBflAsIs = (p.eplBfl || 3000) * (1 - p.revShare / 100);
+        crSegment = (p.crLeadBfl || 10) / 100;
+        ltv0 = revBflAsIs * crSegment;
+        ltv1 = ltv0;
+        ltv2 = ltv0;
+      } else {
+        ltv0 = le.net * crSegment;
+        ltv1 = ltv0 + (ltv0 * (s.ret1 / 100)) / (1 + d);
+        ltv2 = ltv1 + (ltv0 * (s.ret2 / 100)) / Math.pow(1 + d, 2);
+      }
     }
+
     var roi = s.cac > 0 ? (ltv2 - s.cac) / s.cac * 100 : 0;
     var ltvCac = s.cac > 0 ? ltv2 / s.cac : 0;
     // Срок окупаемости (месяцы): линейная интерполяция по точкам 0 / 12 / 24 мес.
@@ -555,7 +593,7 @@
         return repeatABHtml() + insightsHtml() + presetBarHtml() + compareSplitHtml();
       case 'overview':
       default:
-        return managementDecisionHtml() + kpiHtml() + tzSegmentLightHtml() + summaryHtml();
+        return managementDecisionHtml() + kpiHtml() + waterfallHtml() + tzSegmentLightHtml() + summaryHtml();
     }
   }
 
@@ -607,6 +645,15 @@
         sliderRow('crossEpl', 'Доп. EPL',     '₽ за выдачу',  0, 3000, 10, bp.crossEpl) +
       '</div>';
 
+    var routerGroup =
+      '<div class="ue2-side-group">' +
+        '<h4>Smart Safe Router</h4>' +
+        sliderRow('cfRejectRate', 'Доля отказов ЦФ (Soft Reject)', '%', 0, 100, 1, bp.cfRejectRate || 70, 'Влияет на объём трафика, уходящего на внешнюю CPA-витрину') +
+        sliderRow('crCrossBank', 'CR кросс-сейл (некредиты)', '%', 0, 60, 1, bp.crCrossBank || 5, 'Для действующих и спящих клиентов') +
+        sliderRow('crLeadBfl', 'CR квал. лид БФЛ', '%', 0, 90, 1, bp.crLeadBfl || 10) +
+        sliderRow('eplBfl', 'Выплата БФЛ (EPL)', '₽', 0, 10000, 100, bp.eplBfl || 3000) +
+      '</div>';
+
     var segs = SEGMENTS.map(function (s) {
       var sp = bp.seg[s.id];
       return '<div class="ue2-side-group ue2-seg-group" data-seg="' + s.id + '" style="--seg-accent:' + s.accent + '">' +
@@ -627,7 +674,7 @@
       '<button class="ue2-reset" type="button" id="ueResetParams">Сбросить</button></div>' +
       '<p class="ue2-side-lead">Все вводные из листа «Вводные» Excel-модели. Двигайте ползунки или вводите значение — все KPI, графики и P&amp;L пересчитываются мгновенно.</p>' +
       modeNote +
-      common + funnel + cross + thresholdsSidebarHtml() + segs;
+      common + funnel + cross + routerGroup + thresholdsSidebarHtml() + segs;
   }
 
   /* ---------- Top cards (сводные KPI) ---------- */
@@ -742,6 +789,49 @@
     '</details>';
   }
 
+  /* ---------- PnL Waterfall ---------- */
+  function waterfallHtml() {
+    var r = scenario10k(params, scenarioUsers || 10000);
+    var totalInvest = r.tot.cacTotal + r.tot.opexTotal;
+    
+    var rowNew = r.rows.find(function(x){ return x.seg.id === 'new'; });
+    var rowRepeat = r.rows.find(function(x){ return x.seg.id === 'repeat'; });
+    var rowSleep = r.rows.find(function(x){ return x.seg.id === 'sleep'; });
+    var rowOverdue = r.rows.find(function(x){ return x.seg.id === 'overdue'; });
+
+    var rejectRev = rowNew ? rowNew.revenue : 0;
+    var crossRev = (rowRepeat ? rowRepeat.revenue : 0) + (rowSleep ? rowSleep.revenue : 0);
+    var overdueRev = rowOverdue ? rowOverdue.revenue : 0;
+    
+    var totalRev = rejectRev + crossRev + overdueRev;
+    var margin = totalRev - totalInvest;
+    var isGreen = margin >= 0;
+    
+    var maxVal = Math.max(totalInvest, totalRev, 1);
+    function barWidth(v) { return Math.max(1, (Math.abs(v) / maxVal) * 100) + '%'; }
+
+    var styles = '<style>' +
+      '.ue2-wf-row { display: flex; align-items: center; margin-bottom: 8px; }' +
+      '.ue2-wf-label { width: 250px; font-weight: 500; }' +
+      '.ue2-wf-bar { color: #fff; padding: 4px 8px; border-radius: 4px; }' +
+    '</style>';
+
+    return '<div class="ue2-card">' + styles +
+      '<div class="ue2-card-head">' +
+        '<h2>PnL Waterfall · Окупаемость внешнего трафика</h2>' +
+        '<p>Мы тратим маркетинговый бюджет на Новых, отдаем лучших клиентов в ЦФ бесплатно, но все равно окупаем CAC за счет монетизации отказников, действующих и спящих через Роутер.</p>' +
+      '</div>' +
+      '<div class="ue2-waterfall" style="display:flex; flex-direction:column; margin-top:16px;">' +
+        '<div class="ue2-wf-row"><div class="ue2-wf-label">1. Инвестиции (CAC+OPEX)</div><div class="ue2-wf-bar" style="background:var(--red); width:'+barWidth(totalInvest)+'">-' + money(totalInvest) + '</div></div>' +
+        '<div class="ue2-wf-row"><div class="ue2-wf-label">2. Потеря (Одобренные ЦФ)</div><div class="ue2-wf-bar" style="background:#e5e7eb; color:#666; width:auto">0 ₽ (Внутренняя синергия)</div></div>' +
+        '<div class="ue2-wf-row"><div class="ue2-wf-label">3. Компенсация: Soft Reject МФО</div><div class="ue2-wf-bar" style="background:var(--blue); width:'+barWidth(rejectRev)+'">+' + money(rejectRev) + '</div></div>' +
+        '<div class="ue2-wf-row"><div class="ue2-wf-label">4. Компенсация: Банки/РКО</div><div class="ue2-wf-bar" style="background:var(--green); width:'+barWidth(crossRev)+'">+' + money(crossRev) + '</div></div>' +
+        '<div class="ue2-wf-row"><div class="ue2-wf-label">5. Компенсация: БФЛ/HR</div><div class="ue2-wf-bar" style="background:var(--orange); width:'+barWidth(overdueRev)+'">+' + money(overdueRev) + '</div></div>' +
+        '<div class="ue2-wf-row" style="margin-top:8px; padding-top:8px; border-top:1px solid #e5e7eb;"><div class="ue2-wf-label" style="font-weight:bold;">6. Итог (Чистая маржа)</div><div class="ue2-wf-bar" style="background:var(--'+(isGreen?'green':'red')+'); font-weight:bold; width:'+barWidth(margin)+'">' + (isGreen?'+':'') + money(margin) + '</div></div>' +
+      '</div>' +
+    '</div>';
+  }
+
   /* ---------- Управленческий вывод ---------- */
   function managementDecisionHtml() {
     var k = blendedKpis(params);
@@ -839,7 +929,21 @@
       }).join('');
       var cons = n.cons.map(function (x) { return '<li>' + esc(x) + '</li>'; }).join('');
       var pTone2 = passed ? 'green' : pTone;
+      
+      var tag = '';
+      if (params.isRouterActive) {
+        var tStyle = 'font-size:10px; padding:2px 6px; border-radius:4px; ';
+        if (s.id === 'new') {
+          tag = '<div class="ue2-seg-tags" style="margin-bottom:8px; display:flex; gap:4px; flex-wrap:wrap;"><span class="ue2-tag tone-gray" style="' + tStyle + 'background:#f3f4f6;">[Внутренняя синергия с ЦФ]</span><span class="ue2-tag tone-blue" style="' + tStyle + 'background:var(--blue); color:#fff;">[Внешняя CPA-монетизация]</span></div>';
+        } else if (s.id === 'repeat' || s.id === 'sleep') {
+          tag = '<div class="ue2-seg-tags" style="margin-bottom:8px;"><span class="ue2-tag tone-green" style="' + tStyle + 'background:var(--green); color:#fff;">[Zero-Waste кросс-сейл]</span></div>';
+        } else if (s.id === 'overdue') {
+          tag = '<div class="ue2-seg-tags" style="margin-bottom:8px;"><span class="ue2-tag tone-orange" style="' + tStyle + 'background:var(--orange); color:#fff;">[Токсичный трафик → NPL монетизация]</span></div>';
+        }
+      }
+
       return '<div class="ue2-seg-card' + (passed ? ' is-target-green' : '') + '" style="--seg-accent:' + s.accent + '">' +
+        tag + 
         '<div class="ue2-seg-head"><span class="ue2-seg-dot" style="background:' + s.accent + '"></span>' +
           '<h3>' + esc(s.name) + '</h3>' +
           (passed ? '<span class="ue2-seg-target-badge">окупается</span>' : '') +
@@ -875,9 +979,9 @@
       var sp = p.seg[s.id];
       var e = segmentEconomics(p, s.id);
       var users = N * (sp.share || 0) / totalShare;
-      var isBfl = sp.router === 'bfl';
-      // Лиды: классика — visit→lead; БФЛ — visit→квал.лид (CR_lead_bfl).
-      var leadCr = isBfl ? (sp.crLeadBfl != null ? sp.crLeadBfl : CR_LEAD_BFL) : p.crVisitLead;
+      var isBfl = sp.router === 'bfl' || (p.isRouterActive && s.id === 'overdue');
+      // Лиды: классика — visit→lead; БФЛ — visit→квал.лид.
+      var leadCr = isBfl ? (p.crLeadBfl || 10) : p.crVisitLead;
       var leads = users * leadCr / 100;
       // Промежуточные шаги воронки (для таблицы).
       var clickouts, issues;
