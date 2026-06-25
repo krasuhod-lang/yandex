@@ -221,7 +221,9 @@
       var saved = JSON.parse(raw);
       var merged = Object.assign({}, DEFAULT_THRESHOLDS, saved);
       // Миграция старой цели «окупиться за 2 месяца»: если пользователь не задавал
-      // новый реальный горизонт вручную, возвращаем дефолт 24 месяца.
+      // новый реальный горизонт вручную, возвращаем дефолт 24 месяца. В старом
+      // хранилище не было признака ручного изменения, поэтому legacy-значения
+      // 2/12 трактуем как дефолты старой версии.
       if (saved._realPaybackV2 !== true) {
         if ((Number(merged.paybackGreenMax) || 0) <= LEGACY_PAYBACK_GREEN_MAX) merged.paybackGreenMax = DEFAULT_THRESHOLDS.paybackGreenMax;
         if ((Number(merged.paybackYellowMax) || 0) <= LEGACY_PAYBACK_YELLOW_MAX) merged.paybackYellowMax = DEFAULT_THRESHOLDS.paybackYellowMax;
@@ -366,8 +368,8 @@
     var roi = s.cac > 0 ? (ltv2 - s.cac) / s.cac * 100 : 0;
     var ltvCac = s.cac > 0 ? ltv2 / s.cac : 0;
     // Срок окупаемости (месяцы): классическая линейная интерполяция накопленного LTV
-    // по горизонту 0 / 12 / 24 мес. В нулевой месяц накопленный доход = 0;
-    // с первого месяца он начинает равномерно накапливаться до LTV₁ к 12-му месяцу.
+    // по горизонту 0 / 12 / 24 мес. В нулевой месяц накопленный доход = 0,
+    // дальше он равномерно накапливается до LTV₁ к 12-му месяцу.
     var payback = paybackMonths(ltv0, ltv1, ltv2, s.cac);
     // ТЗ §2.4.1: RPL (Revenue per Lead) = выручка сегмента / число лидов. Берём LTV₂ как
     // ожидаемую совокупную выручку с одного привлечённого лида за 2 года.
@@ -1028,7 +1030,7 @@
       // Промежуточные шаги воронки (для таблицы).
       var clickouts, issues;
       if (isBfl) {
-        var bflLeadCr = p.crLeadBfl == null ? DEFAULT_PARAMS.crLeadBfl : p.crLeadBfl;
+        var bflLeadCr = p.crLeadBfl ?? DEFAULT_PARAMS.crLeadBfl;
         clickouts = leads * bflLeadCr / 100;           // квал. БФЛ-лиды
         issues = clickouts;                            // квалифицированный лид = «выдача» дохода
       } else {
