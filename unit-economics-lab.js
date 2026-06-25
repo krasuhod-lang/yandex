@@ -643,7 +643,6 @@
   function ltvCacBadge(r) { return r >= 2.5 ? 'таргет ≥ 2.5' : r >= 1 ? 'ниже таргета' : 'убыток'; }
   function paybackText(p) {
     if (!isFinite(p)) return 'не окупается';
-    if (p < 1) return p.toLocaleString('ru-RU', { maximumFractionDigits: 1 }) + ' мес.';
     if (p < 12) return p.toLocaleString('ru-RU', { maximumFractionDigits: 1 }) + ' мес.';
     var y = p / 12;
     return y.toLocaleString('ru-RU', { maximumFractionDigits: 1 }) + ' года';
