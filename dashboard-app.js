@@ -387,7 +387,7 @@ const COST_ITEMS=[
 // Продуктовая разбивка выручки. Проценты получены из микса партнёров (МФО, банк, карта, страхование, повторы)
 // и применяются к месячной выручке, сохраняя итог равным totals.revenue.
 const PRODUCT_MIX=[
- {key:'mfo',label:'Микрозаймы (МФО)',share:0.55,partners:'Центрофинанс, МФО-партнёр №2 (PDL), МФО-партнёр №3 (контроль риска)'},
+ {key:'mfo',label:'Микрозаймы (МФО)',share:0.55,partners:'МФО-партнёры; Центрофинанс — внутренний маршрут без выручки Выручай.ру'},
  {key:'loan',label:'Кредиты и рефинансирование',share:0.14,partners:'Банк-партнёр (необеспеченные кредиты)'},
  {key:'card',label:'Кредитные карты',share:0.12,partners:'Эмитент карт (партнёр)'},
  {key:'insurance',label:'Страхование',share:0.06,partners:'Страховой партнёр'},
@@ -468,7 +468,7 @@ const scenarios=[
  {name:'Перегруженный клиент',users:92000,completion:49,diag:94,match:37,approval:18,repeat:8.9,revenue:2600000,time:'5:10',best:'Подтверждённый доход'}
 ];
 const partners=[
- {id:'p-01',name:'Центрофинанс API',type:'прямой API',status:'активен',sla:'99.4%',response:'420 мс',approval:38,issue:29,revenue:18200000,epc:128,ecpa:940,complaints:0.8,reject:'ПДН, просрочки',action:'масштабировать'},
+ {id:'p-01',name:'Центрофинанс API',type:'прямой API',status:'активен',sla:'99.4%',response:'420 мс',approval:38,issue:29,revenue:0,epc:0,ecpa:940,complaints:0.8,reject:'ПДН, просрочки',action:'внутренний маршрут'},
  {id:'p-02',name:'МФО-партнёр №2 (PDL)',type:'CPA',status:'активен',sla:'97.1%',response:'1.2 с',approval:31,issue:22,revenue:11700000,epc:116,ecpa:810,complaints:1.7,reject:'Возраст, регион',action:'закрепить'},
  {id:'p-03',name:'Банк-партнёр (необеспеченные кредиты)',type:'прямой API',status:'наблюдение',sla:'93.0%',response:'2.8 с',approval:22,issue:15,revenue:9300000,epc:104,ecpa:1190,complaints:2.9,reject:'КИ, доход',action:'понизить'},
  {id:'p-04',name:'Эмитент карт (партнёр)',type:'CPA',status:'активен',sla:'98.0%',response:'780 мс',approval:27,issue:18,revenue:6400000,epc:91,ecpa:670,complaints:1.1,reject:'Скоринг банка',action:'кросс-продажа'},
@@ -517,7 +517,7 @@ const partnerMethodRows=[
  ['EPC (₽/клик)','Бенчмарк CPA-сетей','Leads.su / Lead-R / Mixmarket по сегменту','Пересчитывается при смене ставок партнёра или mix трафика'],
  ['eCPA (₽/заявка)','Производная','расходы на канал / заявки партнёра','Автоматически от плана трафика и approval'],
  ['Жалобы (%)','Целевой порог риска','Внутренний регламент: ≤ 1.5% — норма, > 3% — стоп','Факт из тикет-системы; превышение → alert'],
- ['Выручка партнёра, ₽','Производная','трафик × CTR оффера × approval × issue × средний чек комиссии','Пересчитывается при изменении входов на вкладке «Целевая модель»'],
+ ['Выручка партнёра, ₽','Производная','для внешних партнёров: трафик × CTR оффера × approval × issue × средний чек комиссии; для Центрофинанса = 0 ₽ выручки Выручай.ру','Пересчитывается при изменении входов; ЦФ считается внутренней синергией, а не доходом маркетплейса'],
  ['Доля продукта в выручке (share)','Целевой mix','Структура рынка по ЦБ РФ + позиционирование Выручай.ру','Фиксируется на год, ребалансировка по итогам квартала']
 ];
 
@@ -625,7 +625,7 @@ const scenarioCatalog=scenarios.map(s=>{
 });
 const partnerCatalog=partners.map(p=>{
  const map={
-  'p-01':{roles:['Рост','Операции','Руководитель'],channels:['SEO'],owner:'Рост',plan:['Дать больший share в SEO выдаче','Не снижать позицию в SOS','Пересмотреть лимит по бренд-трафику']},
+  'p-01':{roles:['Рост','Операции','Руководитель'],channels:['SEO'],owner:'Рост',plan:['Отдавать подходящих клиентов в ЦФ без CPA-выручки Выручай.ру','Считать эффект как экономию CAC и защиту базы ЦФ','Не смешивать внутренний эффект ЦФ с внешней партнёрской выручкой']},
   'p-02':{roles:['Рост','Операции'],channels:['SEO','PR'],owner:'Операции',plan:['Закрепить в 2-м слоте JTBD займов','Оставить как резерв в PR-цепочках','Отдельно следить за региональными отказами']},
   'p-03':{roles:['Операции','Руководитель','Продукт'],channels:['PR','Яндекс.Директ'],owner:'Операции',plan:['Снизить rank до устранения гэпа прогноза','Проверить, где теряется match-score','Запустить аудит входных признаков скоринга']},
   'p-04':{roles:['CRM','Продукт'],channels:['Повторный'],owner:'CRM',plan:['Использовать как кросс-продажу D+14','Оставить в AI top-3 для клиентов с активным лимитом','Поднять visibility в retention-цепочке']},
@@ -803,6 +803,9 @@ const BRANCH_SHARE_TARGETS={
 };
 function branchStatusByShare(branchId,share,arpu){
  const band=BRANCH_SHARE_TARGETS[branchId];
+ if(branchId==='target'){
+  return {level:'warning',recommendation:'Внутренний маршрут',rowClass:'row-status-warning',dotClass:'status-warning',badgeClass:'status-badge status-warning',band};
+ }
  if(Number.isFinite(arpu)&&arpu<=0){
   return {level:'danger',recommendation:'Отключить',rowClass:'row-status-danger',dotClass:'status-danger',badgeClass:'status-badge status-danger',band};
  }
@@ -835,7 +838,8 @@ function perLeadFromModel(model,overrides){
  // Доли веток по трафику (нормализуем — гарантируем сумму=1)
  const sumTraffic=m.cjm_branches.reduce((a,b)=>a+(b.traffic||0),0)||1;
  const baseShares=Object.fromEntries(m.cjm_branches.map(b=>[b.id,(b.traffic||0)/sumTraffic]));
- // ARPU каждой ветки (revenue/traffic) — для target = LTV-подобная выдача, для остальных = CPA × match-rate
+ // ARPU каждой ветки (revenue/traffic): target ЦФ = 0 ₽ внешней выручки Выручай.ру,
+ // остальные ветки = CPA × match-rate внешнего партнёра.
  const baseArpu=Object.fromEntries(m.cjm_branches.map(b=>[b.id,b.arpu||0]));
  // Применяем оверрайды симулятора (TZ §5.4): cplDelta (-50..0), shareTargetAbs (+0..+0.05),
  // arpuRejectedMultiplier (1..2). При смещении share_target — пропорционально уменьшаем остальные ветки.
@@ -867,7 +871,7 @@ function renderUnitBrief(model){
  const m=model||buildUnitModel();
  const u=perLeadFromModel(m);
  const branchMeta={
- target:{name:'Целевые',route:'выдача в ЦФ'},
+ target:{name:'Целевые',route:'ЦФ без выручки Выручай.ру'},
  rejected:{name:'Отказы',route:'CPA при отказе'},
  noncore:{name:'Непрофильные',route:'кросс-офферы'},
  overdue:{name:'Просрочка',route:'перекредитованные / БФЛ'}
@@ -915,7 +919,7 @@ function buildUnitModel(){
  const noncoreCR=unit.issueRateFromVisit*noncoreApproval;
  const overdueCR=unit.issueRateFromVisit*overdueApproval;
  // CPA revenue per conversion.
- const cpaTarget=unit.revenuePerIssue;
+ const cpaTarget=0;
  const cpaRejected=DYNAMIC_PAYOUTS.CF_REJECTED;
  const cpaNoncore=DYNAMIC_PAYOUTS.CF_NON_CORE;
  const cpaOverdue=DYNAMIC_PAYOUTS.CF_OVERDUE;
@@ -932,14 +936,17 @@ function buildUnitModel(){
   return {id,name,traffic,traffic_monthly:trafficMonthly,cr_to_deal:cr,cpa_revenue:cpa,cost,conversions,revenue,arpu,cac,romi,clicks:Math.round(traffic*unit.clicksPerVisit)};
  };
  const branches=[
-  branch('target','Целевые (ЦФ)',targetTraffic,targetTrafficMonthly,targetCR,cpaTarget),
+  branch('target','Целевые (ЦФ · 0 ₽)',targetTraffic,targetTrafficMonthly,targetCR,cpaTarget),
   branch('rejected','Отказники (Брокер)',rejectedTraffic,rejectedTrafficMonthly,rejectedCR,cpaRejected),
   branch('noncore','Непрофильные (Банк)',noncoreTraffic,noncoreTrafficMonthly,noncoreCR,cpaNoncore),
   branch('overdue','Перегруженные (БФЛ)',overdueTraffic,overdueTrafficMonthly,overdueCR,cpaOverdue)
  ];
  const totalRevenue=branches.reduce((a,b)=>a+b.revenue,0);
+ const totalExternalRevenue=branches
+  .filter(branch=>branch.id!=='target')
+  .reduce((acc,branch)=>acc+branch.revenue,0);
  const revenueByBranch=Object.fromEntries(branches.map(b=>[b.id,b.revenue]));
- // Per TZ formula §5: Blended CAC = (spend − rev_rejected − rev_noncore) / target_conversions.
+ // Per TZ formula §5: Blended CAC = (spend − rev_rejected − rev_noncore − rev_overdue) / target_conversions.
  const blendedCac=Math.max(1,(marketingSpend-revenueByBranch.rejected-revenueByBranch.noncore-revenueByBranch.overdue)/targetConversions);
  const baseCac=marketingSpend/targetConversions;
  const margin=totalRevenue-marketingSpend;
@@ -953,9 +960,9 @@ function buildUnitModel(){
   if(!prev)return null;
   return (cur-prev)/prev*100;
  };
- // Blend monthly external revenue into total revenue series proportionally to monthly revenue weight.
+ // В месячный PnL добавляем только внешнюю партнёрскую выручку; target ЦФ = 0 ₽.
  const revSum=sum(revenue)||1;
- const monthlyExternal=revenue.map(v=>(totalRevenue-totals.revenue)*(v/revSum));
+ const monthlyExternal=revenue.map(v=>totalExternalRevenue*(v/revSum));
  const monthlyRevenue=revenue.map((v,i)=>v+monthlyExternal[i]);
  const monthlyProfit=monthlyRevenue.map((v,i)=>v-expenses[i]);
  const monthlyRomi=monthlyProfit.map((p,i)=>expenses[i]?p/expenses[i]*100:0);
@@ -1027,7 +1034,7 @@ function renderCjmUnitEconomics(){
  renderUnitBrief(model);
  const u=perLeadFromModel(model);
  const META={
-  target:{title:'Целевые — выдача в ЦФ',sub:'Прямой оффер Центрофинанса',cls:'s-target'},
+  target:{title:'Целевые — ЦФ без выручки',sub:'Внутренний маршрут Центрофинанса',cls:'s-target'},
   rejected:{title:'Отказы — CPA при отказе',sub:'Мягкий отказ → витрина партнёров',cls:'s-rejected'},
   noncore:{title:'Непрофильные — кросс-офферы',sub:'Банк, авто, залог, ипотека',cls:'s-noncore'},
   overdue:{title:'Просрочка — БФЛ / работа',sub:'Банкротство и трудоустройство',cls:'s-overdue'}
@@ -1083,7 +1090,7 @@ function ensureApexReady(callback){
 function disposeApex(id){if(apexInstances[id]){try{apexInstances[id].destroy()}catch{}delete apexInstances[id]}}
 function apexThemeMode(){return document.documentElement.dataset.theme==='dark'?'dark':'light'}
 // TZ §5.2 — водопад PnL: стоимость лида, вклад веток CJM и итоговая маржа на лид.
-const UNIT_LABELS={target:'Целевые — ЦФ',rejected:'Отказы — CPA',noncore:'Непрофильные — кросс',overdue:'Просрочка — БФЛ/HR'};
+const UNIT_LABELS={target:'Целевые — ЦФ (0 ₽)',rejected:'Отказы — CPA',noncore:'Непрофильные — кросс',overdue:'Просрочка — БФЛ/HR'};
 function renderPnlWaterfall(model,overrides){
  const host=document.getElementById('pnlWaterfallChart');
  if(!host)return;
@@ -1179,7 +1186,7 @@ function renderLtvCacSimulator(model){
     <div class="sim-out-row sim-out-row-strong"><span>Маржа на лид</span><b class="${u.unitMargin>=0?'positive':'negative'}">${money(u.unitMargin)}</b><span class="sim-delta ${dMargin>0?'good':dMargin<0?'bad':'warn'}">${dMargin===0?'•':((dMargin>0?'+':'−')+money(Math.abs(dMargin)))}</span></div>
     <div class="sim-out-row sim-out-row-strong"><span>Окупаемость рекламы</span><b class="${u.romi>=0?'positive':'negative'}">${u.romi.toFixed(1)}%</b><span class="sim-delta ${dRomi>0?'good':dRomi<0?'bad':'warn'}">${dRomi===0?'•':((dRomi>0?'+':'')+dRomi.toFixed(1)+' п.п.')}</span></div>
     <div class="sim-breakeven ${breakeven?'is-good':'is-bad'}"><span class="status-dot ${breakeven?'status-success':'status-danger'}"></span>${escapeHtml(reachStr)}</div>
-    <div class="sim-formula">Средняя выручка на лид = Σ доля ветки × выручка на пользователя · Маржа на лид = средняя выручка на лид − стоимость лида · Окупаемость рекламы = маржа / стоимость лида × 100%</div>`;
+    <div class="sim-formula">Средняя выручка на лид = Σ доля ветки × выручка на пользователя; для ЦФ-target внешняя выручка Выручай.ру = 0 ₽ · Маржа на лид = средняя выручка на лид − стоимость лида · Окупаемость рекламы = маржа / стоимость лида × 100%</div>`;
   }
   document.getElementById('simValCpl').textContent=(SIM_STATE.cplDelta*100).toFixed(0)+'%';
   document.getElementById('simValShare').textContent='+'+(SIM_STATE.shareTargetAbs*100).toFixed(1)+' п.п.';
@@ -1256,8 +1263,8 @@ function renderUnitRationale(perLead,model){
     `<li>Всего лидов: <b>${fmt(u.totalLeads)}</b> — сумма визитов из плана трафика</li>`,
     `<li>Что двигает: бюджеты каналов на вкладке «Обзор», ползунок «Снизить стоимость лида» в симуляторе</li>`
   ]},
-  {name:'Средняя выручка',val:moneyPrec(u.blendedArpu),formula:'Средняя выручка на лид = Σ доля ветки × выручка на пользователя по 4 веткам Smart Safe Router',inputs:[
-    shareLine('target','Целевые — выдача в ЦФ'),
+  {name:'Средняя выручка',val:moneyPrec(u.blendedArpu),formula:'Средняя выручка на лид = Σ доля ветки × выручка на пользователя по 4 веткам Smart Safe Router; ЦФ-target считается как 0 ₽ внешней выручки Выручай.ру',inputs:[
+    shareLine('target','Целевые — ЦФ без выручки Выручай.ру'),
     shareLine('rejected','Отказы — CPA при отказе'),
     shareLine('noncore','Непрофильные — кросс-офферы'),
     shareLine('overdue','Просрочка — перекредитованные'),
@@ -2829,4 +2836,3 @@ init();
     if(st&&!st.done)lastLoggedStep=-1;
   };
 })();
-
