@@ -21,6 +21,7 @@
   var MODE_KEY = 'ue_segments_mode_v1';        // 'asis' | 'tobe' — переключатель модели
   var TAB_KEY = 'ue_segments_tab_v1';          // активный таб внутри #ueLab
   var COHORT_SIZE = 1000;                       // эталонная когорта по ТЗ
+  var DEFAULT_CF_SECOND_CONTRACT = 60;          // % «Новых», возвращающихся во второй договор ЦФ (дефолт)
 
   // ---- Константы целевой модели «To-Be» (ТЗ §2) ----
   var USERS_BASE = 10000;        // фикс-база сценария окупаемости (10 000 пользователей)
@@ -364,7 +365,7 @@
         // Второй договор: только доля cfSecondContract клиентов возвращается во второй договор ЦФ
         // и снова частично уходит в Soft Reject МФО (повторный доход Выручай.ру). Остальные
         // становятся спящими/отказными и не пользуются услугами МФО → повторного дохода нет.
-        var secondShare = (p.cfSecondContract != null ? p.cfSecondContract : 60) / 100;
+        var secondShare = (p.cfSecondContract != null ? p.cfSecondContract : DEFAULT_CF_SECOND_CONTRACT) / 100;
         ltv1 = ltv0 + (ltv0 * (s.ret1 / 100) * secondShare) / (1 + d);
         ltv2 = ltv1 + (ltv0 * (s.ret2 / 100) * secondShare) / Math.pow(1 + d, 2);
       } else if (segId === 'repeat' || segId === 'sleep') {
@@ -722,7 +723,7 @@
       '<div class="ue2-side-group">' +
         '<h4>Smart Safe Router</h4>' +
         sliderRow('cfRejectRate', 'Доля отказов ЦФ (Soft Reject)', '%', 0, 100, 1, bp.cfRejectRate || 70, 'Влияет на объём трафика, уходящего на внешнюю CPA-витрину') +
-        sliderRow('cfSecondContract', 'Второй договор ЦФ (Новые)', '%', 0, 100, 1, bp.cfSecondContract != null ? bp.cfSecondContract : 60, 'Доля «Новых», возвращающихся во второй договор ЦФ. Остальные становятся спящими/отказными и не пользуются МФО. По стандарту 60%.') +
+        sliderRow('cfSecondContract', 'Второй договор ЦФ (Новые)', '%', 0, 100, 1, bp.cfSecondContract != null ? bp.cfSecondContract : DEFAULT_CF_SECOND_CONTRACT, 'Доля «Новых», возвращающихся во второй договор ЦФ. Остальные становятся спящими/отказными и не пользуются МФО. По умолчанию 60%.') +
         sliderRow('crCrossBank', 'CR кросс-сейл (некредиты)', '%', 0, 60, 1, bp.crCrossBank || 5, 'Для действующих и спящих клиентов') +
         sliderRow('crLeadBfl', 'CR квал. лид БФЛ', '%', 0, 90, 1, bp.crLeadBfl || 10) +
         sliderRow('eplBfl', 'Выплата БФЛ (EPL)', '₽', 0, 10000, 100, bp.eplBfl || 3000) +
