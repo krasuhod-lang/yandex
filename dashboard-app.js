@@ -2710,7 +2710,7 @@ init();
     var host=document.getElementById('ssrMatrixEditor');if(!host)return;
     var dec=read(DK,null);
     var pinned=dec
-      ? '<div class="ssr-mx-pinned">📌 Решение из юнит-экономики: <b>'+esc(dec.winner==='A'?'Передача в Центр Финансов':'Своя монетизация')+'</b> → роутер по умолчанию ставит <b>'+esc(dec.route)+'</b> для сегмента «Повторные · Hot». Зафиксировано '+esc(new Date(dec.ts).toLocaleString('ru-RU'))+'.</div>'
+      ? '<div class="ssr-mx-pinned">Решение из юнит-экономики: <b>'+esc(dec.winner==='A'?'Передача в Центр Финансов':'Своя монетизация')+'</b> → роутер по умолчанию ставит <b>'+esc(dec.route)+'</b> для сегмента «Повторные · Hot». Зафиксировано '+esc(new Date(dec.ts).toLocaleString('ru-RU'))+'.</div>'
       : '<div class="ssr-mx-pinned empty">Решение Own/CF ещё не зафиксировано. Перейдите на вкладку «Юнит-экономика», раздел A/B «Повторные», и нажмите «Зафиксировать решение в Smart Safe Router».</div>';
     var statusOpts=['Новый','Повторный','Любой'].map(function(s){return '<option value="'+s+'">'+s+'</option>';}).join('');
     var zoneOpts=['Hot','Warm','Cold','Block'].map(function(z){return '<option value="'+z+'">'+z+'</option>';}).join('');

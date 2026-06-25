@@ -5,11 +5,16 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Выручай.ру — операционный дашборд</title>
 <script defer src="https://cdn.jsdelivr.net/npm/apexcharts@3.49.1/dist/apexcharts.min.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;600;700&display=swap">
 <style>
 :root{
   color-scheme:light;
-  --font:-apple-system,BlinkMacSystemFont,"SF Pro Display","SF Pro Text","Inter","Segoe UI",Arial,sans-serif;
-  --font-mono:"SF Mono",ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  /* Inter — рабочая лошадка дашбордов: высокая читаемость на экране, табличные цифры,
+     отличный контраст плотности текста (KPI, таблицы, мелкие подписи). */
+  --font:"Inter",-apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",Roboto,Arial,sans-serif;
+  --font-mono:"JetBrains Mono","SF Mono",ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
   --bg:#f5f5f7;--surface:#ffffff;--surface-2:#fbfbfd;--surface-3:#f0f0f5;
   --text:#1d1d1f;--muted:#6e6e73;--faint:#a1a1a6;--line:#e3e3e8;--line-strong:#d2d2d7;
   --blue:#0071e3;--green:#1d9d52;--orange:#c2680a;--red:#e0162b;--violet:#6e5dc6;
@@ -20,7 +25,7 @@
 [data-theme="dark"]{color-scheme:dark;--bg:#000;--surface:#1c1c1e;--surface-2:#232325;--surface-3:#2c2c2e;--text:#f5f5f7;--muted:#a1a1a6;--faint:#6e6e73;--line:#34343a;--line-strong:#3a3a42;--blue:#0a84ff;--green:#30d158;--orange:#ff9f0a;--red:#ff453a;--violet:#9a86ff;--shadow:0 28px 70px rgba(0,0,0,.5);--shadow-soft:0 6px 22px rgba(0,0,0,.32);--shadow-hover:0 22px 56px rgba(0,0,0,.46)}
 *{box-sizing:border-box}
 html{scroll-behavior:smooth}
-body{margin:0;background:radial-gradient(1200px 700px at 50% -10%,#ffffff 0,#f5f5f7 44%,#ececf1 100%);color:var(--text);font-family:var(--font);font-size:15px;line-height:1.47;-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility}
+body{margin:0;background:radial-gradient(1200px 700px at 50% -10%,#ffffff 0,#f5f5f7 44%,#ececf1 100%);color:var(--text);font-family:var(--font);font-size:15px;line-height:1.5;font-feature-settings:"cv11","ss01","ss03","calt";font-variant-numeric:tabular-nums;letter-spacing:-0.005em;-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility}
 [data-theme="dark"] body{background:radial-gradient(1200px 700px at 50% -10%,#1c1c1e 0,#0a0a0b 60%,#000 100%)}
 button,select,input,textarea{font:inherit;color:inherit}
 button{cursor:pointer}
@@ -1524,7 +1529,7 @@ table.sortable thead th[aria-sort="descending"]::after{content:" ▼";font-size:
 
     <section id="tab-unit" class="panel">
       <div class="card ue-hero">
-        <div class="card-title"><div><span class="eyebrow">Юнит-экономика · 4 сегмента · LTV / CAC / ROMI</span><h2>Интерактивный дашборд по сегментам пользователей</h2><p>Сегменты <b>Новый</b>, <b>Повторный</b>, <b>Просроченный</b> и <b>Спящий</b> — каждый со своим CJM, CAC, Retention и долей трафика. Сдвигайте ползунки в панели слева — Blended CAC, Average ARPU, LTV/CAC, Payback period, CJM-воронка, когортный LTV и P&amp;L-водопад пересчитываются мгновенно. Чекер через ЦФ — дополнительный инструмент перенаправления трафика: большая часть пользователей вне базы ЦФ, поэтому ни один сегмент не отсекается.</p></div></div>
+        <div class="card-title"><div><span class="eyebrow">Юнит-экономика · бизнес-модель Выручай.ру</span><h2>Где зарабатываем, как зарабатываем, как масштабировать</h2><p>Четыре источника денег и четыре рычага управления результатом. <b>Где зарабатываем</b> — Новые, Повторные, Просроченные, Спящие; каждый сегмент со своим RPL, CAC и LTV. <b>Как зарабатываем</b> — комиссия Центрофинанса по успешным выдачам плюс монетизация отказников через Smart Safe Router (БФЛ и CPA-витрина). <b>Как масштабировать</b> — Квиз поднимает CR Visit→Lead Новых, Router забирает выручку у отказников и снижает Blended CAC. <b>Как управлять</b> — переключатель As-Is / To-Be, ползунки CAC и конверсий, светофор по каждому сегменту, фиксация решений в роутере.</p></div></div>
       </div>
       <div id="ueLab" data-source="segments-v2" aria-live="polite"></div>
       <div id="uePlanModal" class="ue-modal" hidden>
