@@ -710,7 +710,7 @@
 
     return '<div class="ue2-card ue2-decision-board tone-' + tone + '">' +
       '<div class="ue2-card-head">' +
-        '<span class="eyebrow">Вывод для Елены Владимировны · управленческое решение</span>' +
+        '<span class="eyebrow">Управленческий вывод · решение по запуску</span>' +
         '<h2>Где «секс» экономики: Повторные + Просроченные через Router; Новые — только через квиз и CAC-лимит</h2>' +
         '<p>' + esc(talkTrack) + '</p>' +
       '</div>' +
