@@ -4,9 +4,10 @@
   var STORAGE_KEY='cjm_unit_dashboard_v1';
   var PAYBACK_KEY='cjm_payback_inputs_v1';
   var MODE_KEY='cjm_unit_mode_v1';
-  var CF_CHECK_ENDPOINT='POST /api/v1/cf/check-hash';
+  var CF_CHECK_REQUEST='POST /api/v1/cf/check-hash';
   var PAYBACK_CONVERSION_RATE=0.02;
   var PAYBACK_CPA=1500;
+  var HTML_ESCAPE_MAP={'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;','/':'&#x2F;','`':'&#96;'};
   var COLORS=['var(--blue)','var(--orange)','var(--violet)','var(--green)'];
   var charts={};
 
@@ -105,9 +106,9 @@
   ];
 
   function $(id){return document.getElementById(id);}
-  function esc(value){return String(value==null?'':value).replace(/[&<>"'\/`]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;','/':'&#x2F;','`':'&#96;'}[c];});}
-  function read(key,fb){try{var raw=localStorage.getItem(key);return raw?JSON.parse(raw):fb;}catch(e){console.warn('CJM dashboard: cannot read localStorage key',key,e);return fb;}}
-  function write(key,value){try{localStorage.setItem(key,JSON.stringify(value));}catch(e){}}
+  function esc(value){return String(value==null?'':value).replace(/[&<>"'\/`]/g,function(c){return HTML_ESCAPE_MAP[c];});}
+  function read(key,fallback){try{var raw=localStorage.getItem(key);return raw?JSON.parse(raw):fallback;}catch(e){console.warn('CJM dashboard: cannot read localStorage key',key,e);return fallback;}}
+  function write(key,value){try{localStorage.setItem(key,JSON.stringify(value));}catch(e){console.warn('CJM dashboard: cannot write localStorage key',key,e);}}
   function fmt(v){return Math.round(Number(v)||0).toLocaleString('ru-RU');}
   function rub(v){return fmt(v)+' ₽';}
   function pct(v,digits){return (Number(v)||0).toLocaleString('ru-RU',{maximumFractionDigits:digits==null?1:digits})+'%';}
@@ -137,7 +138,7 @@
   }
   function currentSegmentLabel(){var id=selectedId();return id==='all'?'Все сегменты':(segmentById(id)||segments[0]).name;}
   function clearChart(id){if(charts[id]){charts[id].destroy();delete charts[id];}}
-  function drawChart(id,config){var canvas=$(id);if(!canvas)return;if(typeof Chart==='undefined'){console.warn('CJM dashboard: Chart renderer is unavailable');return;}clearChart(id);charts[id]=new Chart(canvas,config);}
+  function drawChart(id,config){var canvas=$(id);if(!canvas)return;if(typeof Chart==='undefined'){console.warn('CJM dashboard: custom Chart renderer is unavailable; ensure dashboard-app.js is loaded before cjm-unit-dashboard.js');return;}clearChart(id);charts[id]=new Chart(canvas,config);}
 
   function initSelector(){
     var select=$('cjmSegmentSelect');
@@ -246,7 +247,7 @@
     var flow=[
       ['Входящий трафик','SEO · Директ · PR · Push'],
       ['Lead Capture','Телефон, сумма, согласие 152-ФЗ'],
-      ['S2S API ЦФ',CF_CHECK_ENDPOINT],
+      ['S2S API ЦФ',CF_CHECK_REQUEST],
       ['Smart Safe Router','8 статусов → правила Offers Engine'],
       ['Витрина / действие','ЦФ, CPA, БФЛ, банк или отказ']
     ];
