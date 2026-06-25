@@ -47,13 +47,18 @@
     { id: 'sleep',    name: 'Спящий',      short: 'Сонн.',  accent: 'var(--violet)' }
   ];
 
+  // Базовая («As-Is») модель: все вводные откалиброваны так, чтобы общий Blended LTV/CAC ≈ 0.56x
+  // (проект убыточен) — это исходная точка для инвесткомитета. Целевые оптимизации (Quiz,
+  // Traffic Mix, Smart Safe Router → БФЛ) накладываются поверх через applyMode(mode='tobe')
+  // и поднимают Blended LTV/CAC до ≈ 2.6x. Значения не «исторический факт», а согласованный
+  // базовый сценарий, относительно которого считается эффект To-Be.
   var DEFAULT_PARAMS = {
     // Общие
     epl: 1600,
     opex: 120,
     revShare: 30,   // %
     discount: 20,   // %
-    // Воронка
+    // Воронка (As-Is базовые конверсии; To-Be поднимает их за счёт квиз-преквалификации)
     crVisitLead: 8,        // %
     crLeadClickout: 55,    // %
     crClickoutIssue: 55,   // %
@@ -893,7 +898,7 @@
         '<h3>Точка безубыточности · при каких цифрах сходится</h3>' +
         '<p class="ue2-scn-verdict">' + verdict + '</p>' +
         '<ul class="ue2-scn-thresholds">' +
-          '<li>Маржа = 0 при blended CAC ≈ <b>' + money(r.tot.cacTotal > 0 ? (r.tot.revenue - r.tot.opexTotal) / Math.max(1, r.tot.leads) : 0) + '</b> на лида ' +
+          '<li>Маржа = 0 при blended CAC ≈ <b>' + money(r.tot.leads > 0 ? (r.tot.revenue - r.tot.opexTotal) / r.tot.leads : 0) + '</b> на лида ' +
             '(текущий blended ≈ ' + money(r.tot.leads > 0 ? r.tot.cacTotal / r.tot.leads : 0) + ').</li>' +
           '<li>Допустимый рост CAC до нуля прибыли: <b>×' + (Number(r.cacBreakevenMult) || 0).toLocaleString('ru-RU', { maximumFractionDigits: 2 }) + '</b> от текущего.</li>' +
           '<li>Целевые рычаги To-Be: CR&nbsp;Visit→Lead Нового +20% (квиз) → CAC 1200→800&nbsp;₽; ' +
