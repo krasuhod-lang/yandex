@@ -550,7 +550,7 @@
         return repeatABHtml() + insightsHtml() + presetBarHtml() + compareSplitHtml();
       case 'overview':
       default:
-        return kpiHtml() + tzSegmentLightHtml() + summaryHtml();
+        return managementDecisionHtml() + kpiHtml() + tzSegmentLightHtml() + summaryHtml();
     }
   }
 
@@ -676,6 +676,70 @@
 
     return '<div class="ue2-kpis">' + cards + '</div>' +
       '<div class="ue2-kpi-mini-row">' + perSegHtml + '</div>';
+  }
+
+  /* ---------- Управленческий вывод: что говорить генеральному ---------- */
+  function managementDecisionHtml() {
+    var k = blendedKpis(params);
+    var th = loadThresholds();
+    var seg = function (id) { return segmentEconomics(params, id); };
+    var eNew = seg('new'), eRepeat = seg('repeat'), eOverdue = seg('overdue'), eSleep = seg('sleep');
+    var ab = repeatAB(params);
+    var portfolioOk = k.blendedRatio >= th.ltvCacGreen;
+    var tone = portfolioOk ? 'green' : (k.blendedRatio >= th.ltvCacYellow ? 'yellow' : 'red');
+    var decision = portfolioOk
+      ? 'Запускать управляемый To-Be пилот: масштаб — только через прибыльные ветки, не «заливать» весь трафик одинаково.'
+      : 'As-Is в масштаб не запускать: сначала включить Quiz + Smart Safe Router и довести экономику до зелёного коридора.';
+    var talkTrack = currentMode === 'tobe'
+      ? 'Мы не продаём идею квиза как интерфейс. Мы показываем, что квиз и Router — это экономический фильтр: снижают CAC Новых, выводят Повторных в лучший канал и монетизируют Просроченных через БФЛ/CPA.'
+      : 'По текущей модели ответ честный: без маршрутизации и квиза экономика не является инвестиционным кейсом. Решение — не спорить с цифрами, а запускать только рычаги, которые переводят портфель в To-Be.';
+
+    var card = function (toneCard, title, metric, decisionText, proof) {
+      return '<article class="ue2-decision-card tone-' + toneCard + '">' +
+        '<span class="ue2-decision-tag">' + esc(metric) + '</span>' +
+        '<h3>' + esc(title) + '</h3>' +
+        '<p>' + decisionText + '</p>' +
+        '<div class="ue2-decision-proof">' + proof + '</div>' +
+      '</article>';
+    };
+    var repeatRoute = ab.winner === 'A' ? 'Центр Финансов' : 'своя монетизация';
+    var repeatProof = 'LTV/CAC <b>' + ratio(eRepeat.ltvCac) + '</b>, маржа/лид <b>' + money(eRepeat.marginPerLead) + '</b>; A/B показывает приоритет: <b>' + esc(repeatRoute) + '</b>.';
+    var overdueProof = 'LTV/CAC <b>' + ratio(eOverdue.ltvCac) + '</b>, маржа/лид <b>' + money(eOverdue.marginPerLead) + '</b>; Router переводит рискованный интент в БФЛ/CPA вместо потери лида.';
+    var newProof = 'LTV/CAC <b>' + ratio(eNew.ltvCac) + '</b>, маржа/лид <b>' + money(eNew.marginPerLead) + '</b>; рост только через квиз, лимит CAC и контроль CR Visit→Lead.';
+    var sleepProof = 'LTV/CAC <b>' + ratio(eSleep.ltvCac) + '</b>, маржа/лид <b>' + money(eSleep.marginPerLead) + '</b>; использовать дешёвую реактивацию, без дорогой закупки.';
+
+    return '<div class="ue2-card ue2-decision-board tone-' + tone + '">' +
+      '<div class="ue2-card-head">' +
+        '<span class="eyebrow">Вывод для Елены Владимировны · управленческое решение</span>' +
+        '<h2>Где «секс» экономики: Повторные + Просроченные через Router; Новые — только через квиз и CAC-лимит</h2>' +
+        '<p>' + esc(talkTrack) + '</p>' +
+      '</div>' +
+      '<div class="ue2-decision-hero">' +
+        '<div><span>Главное решение</span><b>' + esc(decision) + '</b></div>' +
+        '<div><span>Порог совета директоров</span><b class="tone-' + tone + '">Blended LTV/CAC ' + ratio(k.blendedRatio) + ' / цель ≥ ' + ratio(th.ltvCacGreen) + '</b></div>' +
+      '</div>' +
+      '<div class="ue2-decision-grid">' +
+        card(segmentLight(eRepeat, th).tone, 'Удар №1 · Повторные', 'масштабировать первыми', 'Не отдавать сегмент автоматически в один канал: каждый повторный лид сравниваем Own vs CF и фиксируем победителя в Smart Safe Router.', repeatProof) +
+        card(segmentLight(eOverdue, th).tone, 'Удар №2 · Просроченные', 'монетизировать, не списывать', 'Не пытаться продавить классическую выдачу. Отдельная ветка БФЛ/рефинанс/HR превращает «непроходной» поток в доход.', overdueProof) +
+        card(segmentLight(eNew, th).tone, 'Новые', 'пилот под лимитами', 'Запускать не как широкий медиабюджет, а как управляемый тест квиза: режем CAC, повышаем CR и быстро отключаем неокупаемые источники.', newProof) +
+        card(segmentLight(eSleep, th).tone, 'Спящие', 'дешёвая реактивация', 'Держать как low-cost CRM-контур: прогрев, обновление данных, возврат в квиз; платный трафик сюда не масштабировать.', sleepProof) +
+      '</div>' +
+      '<div class="ue2-answer-grid">' +
+        '<div><h3>Что сказать генеральному</h3><ul>' +
+          '<li><b>Мы не запускаем проект «вслепую»:</b> As-Is показывает ограничения, To-Be показывает условия окупаемости.</li>' +
+          '<li><b>Квиз нужен не ради UX:</b> он снижает CAC Новых и собирает сигналы для маршрутизации по CJM.</li>' +
+          '<li><b>Router защищает деньги:</b> каждый статус клиента получает свой оффер, поэтому нецелевой или просроченный трафик не сгорает.</li>' +
+          '<li><b>Главный фокус бюджета:</b> сначала Повторные и Просроченные, потом масштаб Новых после подтверждения CAC/CR.</li>' +
+        '</ul></div>' +
+        '<div><h3>Какие решения зафиксировать</h3><ol>' +
+          '<li>Утвердить To-Be пилот на 10 000 пользователей как базовый сценарий проверки.</li>' +
+          '<li>Поставить go/no-go: LTV/CAC ≥ ' + ratio(th.ltvCacGreen) + ', маржа/лид &gt; 0, payback ≤ ' + esc(th.paybackGreenMax) + ' мес.</li>' +
+          '<li>Для Повторных зафиксировать A/B-правило Own vs CF в роутере.</li>' +
+          '<li>Для Просроченных запускать отдельную БФЛ/CPA-витрину, не смешивая с основной выдачей.</li>' +
+          '<li>Для Новых открыть бюджет только под квиз-преквалификацию и дневной контроль CAC.</li>' +
+        '</ol></div>' +
+      '</div>' +
+    '</div>';
   }
 
   /* ---------- Матрица: плюсы / минусы каждого сегмента ---------- */
