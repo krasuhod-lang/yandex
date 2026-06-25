@@ -102,8 +102,8 @@
   ];
 
   function $(id){return document.getElementById(id);}
-  function esc(value){return String(value==null?'':value).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
-  function read(key,fb){try{var raw=localStorage.getItem(key);return raw?JSON.parse(raw):fb;}catch(e){return fb;}}
+  function esc(value){return String(value==null?'':value).replace(/[&<>"'\/]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;','/':'&#x2F;'}[c];});}
+  function read(key,fb){try{var raw=localStorage.getItem(key);return raw?JSON.parse(raw):fb;}catch(e){console.warn('CJM dashboard: cannot read localStorage key',key,e);return fb;}}
   function write(key,value){try{localStorage.setItem(key,JSON.stringify(value));}catch(e){}}
   function fmt(v){return Math.round(Number(v)||0).toLocaleString('ru-RU');}
   function rub(v){return fmt(v)+' ₽';}
@@ -134,7 +134,7 @@
   }
   function currentSegmentLabel(){var id=selectedId();return id==='all'?'Все сегменты':(segmentById(id)||segments[0]).name;}
   function clearChart(id){if(charts[id]){charts[id].destroy();delete charts[id];}}
-  function drawChart(id,config){var canvas=$(id);if(!canvas||typeof Chart==='undefined')return;clearChart(id);charts[id]=new Chart(canvas,config);}
+  function drawChart(id,config){var canvas=$(id);if(!canvas)return;if(typeof Chart==='undefined'){console.warn('CJM dashboard: Chart renderer is unavailable');return;}clearChart(id);charts[id]=new Chart(canvas,config);}
 
   function initSelector(){
     var select=$('cjmSegmentSelect');
@@ -264,7 +264,7 @@
       ['new','Новые']
     ];
     $('cjmPaybackInputs').innerHTML=fields.map(function(f){
-      return '<label>'+esc(f[1])+'<input id="cjmPb_'+esc(f[0])+'" type="number" min="0" step="100" value="'+esc(defaults[f[0]]||0)+'" inputmode="numeric"></label>';
+      return '<label for="cjmPb_'+esc(f[0])+'">'+esc(f[1])+'<input id="cjmPb_'+esc(f[0])+'" type="number" min="0" step="100" value="'+esc(defaults[f[0]]||0)+'" inputmode="numeric"></label>';
     }).join('');
     fields.forEach(function(f){
       var input=$('cjmPb_'+f[0]);
@@ -307,7 +307,7 @@
     var segmentColors=segments.map(function(s){return s.color;});
     drawChart('cjmTrendChart',{
       type:'bar',
-      data:{labels:segmentNames,datasets:[{label:'LTV/CAC, ×',data:segmentRatios,backgroundColor:segmentColors,tooltipFormat:function(v){return v.toFixed(1)+'×';}}]}
+      data:{labels:segmentNames,datasets:[{label:'LTV/CAC, ×',data:segmentRatios,backgroundColor:segmentColors}]}
     });
     var asIs=aggregateFunnel('asIs'), toBe=aggregateFunnel('toBe');
     drawChart('cjmUnitChart',{
