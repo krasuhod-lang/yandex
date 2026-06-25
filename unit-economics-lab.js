@@ -686,7 +686,7 @@
 
   function managementFootnoteHtml(k, th, talkTrack, decision) {
     return '<details class="ue2-footnote-wrap">' +
-      '<summary class="ue2-footnote-btn" aria-label="Открыть или закрыть сноску с комментариями, терминами и формулами">!</summary>' +
+      '<summary class="ue2-footnote-btn" aria-label="Сноска: комментарии для руководства, термины, формулы и правила монетизации">!</summary>' +
       '<span class="ue2-footnote-label">Сноска: комментарии, что говорить, термины и формулы</span>' +
       '<div class="ue2-footnote-panel" role="note">' +
         '<h3>Подробная сноска к управленческому выводу</h3>' +
@@ -1432,7 +1432,7 @@
         '<div class="ue2-ab-side' + (r.winner === 'A' ? ' is-winner' : '') + '">' +
           '<h4>A · Передача в Центр Финансов</h4>' +
           '<div class="ue2-ab-fields">' +
-            '<label>Внешняя выручка ЦФ, ₽ <input type="number" min="0" step="50" data-ue-ab="cfCommission" value="' + ab.cfCommission + '" readonly title="Всегда 0 ₽: передача в Центрофинанс — внутренний маршрут без выручки Выручай.ру" aria-label="Внешняя выручка Центрофинанс всегда 0 рублей: внутренний маршрут без выручки Выручай.ру"></label>' +
+            '<label>Внешняя выручка ЦФ (всегда 0 ₽), ₽ <input type="number" min="0" step="50" data-ue-ab="cfCommission" value="' + ab.cfCommission + '" readonly title="Передача в Центрофинанс — внутренний маршрут без выручки Выручай.ру"></label>' +
             '<label>Одобрение ЦФ, % <input type="number" min="0" max="100" step="0.5" data-ue-ab="cfApproval" value="' + ab.cfApproval + '"></label>' +
           '</div>' +
           '<div class="ue2-ab-margin">Маржа на лида: <b class="tone-' + (r.marginA >= 0 ? 'green' : 'red') + '">' + money(r.marginA) + '</b></div>' +

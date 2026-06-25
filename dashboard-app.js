@@ -943,8 +943,8 @@ function buildUnitModel(){
  ];
  const totalRevenue=branches.reduce((a,b)=>a+b.revenue,0);
  const totalExternalRevenue=branches
-  .filter(b=>b.id!=='target')
-  .reduce((a,b)=>a+b.revenue,0);
+  .filter(branch=>branch.id!=='target')
+  .reduce((acc,branch)=>acc+branch.revenue,0);
  const revenueByBranch=Object.fromEntries(branches.map(b=>[b.id,b.revenue]));
  // Per TZ formula §5: Blended CAC = (spend − rev_rejected − rev_noncore − rev_overdue) / target_conversions.
  const blendedCac=Math.max(1,(marketingSpend-revenueByBranch.rejected-revenueByBranch.noncore-revenueByBranch.overdue)/targetConversions);
