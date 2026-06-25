@@ -222,11 +222,11 @@
       var merged = Object.assign({}, DEFAULT_THRESHOLDS, saved);
       // Миграция старой цели «окупиться за 2 месяца»: если пользователь не задавал
       // новый реальный горизонт вручную, возвращаем дефолт 24 месяца. В старом
-      // хранилище не было признака ручного изменения, поэтому legacy-значения
-      // 2/12 трактуем как дефолты старой версии.
+      // хранилище не было признака ручного изменения, поэтому точно выставленные
+      // пользователем legacy-значения 2/12 не перетираем.
       if (saved._realPaybackV2 !== true) {
-        if ((Number(merged.paybackGreenMax) || 0) <= LEGACY_PAYBACK_GREEN_MAX) merged.paybackGreenMax = DEFAULT_THRESHOLDS.paybackGreenMax;
-        if ((Number(merged.paybackYellowMax) || 0) <= LEGACY_PAYBACK_YELLOW_MAX) merged.paybackYellowMax = DEFAULT_THRESHOLDS.paybackYellowMax;
+        if ((Number(merged.paybackGreenMax) || 0) < LEGACY_PAYBACK_GREEN_MAX) merged.paybackGreenMax = DEFAULT_THRESHOLDS.paybackGreenMax;
+        if ((Number(merged.paybackYellowMax) || 0) < LEGACY_PAYBACK_YELLOW_MAX) merged.paybackYellowMax = DEFAULT_THRESHOLDS.paybackYellowMax;
         merged._realPaybackV2 = true;
         saveThresholds(merged);
       }
@@ -1030,7 +1030,7 @@
       // Промежуточные шаги воронки (для таблицы).
       var clickouts, issues;
       if (isBfl) {
-        var bflLeadCr = p.crLeadBfl ?? DEFAULT_PARAMS.crLeadBfl;
+        var bflLeadCr = (p.crLeadBfl !== undefined && p.crLeadBfl !== null) ? p.crLeadBfl : DEFAULT_PARAMS.crLeadBfl;
         clickouts = leads * bflLeadCr / 100;           // квал. БФЛ-лиды
         issues = clickouts;                            // квалифицированный лид = «выдача» дохода
       } else {
