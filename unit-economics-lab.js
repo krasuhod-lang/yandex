@@ -22,12 +22,13 @@
   var TAB_KEY = 'ue_segments_tab_v1';          // активный таб внутри #ueLab
   var COHORT_SIZE = 1000;                       // эталонная когорта по ТЗ
 
-  // ---- Константы целевой модели «To-Be» (ТЗ-1 §2 + Дополнение №2 §7) ----
+  // ---- Константы целевой модели «To-Be» (ТЗ §2) ----
   var USERS_BASE = 10000;        // фикс-база сценария окупаемости (10 000 пользователей)
   var QUIZ_UPLIFT = 0.20;        // +20% к CR Visit→Lead Нового сегмента за счёт интерактивного Квиза
   var EPL_BFL = 3000;            // фикс-доход (EPL) за квалифицированный лид БФЛ (Smart Safe Router)
   var CR_LEAD_BFL = 10;          // %, конверсия трафика «Просроченных» в квалифицированный лид БФЛ
-  var SEG_PAYBACK_THRESHOLD = 1.2; // LTV/CAC, выше которого карточка сегмента подсвечивается зелёным в To-Be
+  // Порог «зелёного» статуса карточки сегмента: LTV/CAC ≥ 2.5x (ТЗ §4 — масштабируем).
+  var SEG_PAYBACK_THRESHOLD = 2.5;
 
   // Табы модуля (ТЗ-Дополнение №2 §6). id → заголовок ленты.
   var TABS = [
@@ -192,11 +193,15 @@
     { id: 'optimistic',  name: 'Оптимистичный' }
   ];
 
-  // ---- Конфиг порогов «светофора» (ТЗ §2.4.2) ----
+  // ---- Конфиг порогов «светофора» (ТЗ §4: масштаб/контроль/ремонт) ----
+  // Green   — масштабируем: LTV/CAC ≥ 2.5 И Payback ≤ 2 мес. И маржа на лида > 0.
+  // Yellow  — зона контроля: LTV/CAC от 1 до 2.5.
+  // Red     — убыток / ремонт: LTV/CAC < 1 ИЛИ маржа на лида ≤ 0.
   var DEFAULT_THRESHOLDS = {
-    ltvCacGreen: 3.0,      // 🟢 при LTV/CAC ≥ green и марже > 0
-    paybackGreenMax: 6,    // 🟢 при Payback ≤ N мес.
-    paybackYellowMax: 12   // 🟡 при Payback ≤ N мес. (свыше — 🔴)
+    ltvCacGreen: 2.5,
+    ltvCacYellow: 1.0,
+    paybackGreenMax: 2,
+    paybackYellowMax: 12
   };
   function loadThresholds() {
     try { var raw = localStorage.getItem(THRESH_KEY); if (!raw) return Object.assign({}, DEFAULT_THRESHOLDS); return Object.assign({}, DEFAULT_THRESHOLDS, JSON.parse(raw)); }
@@ -348,17 +353,18 @@
     };
   }
 
-  // ---- Светофор сегмента (ТЗ §2.4.2) ----
-  // 🟢 — маржа > 0 И LTV/CAC ≥ green И Payback ≤ paybackGreenMax
-  // 🟡 — один из критериев не выполнен (но маржа > 0)
-  // 🔴 — маржа ≤ 0
+  // ---- Светофор сегмента (ТЗ §4) ----
+  // Red    — маржа на лида ≤ 0 ИЛИ LTV/CAC < ltvCacYellow → ремонт / отключение канала.
+  // Yellow — ltvCacYellow ≤ LTV/CAC < ltvCacGreen → зона контроля.
+  // Green  — LTV/CAC ≥ ltvCacGreen И Payback ≤ paybackGreenMax → масштабируем.
   function segmentLight(e, th) {
     if (!th) th = loadThresholds();
-    if (e.marginPerLead <= 0) return { tone: 'red',    label: 'Убыточен' };
+    if (e.marginPerLead <= 0) return { tone: 'red',    label: 'Ремонт' };
+    if (e.ltvCac < (th.ltvCacYellow || 1)) return { tone: 'red', label: 'Ремонт' };
     var okRatio = e.ltvCac >= th.ltvCacGreen;
     var okPb = isFinite(e.payback) && e.payback <= th.paybackGreenMax;
-    if (okRatio && okPb) return { tone: 'green', label: 'Рентабелен' };
-    return { tone: 'yellow', label: 'Под наблюдением' };
+    if (okRatio && okPb) return { tone: 'green', label: 'Масштабируем' };
+    return { tone: 'yellow', label: 'Контроль' };
   }
 
   // ---- A/B экономика повторных: Центр Финансов vs Своя монетизация (ТЗ §2.5) ----
@@ -512,8 +518,8 @@
       '<div class="ue2-mode-meta">' +
         '<span class="ue2-mode-pill tone-' + tone + '">Blended LTV/CAC ' + ratio(k.blendedRatio) + '</span>' +
         '<span class="ue2-mode-hint">' + (currentMode === 'tobe'
-          ? 'Целевой сценарий: Квиз снижает CAC, Smart Safe Router монетизирует «Просроченных» на БФЛ.'
-          : 'Базовая экономика проекта без оптимизаций — портфель убыточен.') + '</span>' +
+          ? 'Где зарабатываем: Квиз снижает CAC новых, Router монетизирует отказников через БФЛ и CPA-витрину.'
+          : 'Текущая выручка проекта без рычагов масштабирования — Blended LTV/CAC ниже таргета.') + '</span>' +
       '</div>' +
     '</div>';
   }
@@ -628,8 +634,8 @@
       (sub ? '<span class="ue2-kpi-sub">' + sub + '</span>' : '') +
       '</div>';
   }
-  function ltvCacTone(r) { return r >= 3 ? 'green' : r >= 1.5 ? 'yellow' : 'red'; }
-  function ltvCacBadge(r) { return r >= 3 ? 'таргет ≥ 3.0' : r >= 1.5 ? 'ниже таргета' : 'критически низко'; }
+  function ltvCacTone(r) { return r >= 2.5 ? 'green' : r >= 1 ? 'yellow' : 'red'; }
+  function ltvCacBadge(r) { return r >= 2.5 ? 'таргет ≥ 2.5' : r >= 1 ? 'ниже таргета' : 'убыток'; }
   function paybackText(p) {
     if (!isFinite(p)) return 'не окупается';
     if (p < 1) return 'до 1 мес.';
@@ -639,7 +645,7 @@
   }
   function paybackTone(p) {
     if (!isFinite(p)) return 'red';
-    if (p <= 6) return 'green';
+    if (p <= 2) return 'green';
     if (p <= 12) return 'yellow';
     return 'red';
   }
@@ -663,7 +669,7 @@
       kpiCard('Average ARPU', money(k.avgArpu),
         'Средняя выручка с лида за 2 года (LTV₂, взвешенно)', 'blue') +
       kpiCard('LTV / CAC (общий)', ratio(k.blendedRatio),
-        'Blended ARPU ÷ Blended CAC · таргет инвесткомитета &gt; 3.0', ratioTone, ltvCacBadge(k.blendedRatio)) +
+        'Blended ARPU ÷ Blended CAC · таргет инвесткомитета ≥ 2.5', ratioTone, ltvCacBadge(k.blendedRatio)) +
       kpiCard('Payback period', paybackText(k.payback),
         'Срок окупаемости когорты · CAC ↔ накопительный LTV', pTone,
         pTone === 'green' ? 'быстро' : pTone === 'yellow' ? 'умеренно' : 'долго');
@@ -889,10 +895,10 @@
 
     // --- Блок окупаемости ---
     var verdict = r.tot.margin >= 0 && r.blendedRatio > 2.5
-      ? '🟢 Сценарий окупается: маржа положительна, Blended LTV/CAC выше таргета инвесткомитета (&gt; 2.5x).'
+      ? 'Сценарий окупается: маржа положительна, Blended LTV/CAC выше таргета инвесткомитета (≥ 2.5x).'
       : (r.tot.margin >= 0
-        ? '🟡 На грани: проект в плюсе, но Blended LTV/CAC ещё не достиг таргета 2.5x.'
-        : '🔴 Убыток: на базе ' + nfmt(r.N) + ' пользователей расходы превышают доход. Нужны рычаги To-Be.');
+        ? 'Зона контроля: проект в плюсе, но Blended LTV/CAC ещё не достиг таргета 2.5x.'
+        : 'Убыток: на базе ' + nfmt(r.N) + ' пользователей расходы превышают доход. Нужны рычаги To-Be.');
     var breakeven =
       '<div class="ue2-scn-block ue2-scn-breakeven tone-' + tone + '">' +
         '<h3>Точка безубыточности · при каких цифрах сходится</h3>' +
@@ -1253,11 +1259,10 @@
     var th = loadThresholds();
     var cards = k.perSeg.map(function (e) {
       var lt = segmentLight(e, th);
-      var icon = lt.tone === 'green' ? '🟢' : (lt.tone === 'yellow' ? '🟡' : '🔴');
       return '<div class="ue2-tz-card tone-' + lt.tone + '">' +
         '<div class="ue2-tz-head"><span class="ue2-tz-dot tone-' + lt.tone + '"></span>' +
           '<h3>' + esc(e.name) + '</h3>' +
-          '<span class="ue2-tz-status">' + icon + ' ' + esc(lt.label) + '</span></div>' +
+          '<span class="ue2-tz-status tone-' + lt.tone + '">' + esc(lt.label) + '</span></div>' +
         '<div class="ue2-tz-metrics">' +
           '<div><span>Доход на лида (RPL)</span><b>' + money(e.rpl) + '</b></div>' +
           '<div><span>Маржа на лида</span><b class="tone-' + (e.marginPerLead > 0 ? 'green' : 'red') + '">' + money(e.marginPerLead) + '</b></div>' +
@@ -1270,9 +1275,9 @@
     }).join('');
     return '<div class="ue2-card">' +
       '<div class="ue2-card-head ue2-row-between">' +
-        '<div><h2>Сегменты · светофор рентабельности</h2>' +
-          '<p>RPL / Маржа на лида / LTV/CAC / Payback / ROMI. Пороги светофора редактируются в боковой панели.</p></div>' +
-        '<div class="ue2-thresh-mini">Таргет LTV/CAC ≥ <b>' + th.ltvCacGreen + '</b> · Payback 🟢 ≤ <b>' + th.paybackGreenMax + '</b> мес.</div>' +
+        '<div><h2>Сегменты · решение по каждому каналу</h2>' +
+          '<p>Маржа на лида, LTV/CAC, окупаемость — основа решения «масштабировать / контролировать / ремонтировать». Пороги настраиваются в боковой панели.</p></div>' +
+        '<div class="ue2-thresh-mini">Масштабируем при LTV/CAC ≥ <b>' + th.ltvCacGreen + '</b> и Payback ≤ <b>' + th.paybackGreenMax + '</b> мес.</div>' +
       '</div>' +
       '<div class="ue2-tz-grid">' + cards + '</div>' +
     '</div>';
@@ -1315,8 +1320,8 @@
     var wA = Math.max(4, Math.abs(r.marginA) / maxV * 100);
     var wB = Math.max(4, Math.abs(r.marginB) / maxV * 100);
     var winnerText = r.winner === 'A'
-      ? '🏆 При текущих параметрах выгоднее <b>Центр Финансов</b>: ΔМаржа = ' + money(r.delta) + ' на лида.'
-      : '🏆 При текущих параметрах выгоднее <b>Своя монетизация</b>: ΔМаржа = ' + money(r.delta) + ' на лида.';
+      ? 'При текущих параметрах выгоднее <b>Центр Финансов</b>: ΔМаржа = ' + money(r.delta) + ' на лида.'
+      : 'При текущих параметрах выгоднее <b>Своя монетизация</b>: ΔМаржа = ' + money(r.delta) + ' на лида.';
     return '<div class="ue2-card ue2-repeat-ab">' +
       '<div class="ue2-card-head"><h2>Повторные · «Центр Финансов» vs «Своя монетизация»</h2>' +
         '<p>Сравнение маржи A/B на той же когорте повторных. Решение можно зафиксировать в Smart Safe Router (вкладка «CJM»).</p></div>' +
@@ -1403,7 +1408,7 @@
           '<div>LTV/CAC: <b class="tone-' + ltvCacTone(k.blendedRatio) + '">' + ratio(k.blendedRatio) + '</b></div>' +
           '<div>Payback: <b>' + paybackText(k.payback) + '</b></div>' +
         '</div>' +
-        '<table class="ue2-cmp-table"><thead><tr><th>Сегмент</th><th>🚦</th><th>RPL</th><th>Margin</th><th>LTV/CAC</th><th>ROMI</th><th>Payback</th></tr></thead><tbody>' + perSeg + '</tbody></table>' +
+        '<table class="ue2-cmp-table"><thead><tr><th>Сегмент</th><th>Статус</th><th>RPL</th><th>Margin</th><th>LTV/CAC</th><th>ROMI</th><th>Payback</th></tr></thead><tbody>' + perSeg + '</tbody></table>' +
       '</div>';
     }
     return '<div class="ue2-card ue2-cmp-card">' +
@@ -1725,7 +1730,7 @@
         if (typeof window !== 'undefined' && typeof window.dispatchEvent === 'function') {
           window.dispatchEvent(new CustomEvent('ssr-repeat-decision', { detail: { winner: r.winner, route: route } }));
         }
-        rfix.textContent = '✓ Решение зафиксировано (' + route + ')';
+        rfix.textContent = 'Решение зафиксировано (' + route + ')';
         setTimeout(function () { rfix.textContent = 'Зафиксировать решение в Smart Safe Router'; }, 2200);
       } catch (e) {}
     });
