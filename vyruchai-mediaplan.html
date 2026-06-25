@@ -1091,10 +1091,11 @@ table.sortable thead th[aria-sort="descending"]::after{content:" ▼";font-size:
 .ue2-decision-proof{margin-top:auto;border-top:1px dashed var(--line);padding-top:8px;font-size:12px;color:var(--muted);line-height:1.4}
 .ue2-decision-proof b{color:var(--text);font-variant-numeric:tabular-nums}
 .ue2-footnote-wrap{position:relative;display:inline-flex;align-items:center;gap:8px;margin-top:6px}
-.ue2-footnote-btn{width:26px;height:26px;border-radius:50%;border:1px solid var(--line-strong);background:var(--surface);color:var(--orange);font-weight:900;display:inline-grid;place-items:center;line-height:1;box-shadow:var(--shadow-soft)}
+.ue2-footnote-btn{width:26px;height:26px;border-radius:50%;border:1px solid var(--line-strong);background:var(--surface);color:var(--orange);font-weight:900;display:inline-grid;place-items:center;line-height:1;box-shadow:var(--shadow-soft);cursor:pointer;list-style:none}
+.ue2-footnote-btn::-webkit-details-marker{display:none}
 .ue2-footnote-label{font-size:12.5px;color:var(--muted);font-weight:650}
 .ue2-footnote-panel{position:absolute;left:0;top:34px;z-index:8;width:min(760px,calc(100vw - 64px));max-height:min(70vh,680px);overflow:auto;border:1px solid var(--line);border-radius:var(--radius-sm);background:var(--surface);box-shadow:var(--shadow);padding:18px 20px;display:none}
-.ue2-footnote-wrap:hover .ue2-footnote-panel,.ue2-footnote-wrap:focus-within .ue2-footnote-panel{display:block}
+.ue2-footnote-wrap:hover .ue2-footnote-panel,.ue2-footnote-wrap:focus-within .ue2-footnote-panel,.ue2-footnote-wrap[open] .ue2-footnote-panel{display:block}
 .ue2-footnote-panel h3{margin:0 0 8px;font-size:15px}
 .ue2-footnote-panel h4{margin:14px 0 6px;font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
 .ue2-footnote-panel p{margin:0 0 8px;font-size:12.5px;color:var(--text);line-height:1.5}

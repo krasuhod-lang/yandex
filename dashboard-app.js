@@ -942,8 +942,11 @@ function buildUnitModel(){
   branch('overdue','Перегруженные (БФЛ)',overdueTraffic,overdueTrafficMonthly,overdueCR,cpaOverdue)
  ];
  const totalRevenue=branches.reduce((a,b)=>a+b.revenue,0);
+ const totalExternalRevenue=branches
+  .filter(b=>b.id!=='target')
+  .reduce((a,b)=>a+b.revenue,0);
  const revenueByBranch=Object.fromEntries(branches.map(b=>[b.id,b.revenue]));
- // Per TZ formula §5: Blended CAC = (spend − rev_rejected − rev_noncore) / target_conversions.
+ // Per TZ formula §5: Blended CAC = (spend − rev_rejected − rev_noncore − rev_overdue) / target_conversions.
  const blendedCac=Math.max(1,(marketingSpend-revenueByBranch.rejected-revenueByBranch.noncore-revenueByBranch.overdue)/targetConversions);
  const baseCac=marketingSpend/targetConversions;
  const margin=totalRevenue-marketingSpend;
@@ -959,7 +962,7 @@ function buildUnitModel(){
  };
  // В месячный PnL добавляем только внешнюю партнёрскую выручку; target ЦФ = 0 ₽.
  const revSum=sum(revenue)||1;
- const monthlyExternal=revenue.map(v=>totalRevenue*(v/revSum));
+ const monthlyExternal=revenue.map(v=>totalExternalRevenue*(v/revSum));
  const monthlyRevenue=revenue.map((v,i)=>v+monthlyExternal[i]);
  const monthlyProfit=monthlyRevenue.map((v,i)=>v-expenses[i]);
  const monthlyRomi=monthlyProfit.map((p,i)=>expenses[i]?p/expenses[i]*100:0);

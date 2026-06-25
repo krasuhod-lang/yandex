@@ -218,16 +218,17 @@
     ownServiceCost: 150,   // ₽, издержки на обслуживание лида
     repeatOrders: 1.4      // среднее число повторных сделок на лида сегмента в год
   };
+  function normalizeRepeatAB(obj) {
+    return Object.assign({}, DEFAULT_REPEAT_AB, obj || {}, { cfCommission: 0 });
+  }
   function loadRepeatAB() {
     try {
       var raw = localStorage.getItem(REPEAT_AB_KEY);
-      var obj = raw ? Object.assign({}, DEFAULT_REPEAT_AB, JSON.parse(raw)) : Object.assign({}, DEFAULT_REPEAT_AB);
-      obj.cfCommission = 0;
-      return obj;
+      return normalizeRepeatAB(raw ? JSON.parse(raw) : null);
     }
-    catch (e) { return Object.assign({}, DEFAULT_REPEAT_AB); }
+    catch (e) { return normalizeRepeatAB(); }
   }
-  function saveRepeatAB(o) { try { localStorage.setItem(REPEAT_AB_KEY, JSON.stringify(o)); } catch (e) {} }
+  function saveRepeatAB(o) { try { localStorage.setItem(REPEAT_AB_KEY, JSON.stringify(normalizeRepeatAB(o))); } catch (e) {} }
 
   // ---- Конфиг правил автовыводов (ТЗ §2.4.3) ----
   // Каждое правило — JSON: { scope:'seg'|'portfolio', when:{...}, text:'...' }
@@ -684,8 +685,8 @@
   }
 
   function managementFootnoteHtml(k, th, talkTrack, decision) {
-    return '<div class="ue2-footnote-wrap">' +
-      '<button type="button" class="ue2-footnote-btn" aria-label="Открыть сноску с комментариями, терминами и формулами">!</button>' +
+    return '<details class="ue2-footnote-wrap">' +
+      '<summary class="ue2-footnote-btn" aria-label="Открыть или закрыть сноску с комментариями, терминами и формулами">!</summary>' +
       '<span class="ue2-footnote-label">Сноска: комментарии, что говорить, термины и формулы</span>' +
       '<div class="ue2-footnote-panel" role="note">' +
         '<h3>Подробная сноска к управленческому выводу</h3>' +
@@ -700,7 +701,7 @@
         '<h4>Какие решения зафиксировать</h4>' +
         '<ol>' +
           '<li>Утвердить To-Be пилот на 10 000 пользователей как базовый сценарий проверки.</li>' +
-          '<li>Поставить go/no-go: LTV/CAC ≥ ' + ratio(th.ltvCacGreen) + ', маржа/лид &gt; 0, payback ≤ ' + esc(th.paybackGreenMax) + ' мес.</li>' +
+          '<li>Поставить go/no-go: LTV/CAC ≥ ' + ratio(th.ltvCacGreen) + ', маржа/лид > 0, payback ≤ ' + esc(th.paybackGreenMax) + ' мес.</li>' +
           '<li>Для целевых ЦФ зафиксировать правило: маршрут в ЦФ = 0 ₽ выручки Выручай.ру, но экономия CAC/защита базы ЦФ.</li>' +
           '<li>Для Повторных сравнивать Own vs CF и не путать внутренний эффект ЦФ с внешней выручкой маркетплейса.</li>' +
           '<li>Для Просроченных запускать отдельную БФЛ/CPA-витрину, не смешивая её с основной выдачей ЦФ.</li>' +
@@ -728,7 +729,7 @@
         '<p>' + esc(talkTrack) + '</p>' +
         '<p><b>Решение:</b> ' + esc(decision) + ' Текущий Blended LTV/CAC: <b>' + ratio(k.blendedRatio) + '</b>.</p>' +
       '</div>' +
-    '</div>';
+    '</details>';
   }
 
   /* ---------- Управленческий вывод ---------- */
@@ -1431,7 +1432,7 @@
         '<div class="ue2-ab-side' + (r.winner === 'A' ? ' is-winner' : '') + '">' +
           '<h4>A · Передача в Центр Финансов</h4>' +
           '<div class="ue2-ab-fields">' +
-            '<label>Внешняя выручка ЦФ, ₽ <input type="number" min="0" step="50" data-ue-ab="cfCommission" value="' + ab.cfCommission + '" readonly></label>' +
+            '<label>Внешняя выручка ЦФ, ₽ <input type="number" min="0" step="50" data-ue-ab="cfCommission" value="' + ab.cfCommission + '" readonly title="Всегда 0 ₽: передача в Центрофинанс — внутренний маршрут без выручки Выручай.ру" aria-label="Внешняя выручка Центрофинанс всегда 0 рублей: внутренний маршрут без выручки Выручай.ру"></label>' +
             '<label>Одобрение ЦФ, % <input type="number" min="0" max="100" step="0.5" data-ue-ab="cfApproval" value="' + ab.cfApproval + '"></label>' +
           '</div>' +
           '<div class="ue2-ab-margin">Маржа на лида: <b class="tone-' + (r.marginA >= 0 ? 'green' : 'red') + '">' + money(r.marginA) + '</b></div>' +
@@ -1815,7 +1816,6 @@
         var ab = loadRepeatAB();
         var k = inp.getAttribute('data-ue-ab');
         var v = Number(inp.value);
-        if (k === 'cfCommission') v = 0;
         if (isFinite(v)) ab[k] = v;
         saveRepeatAB(ab); partialRefresh();
       });
