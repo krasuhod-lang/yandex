@@ -62,6 +62,8 @@
     crossEpl: 1200,
     // Настройки Smart Safe Router
     cfRejectRate: 70,      // % отказов ЦФ (Soft Reject)
+    cfSecondContract: 60,  // % клиентов «Нового» сегмента, возвращающихся во второй договор ЦФ.
+                           // Остальные становятся спящими/отказными и не пользуются услугами МФО (доход 0).
     crCrossBank: 5,        // % кросс-сейл некредитных продуктов (Банки/РКО)
     crLeadBfl: 10,         // % в квалифицированный лид БФЛ
     eplBfl: 3000,          // Выплата БФЛ (EPL) в ₽
@@ -359,8 +361,12 @@
         var rejectRate = (p.cfRejectRate || 70) / 100;
         var revReject = p.epl * (1 - p.revShare / 100);
         ltv0 = rejectRate * revReject * crSegment;
-        ltv1 = ltv0 + (ltv0 * (s.ret1 / 100)) / (1 + d);
-        ltv2 = ltv1 + (ltv0 * (s.ret2 / 100)) / Math.pow(1 + d, 2);
+        // Второй договор: только доля cfSecondContract клиентов возвращается во второй договор ЦФ
+        // и снова частично уходит в Soft Reject МФО (повторный доход Выручай.ру). Остальные
+        // становятся спящими/отказными и не пользуются услугами МФО → повторного дохода нет.
+        var secondShare = (p.cfSecondContract != null ? p.cfSecondContract : 60) / 100;
+        ltv1 = ltv0 + (ltv0 * (s.ret1 / 100) * secondShare) / (1 + d);
+        ltv2 = ltv1 + (ltv0 * (s.ret2 / 100) * secondShare) / Math.pow(1 + d, 2);
       } else if (segId === 'repeat' || segId === 'sleep') {
         // Действующий и Спящий: Кредиты блокируются, заработок с кросс-сейла некредитных продуктов.
         var crossBankRev = (p.crossEpl || 1200) * (1 - p.revShare / 100);
@@ -471,14 +477,20 @@
   function repeatAB(p, ab) {
     if (!ab) ab = loadRepeatAB();
     var leadsApproved = (p.crLeadClickout / 100) * (p.crClickoutIssue / 100) * (p.seg.repeat.funnelMul || 1);
-    // A. Передача в Центр Финансов: внешняя выручка Выручай.ру = 0 ₽; считаем только CAC как альтернативную стоимость.
-    var marginA = CF_EXTERNAL_REVENUE * (ab.cfApproval / 100) * leadsApproved - p.seg.repeat.cac;
+    // A. Передача в Центр Финансов: одобренные ЦФ-заявки = 0 ₽ (внутренний маршрут без выручки
+    //    Выручай.ру). Отказники (1 − % одобрения ЦФ) монетизируются через Soft Reject МФО,
+    //    поэтому % одобрения напрямую влияет на маржу маршрута A: чем ниже одобрение, тем больше
+    //    отказников уходит на платную МФО-витрину.
+    var revReject = p.epl * (1 - p.revShare / 100);
+    var rejectShareA = Math.max(0, 1 - ab.cfApproval / 100);
+    var revenueA = revReject * rejectShareA * leadsApproved;
+    var marginA = revenueA - p.seg.repeat.cac;
     // B. Своя монетизация: доход = AOV × ставка маржинальности × повторные сделки; издержки = сервис на лида
     var revenueB = ab.ownAov * (ab.ownMargin / 100) * ab.repeatOrders;
     var marginB = revenueB - ab.ownServiceCost - p.seg.repeat.cac;
     var winner = marginA >= marginB ? 'A' : 'B';
     var delta = Math.abs(marginA - marginB);
-    return { marginA: marginA, marginB: marginB, winner: winner, delta: delta, leadsApproved: leadsApproved, params: ab };
+    return { marginA: marginA, marginB: marginB, winner: winner, delta: delta, leadsApproved: leadsApproved, revenueA: revenueA, revenueB: revenueB, params: ab };
   }
 
   // ---- Автовыводы по правилам (ТЗ §2.4.3) ----
@@ -676,7 +688,8 @@
   }
 
   function sidebarHtml() {
-    var bp = baseParams; // панель управления всегда редактирует «As-Is» базу
+    var bp = params; // показываем вводные АКТИВНОЙ модели (As-Is или производные To-Be), чтобы
+                     // при переключении модели цифры слева тоже менялись; правка пишется в As-Is базу.
     var common =
       '<div class="ue2-side-group">' +
         '<h4>Общие метрики</h4>' +
@@ -709,6 +722,7 @@
       '<div class="ue2-side-group">' +
         '<h4>Smart Safe Router</h4>' +
         sliderRow('cfRejectRate', 'Доля отказов ЦФ (Soft Reject)', '%', 0, 100, 1, bp.cfRejectRate || 70, 'Влияет на объём трафика, уходящего на внешнюю CPA-витрину') +
+        sliderRow('cfSecondContract', 'Второй договор ЦФ (Новые)', '%', 0, 100, 1, bp.cfSecondContract != null ? bp.cfSecondContract : 60, 'Доля «Новых», возвращающихся во второй договор ЦФ. Остальные становятся спящими/отказными и не пользуются МФО. По стандарту 60%.') +
         sliderRow('crCrossBank', 'CR кросс-сейл (некредиты)', '%', 0, 60, 1, bp.crCrossBank || 5, 'Для действующих и спящих клиентов') +
         sliderRow('crLeadBfl', 'CR квал. лид БФЛ', '%', 0, 90, 1, bp.crLeadBfl || 10) +
         sliderRow('eplBfl', 'Выплата БФЛ (EPL)', '₽', 0, 10000, 100, bp.eplBfl || 3000) +
@@ -728,7 +742,7 @@
     }).join('');
 
     var modeNote = currentMode === 'tobe'
-      ? '<p class="ue2-side-note">Активна <b>целевая модель (To-Be)</b>: поверх этих вводных применяются Квиз, новый Traffic&nbsp;Mix и Smart&nbsp;Safe&nbsp;Router&nbsp;→&nbsp;БФЛ. Ползунки задают базовый («As-Is») сценарий.</p>'
+      ? '<p class="ue2-side-note">Активна <b>целевая модель (To-Be)</b>: значения ниже показаны уже с учётом Квиза, нового Traffic&nbsp;Mix и Smart&nbsp;Safe&nbsp;Router&nbsp;→&nbsp;БФЛ. Правка ползунков меняет базовый («As-Is») сценарий, поверх которого пересчитывается To-Be.</p>'
       : '';
     return '<div class="ue2-side-head"><h3>Панель управления</h3>' +
       '<button class="ue2-reset" type="button" id="ueResetParams">Сбросить</button></div>' +
@@ -904,7 +918,6 @@
       '</div>' +
       '<div class="ue2-decision-hero">' +
         '<div><span>Главное решение</span><b>' + esc(decision) + '</b></div>' +
-        '<div><span>Порог совета директоров</span><b class="tone-' + tone + '">Blended LTV/CAC ' + ratio(k.blendedRatio) + ' / цель ≥ ' + ratio(th.ltvCacGreen) + '</b></div>' +
       '</div>' +
       '<div class="ue2-decision-grid">' +
         card(segmentLight(eRepeat, th).tone, 'Удар №1 · Повторные', 'масштабировать первыми', 'Не отдавать сегмент автоматически в один канал: каждый повторный лид сравниваем Own vs CF и фиксируем победителя в Smart Safe Router.', repeatProof) +
@@ -1581,7 +1594,7 @@
     var wA = Math.max(4, Math.abs(r.marginA) / maxV * 100);
     var wB = Math.max(4, Math.abs(r.marginB) / maxV * 100);
     var winnerText = r.winner === 'A'
-      ? 'При текущих параметрах внутренний маршрут <b>Центр Финансов</b> меньше просаживает маржу: ΔМаржа = ' + money(r.delta) + ' на лида. Денежной выручки Выручай.ру здесь нет.'
+      ? 'При текущих параметрах выгоднее маршрут <b>Центр Финансов</b>: ΔМаржа = ' + money(r.delta) + ' на лида. Одобренные ЦФ дают 0 ₽, но доход формируют отказники через Soft Reject МФО (доход маршрута A: ' + money(r.revenueA) + ').'
       : 'При текущих параметрах выгоднее <b>Своя монетизация</b>: ΔМаржа = ' + money(r.delta) + ' на лида.';
     return '<div class="ue2-card ue2-repeat-ab">' +
       '<div class="ue2-card-head"><h2>Повторные · «Центр Финансов» vs «Своя монетизация»</h2>' +
@@ -1590,7 +1603,7 @@
         '<div class="ue2-ab-side' + (r.winner === 'A' ? ' is-winner' : '') + '">' +
           '<h4>A · Передача в Центр Финансов</h4>' +
           '<div class="ue2-ab-fields">' +
-            '<div class="ue2-ab-static" title="Передача в Центрофинанс — внутренний маршрут без выручки Выручай.ру">Внешняя выручка ЦФ: <b>' + money(CF_EXTERNAL_REVENUE) + '</b></div>' +
+            '<div class="ue2-ab-static" title="Одобренные ЦФ — внутренний маршрут без выручки Выручай.ру; доход даёт только Soft Reject отказников">Выдача ЦФ: <b>' + money(CF_EXTERNAL_REVENUE) + '</b> · Soft Reject МФО: <b>' + money(r.revenueA) + '</b></div>' +
             '<label>Одобрение ЦФ, % <input type="number" min="0" max="100" step="0.5" data-ue-ab="cfApproval" value="' + ab.cfApproval + '"></label>' +
           '</div>' +
           '<div class="ue2-ab-margin">Маржа на лида: <b class="tone-' + (r.marginA >= 0 ? 'green' : 'red') + '">' + money(r.marginA) + '</b></div>' +
@@ -1614,7 +1627,7 @@
       '<table class="ue2-ab-table"><thead><tr><th>Параметр</th><th>A · ЦФ</th><th>B · Своя</th></tr></thead>' +
         '<tbody>' +
           '<tr><td>Маржа на лида</td><td>' + money(r.marginA) + '</td><td>' + money(r.marginB) + '</td></tr>' +
-          '<tr><td>Доход</td><td>' + money(CF_EXTERNAL_REVENUE * (ab.cfApproval / 100) * r.leadsApproved) + ' <span class="ue2-t-sub">по умолчанию 0 ₽ для Выручай.ру</span></td><td>' + money(ab.ownAov * (ab.ownMargin / 100) * ab.repeatOrders) + '</td></tr>' +
+          '<tr><td>Доход</td><td>' + money(r.revenueA) + ' <span class="ue2-t-sub">Soft Reject МФО с отказников ЦФ; выдача ЦФ = 0 ₽</span></td><td>' + money(ab.ownAov * (ab.ownMargin / 100) * ab.repeatOrders) + '</td></tr>' +
           '<tr><td>Издержки</td><td>0 ₽ сервис; CAC остаётся альтернативной стоимостью</td><td>' + money(ab.ownServiceCost) + ' (сервис)</td></tr>' +
           '<tr><td>CAC (общий)</td><td>' + money(params.seg.repeat.cac) + '</td><td>' + money(params.seg.repeat.cac) + '</td></tr>' +
         '</tbody>' +
@@ -1906,6 +1919,63 @@
     wireTzControls();
   }
 
+  // Привязка только A/B-карты повторных (вход + кнопка фиксации решения). Вынесено отдельно,
+  // чтобы перерисовывать карту точечно и не терять фокус ввода при наборе значений.
+  function wireAbControls() {
+    document.querySelectorAll('#ueLab [data-ue-ab]').forEach(function (inp) {
+      inp.addEventListener('input', function () {
+        var ab = loadRepeatAB();
+        var k = inp.getAttribute('data-ue-ab');
+        var v = Number(inp.value);
+        if (isFinite(v)) ab[k] = v;
+        saveRepeatAB(ab);
+        refreshAbCard(k);
+      });
+    });
+    // Зафиксировать решение A/B в роутере (ТЗ §2.5.2 + §3.3.4)
+    var rfix = document.getElementById('ueRouterFix');
+    if (rfix) rfix.addEventListener('click', function () {
+      var r = repeatAB(params);
+      try {
+        var route = r.winner === 'A' ? 'CJM.Repeat.CF' : 'CJM.Repeat.Own';
+        localStorage.setItem('ssr_repeat_decision_v1', JSON.stringify({
+          winner: r.winner, route: route, marginA: r.marginA, marginB: r.marginB, ts: Date.now()
+        }));
+        // Уведомим вкладку CJM, если она открыта
+        if (typeof window !== 'undefined' && typeof window.dispatchEvent === 'function') {
+          window.dispatchEvent(new CustomEvent('ssr-repeat-decision', { detail: { winner: r.winner, route: route } }));
+        }
+        rfix.textContent = 'Решение зафиксировано (' + route + ')';
+        setTimeout(function () { rfix.textContent = 'Зафиксировать решение в Smart Safe Router'; }, 2200);
+      } catch (e) {}
+    });
+  }
+
+  // Точечная перерисовка только A/B-карты. Сохраняет фокус и позицию каретки в редактируемом
+  // поле, поэтому пользователь может вводить многозначные числа без потери выделения.
+  function refreshAbCard(focusKey) {
+    var card = document.querySelector('#ueLab .ue2-repeat-ab');
+    if (!card) { partialRefresh(); return; }
+    var active = document.activeElement;
+    var key = focusKey || (active && active.getAttribute ? active.getAttribute('data-ue-ab') : null);
+    var selStart = null, selEnd = null;
+    if (active && key && typeof active.selectionStart === 'number') {
+      selStart = active.selectionStart; selEnd = active.selectionEnd;
+    }
+    var wrap = document.createElement('div');
+    wrap.innerHTML = repeatABHtml();
+    var fresh = wrap.firstChild;
+    card.parentNode.replaceChild(fresh, card);
+    wireAbControls();
+    if (key) {
+      var el = document.querySelector('#ueLab [data-ue-ab="' + key + '"]');
+      if (el) {
+        el.focus();
+        if (selStart != null) { try { el.setSelectionRange(selStart, selEnd); } catch (e) {} }
+      }
+    }
+  }
+
   // Привязка управлений новых ТЗ-блоков (пресеты, слоты, A/B, инсайты, объяснение).
   function wireTzControls() {
     // Пресеты
@@ -1969,32 +2039,7 @@
       });
     });
     // A/B повторных
-    document.querySelectorAll('[data-ue-ab]').forEach(function (inp) {
-      inp.addEventListener('input', function () {
-        var ab = loadRepeatAB();
-        var k = inp.getAttribute('data-ue-ab');
-        var v = Number(inp.value);
-        if (isFinite(v)) ab[k] = v;
-        saveRepeatAB(ab); partialRefresh();
-      });
-    });
-    // Зафиксировать решение A/B в роутере (ТЗ §2.5.2 + §3.3.4)
-    var rfix = document.getElementById('ueRouterFix');
-    if (rfix) rfix.addEventListener('click', function () {
-      var r = repeatAB(params);
-      try {
-        var route = r.winner === 'A' ? 'CJM.Repeat.CF' : 'CJM.Repeat.Own';
-        localStorage.setItem('ssr_repeat_decision_v1', JSON.stringify({
-          winner: r.winner, route: route, marginA: r.marginA, marginB: r.marginB, ts: Date.now()
-        }));
-        // Уведомим вкладку CJM, если она открыта
-        if (typeof window !== 'undefined' && typeof window.dispatchEvent === 'function') {
-          window.dispatchEvent(new CustomEvent('ssr-repeat-decision', { detail: { winner: r.winner, route: route } }));
-        }
-        rfix.textContent = 'Решение зафиксировано (' + route + ')';
-        setTimeout(function () { rfix.textContent = 'Зафиксировать решение в Smart Safe Router'; }, 2200);
-      } catch (e) {}
-    });
+    wireAbControls();
     // Правила выводов (JSON-редактор)
     var insBtn = document.getElementById('ueInsightsEdit');
     if (insBtn) insBtn.addEventListener('click', function () {
