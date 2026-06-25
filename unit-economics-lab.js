@@ -210,8 +210,8 @@
   function saveThresholds(t) { try { localStorage.setItem(THRESH_KEY, JSON.stringify(t)); } catch (e) {} }
 
   // ---- Параметры A/B для сегмента «Повторные» (ТЗ §2.5) ----
+  var CF_INTERNAL_COMMISSION = 0; // ₽, ЦФ — внутренний маршрут без выручки Выручай.ру
   var DEFAULT_REPEAT_AB = {
-    cfCommission: 0,       // ₽, ЦФ — внутренний маршрут без выручки Выручай.ру
     cfApproval: 65,        // %, доля одобренных ЦФ заявок
     ownAov: 9000,          // ₽, средний чек собственной монетизации
     ownMargin: 25,         // %, ставка маржинальности
@@ -219,7 +219,9 @@
     repeatOrders: 1.4      // среднее число повторных сделок на лида сегмента в год
   };
   function normalizeRepeatAB(obj) {
-    return Object.assign({}, DEFAULT_REPEAT_AB, obj || {}, { cfCommission: 0 });
+    var normalized = Object.assign({}, DEFAULT_REPEAT_AB, obj || {});
+    delete normalized.cfCommission;
+    return normalized;
   }
   function loadRepeatAB() {
     try {
@@ -378,7 +380,7 @@
     if (!ab) ab = loadRepeatAB();
     var leadsApproved = (p.crLeadClickout / 100) * (p.crClickoutIssue / 100) * (p.seg.repeat.funnelMul || 1);
     // A. Передача в Центр Финансов: внешняя выручка Выручай.ру = 0 ₽; считаем только CAC как альтернативную стоимость.
-    var marginA = ab.cfCommission * (ab.cfApproval / 100) * leadsApproved - p.seg.repeat.cac;
+    var marginA = CF_INTERNAL_COMMISSION * (ab.cfApproval / 100) * leadsApproved - p.seg.repeat.cac;
     // B. Своя монетизация: доход = AOV × ставка маржинальности × повторные сделки; издержки = сервис на лида
     var revenueB = ab.ownAov * (ab.ownMargin / 100) * ab.repeatOrders;
     var marginB = revenueB - ab.ownServiceCost - p.seg.repeat.cac;
@@ -1432,7 +1434,7 @@
         '<div class="ue2-ab-side' + (r.winner === 'A' ? ' is-winner' : '') + '">' +
           '<h4>A · Передача в Центр Финансов</h4>' +
           '<div class="ue2-ab-fields">' +
-            '<label>Внешняя выручка ЦФ (всегда 0 ₽), ₽ <input type="number" min="0" step="50" data-ue-ab="cfCommission" value="' + ab.cfCommission + '" readonly title="Передача в Центрофинанс — внутренний маршрут без выручки Выручай.ру"></label>' +
+            '<div class="ue2-ab-static" title="Передача в Центрофинанс — внутренний маршрут без выручки Выручай.ру">Внешняя выручка ЦФ: <b>' + money(CF_INTERNAL_COMMISSION) + '</b></div>' +
             '<label>Одобрение ЦФ, % <input type="number" min="0" max="100" step="0.5" data-ue-ab="cfApproval" value="' + ab.cfApproval + '"></label>' +
           '</div>' +
           '<div class="ue2-ab-margin">Маржа на лида: <b class="tone-' + (r.marginA >= 0 ? 'green' : 'red') + '">' + money(r.marginA) + '</b></div>' +
@@ -1456,7 +1458,7 @@
       '<table class="ue2-ab-table"><thead><tr><th>Параметр</th><th>A · ЦФ</th><th>B · Своя</th></tr></thead>' +
         '<tbody>' +
           '<tr><td>Маржа на лида</td><td>' + money(r.marginA) + '</td><td>' + money(r.marginB) + '</td></tr>' +
-          '<tr><td>Доход</td><td>' + money(ab.cfCommission * (ab.cfApproval / 100) * r.leadsApproved) + ' <span class="ue2-t-sub">по умолчанию 0 ₽ для Выручай.ру</span></td><td>' + money(ab.ownAov * (ab.ownMargin / 100) * ab.repeatOrders) + '</td></tr>' +
+          '<tr><td>Доход</td><td>' + money(CF_INTERNAL_COMMISSION * (ab.cfApproval / 100) * r.leadsApproved) + ' <span class="ue2-t-sub">по умолчанию 0 ₽ для Выручай.ру</span></td><td>' + money(ab.ownAov * (ab.ownMargin / 100) * ab.repeatOrders) + '</td></tr>' +
           '<tr><td>Издержки</td><td>0 ₽ сервис; CAC остаётся альтернативной стоимостью</td><td>' + money(ab.ownServiceCost) + ' (сервис)</td></tr>' +
           '<tr><td>CAC (общий)</td><td>' + money(params.seg.repeat.cac) + '</td><td>' + money(params.seg.repeat.cac) + '</td></tr>' +
         '</tbody>' +
