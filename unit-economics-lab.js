@@ -310,11 +310,11 @@
         ltv2 = ltv1 + (ltv0 * (s.ret2 / 100)) / Math.pow(1 + d, 2);
       } else if (segId === 'repeat' || segId === 'sleep') {
         // Действующий и Спящий: Кредиты блокируются, заработок с кросс-сейла некредитных продуктов.
-        var crossBankRev = (p.crossEpl || 1500) * (1 - p.revShare / 100); // Используем crossEpl для банковских продуктов
+        var crossBankRev = (p.crossEpl || 1200) * (1 - p.revShare / 100);
         var crossCr = (p.crCrossBank || 5) / 100;
         crSegment = crossCr;
         ltv0 = crossBankRev * crossCr;
-        ltv1 = ltv0; // Без retention хвоста для разовых кросс-продаж (или с ним, если хотим, но по ТЗ это просто выплата)
+        ltv1 = ltv0; // Без retention хвоста, так как это разовая продажа банковского продукта
         ltv2 = ltv0;
       } else if (segId === 'overdue' || isBfl) {
         // Просроченный: Монетизация через БФЛ
@@ -327,7 +327,7 @@
       }
     } else {
       if (isBfl) {
-        // Резерв на случай явного роутера в As-Is (хотя обычно там нет)
+        // Поддержка принудительной маршрутизации в БФЛ в классической воронке (если явно включено)
         var revBflAsIs = (p.eplBfl || 3000) * (1 - p.revShare / 100);
         crSegment = (p.crLeadBfl || 10) / 100;
         ltv0 = revBflAsIs * crSegment;
@@ -648,7 +648,7 @@
     var routerGroup =
       '<div class="ue2-side-group">' +
         '<h4>Smart Safe Router</h4>' +
-        sliderRow('cfRejectRate', 'Доля отказов ЦФ (Soft Reject)', '%', 0, 100, 1, bp.cfRejectRate || 70, 'Влияет на объем трафика, уходящего на внешнюю CPA-витрину') +
+        sliderRow('cfRejectRate', 'Доля отказов ЦФ (Soft Reject)', '%', 0, 100, 1, bp.cfRejectRate || 70, 'Влияет на объём трафика, уходящего на внешнюю CPA-витрину') +
         sliderRow('crCrossBank', 'CR кросс-сейл (некредиты)', '%', 0, 60, 1, bp.crCrossBank || 5, 'Для действующих и спящих клиентов') +
         sliderRow('crLeadBfl', 'CR квал. лид БФЛ', '%', 0, 90, 1, bp.crLeadBfl || 10) +
         sliderRow('eplBfl', 'Выплата БФЛ (EPL)', '₽', 0, 10000, 100, bp.eplBfl || 3000) +
@@ -808,20 +808,26 @@
     var isGreen = margin >= 0;
     
     var maxVal = Math.max(totalInvest, totalRev, 1);
-    function w(v) { return Math.max(1, (Math.abs(v) / maxVal) * 100) + '%'; }
+    function barWidth(v) { return Math.max(1, (Math.abs(v) / maxVal) * 100) + '%'; }
 
-    return '<div class="ue2-card">' +
+    var styles = '<style>' +
+      '.ue2-wf-row { display: flex; align-items: center; margin-bottom: 8px; }' +
+      '.ue2-wf-label { width: 250px; font-weight: 500; }' +
+      '.ue2-wf-bar { color: #fff; padding: 4px 8px; border-radius: 4px; }' +
+    '</style>';
+
+    return '<div class="ue2-card">' + styles +
       '<div class="ue2-card-head">' +
         '<h2>PnL Waterfall · Окупаемость внешнего трафика</h2>' +
         '<p>Мы тратим маркетинговый бюджет на Новых, отдаем лучших клиентов в ЦФ бесплатно, но все равно окупаем CAC за счет монетизации отказников, действующих и спящих через Роутер.</p>' +
       '</div>' +
-      '<div class="ue2-waterfall" style="display:flex; flex-direction:column; gap:8px; margin-top:16px;">' +
-        '<div style="display:flex; align-items:center;"><div style="width:250px; font-weight:500;">1. Инвестиции (CAC+OPEX)</div><div style="background:var(--red); color:#fff; padding:4px 8px; border-radius:4px; width:'+w(totalInvest)+'">-' + money(totalInvest) + '</div></div>' +
-        '<div style="display:flex; align-items:center;"><div style="width:250px; font-weight:500;">2. Потеря (Одобренные ЦФ)</div><div style="background:#e5e7eb; color:#666; padding:4px 8px; border-radius:4px; width:auto">0 ₽ (Внутренняя синергия)</div></div>' +
-        '<div style="display:flex; align-items:center;"><div style="width:250px; font-weight:500;">3. Компенсация: Soft Reject МФО</div><div style="background:var(--blue); color:#fff; padding:4px 8px; border-radius:4px; width:'+w(rejectRev)+'">+' + money(rejectRev) + '</div></div>' +
-        '<div style="display:flex; align-items:center;"><div style="width:250px; font-weight:500;">4. Компенсация: Банки/РКО</div><div style="background:var(--green); color:#fff; padding:4px 8px; border-radius:4px; width:'+w(crossRev)+'">+' + money(crossRev) + '</div></div>' +
-        '<div style="display:flex; align-items:center;"><div style="width:250px; font-weight:500;">5. Компенсация: БФЛ/HR</div><div style="background:var(--orange); color:#fff; padding:4px 8px; border-radius:4px; width:'+w(overdueRev)+'">+' + money(overdueRev) + '</div></div>' +
-        '<div style="display:flex; align-items:center; margin-top:8px; padding-top:8px; border-top:1px solid #e5e7eb;"><div style="width:250px; font-weight:bold;">6. Итог (Чистая маржа)</div><div style="background:var(--'+(isGreen?'green':'red')+'); color:#fff; padding:4px 8px; border-radius:4px; width:'+w(margin)+'; font-weight:bold;">' + (isGreen?'+':'') + money(margin) + '</div></div>' +
+      '<div class="ue2-waterfall" style="display:flex; flex-direction:column; margin-top:16px;">' +
+        '<div class="ue2-wf-row"><div class="ue2-wf-label">1. Инвестиции (CAC+OPEX)</div><div class="ue2-wf-bar" style="background:var(--red); width:'+barWidth(totalInvest)+'">-' + money(totalInvest) + '</div></div>' +
+        '<div class="ue2-wf-row"><div class="ue2-wf-label">2. Потеря (Одобренные ЦФ)</div><div class="ue2-wf-bar" style="background:#e5e7eb; color:#666; width:auto">0 ₽ (Внутренняя синергия)</div></div>' +
+        '<div class="ue2-wf-row"><div class="ue2-wf-label">3. Компенсация: Soft Reject МФО</div><div class="ue2-wf-bar" style="background:var(--blue); width:'+barWidth(rejectRev)+'">+' + money(rejectRev) + '</div></div>' +
+        '<div class="ue2-wf-row"><div class="ue2-wf-label">4. Компенсация: Банки/РКО</div><div class="ue2-wf-bar" style="background:var(--green); width:'+barWidth(crossRev)+'">+' + money(crossRev) + '</div></div>' +
+        '<div class="ue2-wf-row"><div class="ue2-wf-label">5. Компенсация: БФЛ/HR</div><div class="ue2-wf-bar" style="background:var(--orange); width:'+barWidth(overdueRev)+'">+' + money(overdueRev) + '</div></div>' +
+        '<div class="ue2-wf-row" style="margin-top:8px; padding-top:8px; border-top:1px solid #e5e7eb;"><div class="ue2-wf-label" style="font-weight:bold;">6. Итог (Чистая маржа)</div><div class="ue2-wf-bar" style="background:var(--'+(isGreen?'green':'red')+'); font-weight:bold; width:'+barWidth(margin)+'">' + (isGreen?'+':'') + money(margin) + '</div></div>' +
       '</div>' +
     '</div>';
   }
@@ -926,12 +932,13 @@
       
       var tag = '';
       if (params.isRouterActive) {
+        var tStyle = 'font-size:10px; padding:2px 6px; border-radius:4px; ';
         if (s.id === 'new') {
-          tag = '<div class="ue2-seg-tags" style="margin-bottom:8px; display:flex; gap:4px; flex-wrap:wrap;"><span class="ue2-tag tone-gray" style="font-size:10px; padding:2px 6px; border-radius:4px; background:#f3f4f6;">[Внутренняя синергия с ЦФ]</span><span class="ue2-tag tone-blue" style="font-size:10px; padding:2px 6px; border-radius:4px; background:var(--blue); color:#fff;">[Внешняя CPA-монетизация]</span></div>';
+          tag = '<div class="ue2-seg-tags" style="margin-bottom:8px; display:flex; gap:4px; flex-wrap:wrap;"><span class="ue2-tag tone-gray" style="' + tStyle + 'background:#f3f4f6;">[Внутренняя синергия с ЦФ]</span><span class="ue2-tag tone-blue" style="' + tStyle + 'background:var(--blue); color:#fff;">[Внешняя CPA-монетизация]</span></div>';
         } else if (s.id === 'repeat' || s.id === 'sleep') {
-          tag = '<div class="ue2-seg-tags" style="margin-bottom:8px;"><span class="ue2-tag tone-green" style="font-size:10px; padding:2px 6px; border-radius:4px; background:var(--green); color:#fff;">[Zero-Waste кросс-сейл]</span></div>';
+          tag = '<div class="ue2-seg-tags" style="margin-bottom:8px;"><span class="ue2-tag tone-green" style="' + tStyle + 'background:var(--green); color:#fff;">[Zero-Waste кросс-сейл]</span></div>';
         } else if (s.id === 'overdue') {
-          tag = '<div class="ue2-seg-tags" style="margin-bottom:8px;"><span class="ue2-tag tone-orange" style="font-size:10px; padding:2px 6px; border-radius:4px; background:var(--orange); color:#fff;">[Токсичный трафик → NPL монетизация]</span></div>';
+          tag = '<div class="ue2-seg-tags" style="margin-bottom:8px;"><span class="ue2-tag tone-orange" style="' + tStyle + 'background:var(--orange); color:#fff;">[Токсичный трафик → NPL монетизация]</span></div>';
         }
       }
 
