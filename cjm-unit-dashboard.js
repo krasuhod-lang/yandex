@@ -108,6 +108,7 @@
   function fmt(v){return Math.round(Number(v)||0).toLocaleString('ru-RU');}
   function rub(v){return fmt(v)+' ₽';}
   function pct(v,digits){return (Number(v)||0).toLocaleString('ru-RU',{maximumFractionDigits:digits==null?1:digits})+'%';}
+  function rate(num,den){return den>0?num/den*100:0;}
   function ratioTone(v){return v>=3?'green':v>=1.5?'yellow':'red';}
   function segmentById(id){return segments.find(function(s){return s.id===id;})||null;}
   function selectedId(){return read(STORAGE_KEY,{segment:'all'}).segment||'all';}
@@ -227,9 +228,9 @@
     }).join('');
     var rows=[
       ['Visit',funnel.visit,'—','100%'],
-      ['Lead',funnel.lead,pct(funnel.lead/funnel.visit*100),pct(funnel.lead/funnel.visit*100)],
-      ['Approval',funnel.approval,pct(funnel.approval/funnel.lead*100),pct(funnel.approval/funnel.visit*100)],
-      ['Issue',funnel.issue,pct(funnel.issue/funnel.approval*100),pct(funnel.issue/funnel.visit*100)]
+      ['Lead',funnel.lead,pct(rate(funnel.lead,funnel.visit)),pct(rate(funnel.lead,funnel.visit))],
+      ['Approval',funnel.approval,pct(rate(funnel.approval,funnel.lead)),pct(rate(funnel.approval,funnel.visit))],
+      ['Issue',funnel.issue,pct(rate(funnel.issue,funnel.approval)),pct(rate(funnel.issue,funnel.visit))]
     ];
     $('cjmUnitFunnel').innerHTML='<thead><tr><th>Шаг</th><th>Абс.</th><th>CR шага</th><th>CR от Visit</th></tr></thead><tbody>'+
       rows.map(function(r){return '<tr><td class="ue2-t-name">'+esc(r[0])+'</td><td>'+fmt(r[1])+'</td><td>'+esc(r[2])+'</td><td>'+esc(r[3])+'</td></tr>';}).join('')+'</tbody>';
@@ -301,9 +302,12 @@
 
   function renderCharts(){
     var colors={blue:'#0071e3',green:'#1d9d52',orange:'#c2680a',red:'#e0162b',violet:'#6e5dc6'};
+    var segmentNames=segments.map(function(s){return s.name;});
+    var segmentRatios=segments.map(function(s){return s.ltvCac;});
+    var segmentColors=segments.map(function(s){return s.color;});
     drawChart('cjmTrendChart',{
       type:'bar',
-      data:{labels:segments.map(function(s){return s.name;}),datasets:[{label:'LTV/CAC, ×',data:segments.map(function(s){return s.ltvCac;}),backgroundColor:segments.map(function(s){return s.color;}),tooltipFormat:function(v){return v.toFixed(1)+'×';}}]}
+      data:{labels:segmentNames,datasets:[{label:'LTV/CAC, ×',data:segmentRatios,backgroundColor:segmentColors,tooltipFormat:function(v){return v.toFixed(1)+'×';}}]}
     });
     var asIs=aggregateFunnel('asIs'), toBe=aggregateFunnel('toBe');
     drawChart('cjmUnitChart',{
