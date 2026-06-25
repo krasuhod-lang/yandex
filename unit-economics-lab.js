@@ -25,9 +25,6 @@
   // ---- Константы целевой модели «To-Be» (ТЗ §2) ----
   var USERS_BASE = 10000;        // фикс-база сценария окупаемости (10 000 пользователей)
   var QUIZ_UPLIFT = 0.20;        // +20% к CR Visit→Lead Нового сегмента за счёт интерактивного Квиза
-  // Порог «зелёного» статуса карточки сегмента: LTV/CAC ≥ 2.5x (ТЗ §4 — масштабируем).
-  var SEG_PAYBACK_THRESHOLD = 2.5;
-
   // Табы модуля (ТЗ-Дополнение №2 §6). id → заголовок ленты.
   var TABS = [
     { id: 'overview', name: 'Обзор · KPI' },
@@ -81,9 +78,9 @@
   // ---- Целевая модель «To-Be» (Router & Quiz). Накладывается ПОВЕРХ базовых
   //      вводных при mode === 'tobe'. Источник правды — ТЗ-1 §2:
   //   • Реструктуризация трафика: Повторные 40 / Новые 30 / Просроченные 20 / Спящие 10.
-  //   • Квиз: +20% к CR Visit→Lead Нового → CAC Нового 1200 → 800 ₽; квиз пред-квалифицирует
+  //   • Квиз: +20% к CR Visit→Lead Нового → CAC Нового 1200 → 700 ₽; квиз преквалифицирует
   //     лиды, поэтому растут downstream-конверсии и средний EPL (динамические тарифы).
-  //   • Smart Safe Router: «Просроченные» маршрутизируются на офферы БФЛ, фикс-EPL 3000 ₽.
+  //   • Smart Safe Router: «Просроченные» маршрутизируются на офферы БФЛ, фикс-EPL 10 000 ₽.
   //   Калибровка даёт Blended LTV/CAC ≈ 2.6x (> 2.5x таргета инвесткомитета).
   function applyMode(base, mode) {
     var p = deepCopy(base);
@@ -92,23 +89,29 @@
       return p;
     }
     p.isRouterActive = true;
-    // §2.2 Квиз: +20% к CR Visit→Lead (объём лидов Нового растёт, CAC падает 1200→800).
+    // §2.2 Квиз: +20% к CR Visit→Lead (объём лидов Нового растёт, CAC падает 1200→700).
     p.crVisitLead = Math.round(base.crVisitLead * (1 + QUIZ_UPLIFT) * 10) / 10;
-    // Квиз пред-квалифицирует трафик → выше downstream-конверсии; динамические тарифы → выше EPL.
-    p.crLeadClickout = 70;
-    p.crClickoutIssue = 70;
-    p.epl = 2500;
-    p.crossEpl = 1600;
+    // Квиз и витрина источников преквалифицируют трафик → выше downstream-конверсии;
+    // внешние источники (БФЛ/CPA/банки) дают более высокий подтверждённый EPL.
+    p.crLeadClickout = 80;
+    p.crClickoutIssue = 80;
+    p.epl = 3000;
+    p.crossEpl = 3000;
+    p.crCrossBank = 60;
+    p.crLeadBfl = 35;
+    p.eplBfl = 10000;
     // §2.1 Traffic Mix
     p.seg.new.share = 30;
     p.seg.repeat.share = 40;
     p.seg.overdue.share = 20;
     p.seg.sleep.share = 10;
-    // §2.2 Квиз → CAC Нового 1200 → 800 ₽
-    p.seg.new.cac = 800;
+    // §2.2 Квиз → CAC Нового 1200 → 700 ₽
+    p.seg.new.cac = 700;
     // CRM-уплифт повторных (удержание)
     p.seg.repeat.ret1 = 55;
     p.seg.repeat.ret2 = 38;
+    // Источник БФЛ/CPA монетизирует просроченный интент, поэтому платный CAC ниже.
+    p.seg.overdue.cac = 650;
     // §2.3 Smart Safe Router → БФЛ для «Просроченных»
     p.seg.overdue.router = 'bfl';
     p.seg.overdue.eplBfl = p.eplBfl;
@@ -200,17 +203,35 @@
   ];
 
   // ---- Конфиг порогов «светофора» (ТЗ §4: масштаб/контроль/ремонт) ----
-  // Green   — масштабируем: LTV/CAC ≥ 2.5 И Payback ≤ 2 мес. И маржа на лида > 0.
+  // Green   — масштабируем: LTV/CAC ≥ 2.5 И реальный Payback ≤ 24 мес. И маржа на лида > 0.
   // Yellow  — зона контроля: LTV/CAC от 1 до 2.5.
   // Red     — убыток / ремонт: LTV/CAC < 1 ИЛИ маржа на лида ≤ 0.
   var DEFAULT_THRESHOLDS = {
     ltvCacGreen: 2.5,
     ltvCacYellow: 1.0,
-    paybackGreenMax: 2,
-    paybackYellowMax: 12
+    paybackGreenMax: 24,
+    paybackYellowMax: 36
   };
+  var LEGACY_PAYBACK_GREEN_MAX = 2;
+  var LEGACY_PAYBACK_YELLOW_MAX = 12;
   function loadThresholds() {
-    try { var raw = localStorage.getItem(THRESH_KEY); if (!raw) return Object.assign({}, DEFAULT_THRESHOLDS); return Object.assign({}, DEFAULT_THRESHOLDS, JSON.parse(raw)); }
+    try {
+      var raw = localStorage.getItem(THRESH_KEY);
+      if (!raw) return Object.assign({}, DEFAULT_THRESHOLDS);
+      var saved = JSON.parse(raw);
+      var merged = Object.assign({}, DEFAULT_THRESHOLDS, saved);
+      // Миграция старой цели «окупиться за 2 месяца»: если пользователь не задавал
+      // новый реальный горизонт вручную, возвращаем дефолт 24 месяца. В старом
+      // хранилище не было признака ручного изменения, поэтому точно выставленные
+      // пользователем legacy-значения 2/12 не перетираем.
+      if (saved._realPaybackV2 !== true) {
+        if ((Number(merged.paybackGreenMax) || 0) < LEGACY_PAYBACK_GREEN_MAX) merged.paybackGreenMax = DEFAULT_THRESHOLDS.paybackGreenMax;
+        if ((Number(merged.paybackYellowMax) || 0) < LEGACY_PAYBACK_YELLOW_MAX) merged.paybackYellowMax = DEFAULT_THRESHOLDS.paybackYellowMax;
+        merged._realPaybackV2 = true;
+        saveThresholds(merged);
+      }
+      return merged;
+    }
     catch (e) { return Object.assign({}, DEFAULT_THRESHOLDS); }
   }
   function saveThresholds(t) { try { localStorage.setItem(THRESH_KEY, JSON.stringify(t)); } catch (e) {} }
@@ -271,6 +292,10 @@
   function money1(n) { return (Number(n) || 0).toLocaleString('ru-RU', { maximumFractionDigits: 1 }) + ' ₽'; }
   function pct(n) { return (Number(n) || 0).toLocaleString('ru-RU', { maximumFractionDigits: 1 }) + '%'; }
   function ratio(n) { return (Number(n) || 0).toLocaleString('ru-RU', { maximumFractionDigits: 2 }) + 'x'; }
+  function signedRatioDelta(n) {
+    var v = Number(n) || 0;
+    return (v >= 0 ? '+' : '') + v.toLocaleString('ru-RU', { maximumFractionDigits: 2 }) + 'x';
+  }
   function esc(s) {
     return String(s).replace(/[&<>"']/g, function (c) {
       return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
@@ -342,7 +367,9 @@
 
     var roi = s.cac > 0 ? (ltv2 - s.cac) / s.cac * 100 : 0;
     var ltvCac = s.cac > 0 ? ltv2 / s.cac : 0;
-    // Срок окупаемости (месяцы): линейная интерполяция по точкам 0 / 12 / 24 мес.
+    // Срок окупаемости (месяцы): классическая линейная интерполяция накопленного LTV
+    // по горизонту 0 / 12 / 24 мес. В нулевой месяц накопленный доход = 0,
+    // дальше он равномерно накапливается до LTV₁ к 12-му месяцу.
     var payback = paybackMonths(ltv0, ltv1, ltv2, s.cac);
     // ТЗ §2.4.1: RPL (Revenue per Lead) = выручка сегмента / число лидов. Берём LTV₂ как
     // ожидаемую совокупную выручку с одного привлечённого лида за 2 года.
@@ -359,13 +386,13 @@
 
   function paybackMonths(ltv0, ltv1, ltv2, cac) {
     if (cac <= 0) return 0;
-    // Если выручка нулевого периода уже покрывает CAC, окупаемость условно — первый месяц.
-    if (ltv0 >= cac) return ltv0 > 0 ? Math.min(1, cac / ltv0) : 1;
-    // Между 0 и 12 мес растёт линейно от ltv0 до ltv1
+    // Между 0 и 12 мес растёт линейно от 0 до LTV₁.
     if (ltv1 >= cac) {
-      var t = (cac - ltv0) / Math.max(0.0001, (ltv1 - ltv0));
-      return clamp(0.5 + t * 11.5, 0.5, 12);
+      var t = cac / Math.max(0.0001, ltv1);
+      // Модель помесячная: субмесячную окупаемость не обещаем, минимум отображения — 1 месяц.
+      return clamp(t * 12, 1, 12);
     }
+    // Между 12 и 24 мес добираем от LTV₁ до LTV₂.
     if (ltv2 >= cac) {
       var t2 = (cac - ltv1) / Math.max(0.0001, (ltv2 - ltv1));
       return clamp(12 + t2 * 12, 12, 24);
@@ -552,6 +579,10 @@
   // ---- Toggle [As-Is] / [To-Be] (ТЗ-1 §3.1) ----
   function modeToggleHtml() {
     var k = blendedKpis(params);
+    var baseK = blendedKpis(baseParams);
+    var growthPill = currentMode === 'tobe'
+      ? '<span class="ue2-mode-pill tone-green">Рост к As-Is ' + signedRatioDelta(k.blendedRatio - baseK.blendedRatio) + '</span>'
+      : '';
     var tone = ltvCacTone(k.blendedRatio);
     return '<div class="ue2-modebar">' +
       '<div class="ue2-mode-switch" role="tablist" aria-label="Модель юнит-экономики">' +
@@ -562,6 +593,7 @@
       '</div>' +
       '<div class="ue2-mode-meta">' +
         '<span class="ue2-mode-pill tone-' + tone + '">Blended LTV/CAC ' + ratio(k.blendedRatio) + '</span>' +
+        growthPill +
         '<span class="ue2-mode-hint">' + (currentMode === 'tobe'
           ? 'Где зарабатываем: Квиз снижает CAC новых, Router монетизирует отказников через БФЛ и CPA-витрину.'
           : 'Текущая выручка проекта без рычагов масштабирования — Blended LTV/CAC ниже таргета.') + '</span>' +
@@ -688,17 +720,27 @@
   }
   function ltvCacTone(r) { return r >= 2.5 ? 'green' : r >= 1 ? 'yellow' : 'red'; }
   function ltvCacBadge(r) { return r >= 2.5 ? 'таргет ≥ 2.5' : r >= 1 ? 'ниже таргета' : 'убыток'; }
+  function yearWord(n) {
+    var x = Math.abs(Math.round(n)) % 100;
+    var y = x % 10;
+    if (x > 10 && x < 20) return 'лет';
+    if (y === 1) return 'год';
+    if (y >= 2 && y <= 4) return 'года';
+    return 'лет';
+  }
   function paybackText(p) {
     if (!isFinite(p)) return 'не окупается';
     if (p < 1) return '≈ ' + Math.max(1, Math.round(p * 30)).toLocaleString('ru-RU') + ' дн.';
     if (p < 12) return p.toLocaleString('ru-RU', { maximumFractionDigits: 1 }) + ' мес.';
-    var y = p / 12;
-    return y.toLocaleString('ru-RU', { maximumFractionDigits: 1 }) + ' года';
+    var years = Math.floor(p / 12);
+    var months = Math.floor(p % 12);
+    return years.toLocaleString('ru-RU') + ' ' + yearWord(years) + (months > 0 ? ' ' + months + ' мес.' : '');
   }
   function paybackTone(p) {
     if (!isFinite(p)) return 'red';
-    if (p <= 2) return 'green';
-    if (p <= 12) return 'yellow';
+    var th = loadThresholds();
+    if (p <= th.paybackGreenMax) return 'green';
+    if (p <= th.paybackYellowMax) return 'yellow';
     return 'red';
   }
 
@@ -903,13 +945,14 @@
 
   // Дополнительные «Плюсы» целевой модели (ТЗ-1 §3.3).
   var SEGMENT_NOTES_TOBE = {
-    new: ['Оптимизация CAC за счёт квиза'],
-    overdue: ['Высокая маржинальность за счёт продажи лидов на БФЛ']
+    new: ['Оптимизация CAC за счёт квиза и более качественных источников'],
+    repeat: ['Рост за счёт банков/CPA вместо бесплатной внутренней передачи'],
+    overdue: ['Высокая маржинальность за счёт продажи лидов на БФЛ'],
+    sleep: ['Рост за счёт дешёвой реактивации и CPA-кросс-сейла']
   };
 
-  // Подпись Payback: для «зелёных» сегментов целевой модели (LTV/CAC > порога) — «до 2 мес» (ТЗ-1 §3.2).
+  // Подпись Payback всегда показывает реальный расчётный срок, без подмены на «до 2 мес».
   function paybackDisplay(e) {
-    if (currentMode === 'tobe' && e.ltvCac > SEG_PAYBACK_THRESHOLD) return 'до 2 мес';
     return paybackText(e.payback);
   }
 
@@ -920,8 +963,8 @@
       var pTone = paybackTone(e.payback);
       var n = SEGMENT_NOTES[s.id];
       var prosArr = n.pros.slice();
-      // В целевой модели сегменты, преодолевшие порог окупаемости, подсвечиваются зелёным.
-      var passed = currentMode === 'tobe' && e.ltvCac > SEG_PAYBACK_THRESHOLD;
+      // В целевой модели сегменты с положительной маржей показывают рост от внедрения источников.
+      var passed = currentMode === 'tobe' && e.marginPerLead > 0 && e.ltvCac >= 1;
       if (currentMode === 'tobe' && SEGMENT_NOTES_TOBE[s.id]) prosArr = SEGMENT_NOTES_TOBE[s.id].concat(prosArr);
       var pros = prosArr.map(function (x, i) {
         var hot = currentMode === 'tobe' && SEGMENT_NOTES_TOBE[s.id] && i < SEGMENT_NOTES_TOBE[s.id].length;
@@ -946,7 +989,7 @@
         tag + 
         '<div class="ue2-seg-head"><span class="ue2-seg-dot" style="background:' + s.accent + '"></span>' +
           '<h3>' + esc(s.name) + '</h3>' +
-          (passed ? '<span class="ue2-seg-target-badge">окупается</span>' : '') +
+          (passed ? '<span class="ue2-seg-target-badge">рост</span>' : '') +
           '<span class="ue2-seg-share">' + pct(e.share) + ' трафика</span></div>' +
         '<div class="ue2-seg-metrics">' +
           '<div><span>LTV₂</span><b>' + money(e.ltv2) + '</b></div>' +
@@ -980,14 +1023,16 @@
       var e = segmentEconomics(p, s.id);
       var users = N * (sp.share || 0) / totalShare;
       var isBfl = sp.router === 'bfl' || (p.isRouterActive && s.id === 'overdue');
-      // Лиды: классика — visit→lead; БФЛ — visit→квал.лид.
-      var leadCr = isBfl ? (p.crLeadBfl || 10) : p.crVisitLead;
+      // Лиды считаем по классической математике visit→lead; CR БФЛ применяется следующим шагом
+      // и уже учтён в LTV лида, чтобы не занижать выручку двойным умножением.
+      var leadCr = p.crVisitLead;
       var leads = users * leadCr / 100;
       // Промежуточные шаги воронки (для таблицы).
       var clickouts, issues;
       if (isBfl) {
-        clickouts = leads;            // лид сразу уходит на БФЛ-оффер (lead-gen)
-        issues = leads;               // квалифицированный лид = «выдача» дохода
+        var bflLeadCr = (p.crLeadBfl !== undefined && p.crLeadBfl !== null) ? p.crLeadBfl : DEFAULT_PARAMS.crLeadBfl;
+        clickouts = leads * bflLeadCr / 100;           // квал. БФЛ-лиды
+        issues = clickouts;                            // квалифицированный лид = «выдача» дохода
       } else {
         var mulSqrt = Math.sqrt(sp.funnelMul || 1);
         clickouts = leads * (p.crLeadClickout / 100) * mulSqrt;
@@ -1116,6 +1161,13 @@
       : (r.tot.margin >= 0
         ? 'Зона контроля: проект в плюсе, но Blended LTV/CAC ещё не достиг таргета 2.5x.'
         : 'Убыток: на базе ' + nfmt(r.N) + ' пользователей расходы превышают доход. Нужны рычаги To-Be.');
+    var tobeDefaults = applyMode(DEFAULT_PARAMS, 'tobe');
+    var tobeMix = [
+      tobeDefaults.seg.repeat.share,
+      tobeDefaults.seg.new.share,
+      tobeDefaults.seg.overdue.share,
+      tobeDefaults.seg.sleep.share
+    ].join('/');
     var breakeven =
       '<div class="ue2-scn-block ue2-scn-breakeven tone-' + tone + '">' +
         '<h3>Точка безубыточности · при каких цифрах сходится</h3>' +
@@ -1124,8 +1176,8 @@
           '<li>Маржа = 0 при blended CAC ≈ <b>' + money(r.tot.leads > 0 ? (r.tot.revenue - r.tot.opexTotal) / r.tot.leads : 0) + '</b> на лида ' +
             '(текущий blended ≈ ' + money(r.tot.leads > 0 ? r.tot.cacTotal / r.tot.leads : 0) + ').</li>' +
           '<li>Допустимый рост CAC до нуля прибыли: <b>×' + (Number(r.cacBreakevenMult) || 0).toLocaleString('ru-RU', { maximumFractionDigits: 2 }) + '</b> от текущего.</li>' +
-          '<li>Целевые рычаги To-Be: CR&nbsp;Visit→Lead Нового +20% (квиз) → CAC 1200→800&nbsp;₽; ' +
-            'EPL&nbsp;БФЛ 3000&nbsp;₽ при CR&nbsp;10%; Traffic&nbsp;Mix 40/30/20/10 → Blended&nbsp;LTV/CAC&nbsp;&gt;&nbsp;2.5x.</li>' +
+          '<li>Целевые рычаги To-Be: CR&nbsp;Visit→Lead Нового +' + pct(QUIZ_UPLIFT * 100) + ' (квиз) → CAC 1200→' + money(tobeDefaults.seg.new.cac) + '; ' +
+            'EPL&nbsp;БФЛ ' + money(tobeDefaults.eplBfl) + ' при CR&nbsp;' + pct(tobeDefaults.crLeadBfl) + '; банковский/CPA-кросс ' + pct(tobeDefaults.crCrossBank) + '; Traffic&nbsp;Mix ' + tobeMix + ' → Blended&nbsp;LTV/CAC&nbsp;&gt;&nbsp;' + ratio(DEFAULT_THRESHOLDS.ltvCacGreen) + '.</li>' +
         '</ul>' +
       '</div>';
 
@@ -1146,15 +1198,15 @@
     var checks = [
       { name: 'Квиз +20% к CR Visit→Lead', tone: 'green',
         note: 'Реалистично: интерактивный пред-скоринг типично даёт +15–30% к конверсии в лид.' },
-      { name: 'CAC Нового 1200 → 800 ₽', tone: 'green',
+      { name: 'CAC Нового 1200 → 700 ₽', tone: 'green',
         note: 'Достижимо за счёт роста CR при той же ставке закупки трафика.' },
-      { name: 'CR лид → квал. БФЛ 10%', tone: 'green',
-        note: 'Консервативно для «просрочки»: тёплый интент на банкротство/рефинанс.' },
-      { name: 'EPL БФЛ 3000 ₽ за лид', tone: 'yellow',
-        note: 'В рынке payout БФЛ 2500–5000 ₽; зависит от качества лида и партнёра.' },
+      { name: 'CR лид → квал. БФЛ 35%', tone: 'yellow',
+        note: 'Проверяется пилотом: тёплый интент на банкротство/рефинанс должен подтверждать высокий CR к квал. лиду.' },
+      { name: 'EPL БФЛ 10 000 ₽ за лид', tone: 'yellow',
+        note: 'Требует подтверждённого партнёрского источника и контроля качества лида.' },
       { name: 'Traffic Mix 40/30/20/10', tone: 'yellow',
         note: 'Требует зрелой CRM-базы: повторные 40% достижимы на горизонте 6–12 мес.' },
-      { name: 'Downstream CR 70% (To-Be)', tone: 'yellow',
+      { name: 'Downstream CR 80% (To-Be)', tone: 'yellow',
         note: 'Оптимистично: квиз-преквалификация поднимает клик-аут и выдачу, но проверять A/B.' }
     ];
     var items = checks.map(function (c) {
@@ -1260,8 +1312,8 @@
       var pts = [];
       for (var m = 0; m <= months; m++) {
         var v;
-        if (m === 0) v = e.ltv0;
-        else if (m <= 12) v = e.ltv0 + (e.ltv1 - e.ltv0) * (m / 12);
+        if (m === 0) v = 0;
+        else if (m <= 12) v = e.ltv1 * (m / 12);
         else v = e.ltv1 + (e.ltv2 - e.ltv1) * ((m - 12) / 12);
         pts.push(v);
       }
