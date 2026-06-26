@@ -71,15 +71,15 @@
       label:'Действующий клиент (Зеленый)',
       branch:'repeat',
       color:'var(--green)',
-      status:'1+ займ в ЦФ',
-      description:'Клиент присутствует в базе Центрофинанс, имеет 1 или более займов в компании. По результатам проверки Центрофинанс готов предложить продукт. Ядро лояльной аудитории ЦФ — точка роста через кросс-сейл.',
+      status:'Действующий договор',
+      description:'Клиент присутствует в базе Центрофинанс, имеет действующий договор. Ядро лояльной аудитории ЦФ — точка роста через кросс-сейл.',
       points_of_entry:['SEO','Контекстная реклама','Ремаркетинг','Соц. сети'],
       how_arrives:'Посещение сайтов финансовой тематики (Ремаркетинг), прямой поиск по ключам «Займы онлайн» и т.д. (SEO+ЯД), скроллинг ленты в соцсетях.',
-      why_here:'Клиент, возможно, ищет более выгодное предложение (например, ставку 0% на первый заём) или просто про нас забыл, так как имеет несколько займов в разных МФО. Но после ввода телефона роутер узнаёт его как «Действующего» и вместо стандартной анкеты переводит в Личный кабинет.',
+      why_here:'',
       pains:'Возвращается, чтобы добрать лимит (Top-up), управлять займом или получить удобную банковскую карту.',
       source:'SEO + ретаргет + CRM-касания + соц. сети',
-      router:'Телефон → Авторизация → Личный кабинет (Top-up + витрина банковских карт). Роутер узнаёт «Действующего» и ведёт в ЛК, минуя стандартную анкету.',
-      showcase:'Личный кабинет: Top-up (добор займа ЦФ) + витрина банковских карт (дебетовая / кредитная).',
+      router:'Телефон → Авторизация. Роутер узнаёт «Действующего». Предложение добрать денег в другой МФО, либо банковские карты (дебетовая / кредитная).',
+      showcase:'',
       monetization:'Процентная прибыль ЦФ с Top-up + CPA с оформленных банковских карт. CPA: 1 000–1 500 ₽ (дебетовые), 3 000–5 000 ₽ (кредитные).',
       defaultCr:{visitClick:7.5,clickApp:35,appIssue:30},
       cac:380,cpa:3000,ltv:4500,payback:3,share:0.15,
@@ -100,8 +100,8 @@
       label:'Отказной клиент (Красный)',
       branch:'rejected',
       color:'var(--red)',
-      status:'Отказ ЦФ 1–14 дней',
-      description:'Клиент, получивший отказ от Центрофинанс от 1 до 14 дней назад. Присутствует в базе как отказной. Т.е. это не обязательно прямая монетизация отказного трафика через маркетплейс.',
+      status:'Отказ ЦФ 1–30 дней',
+      description:'Клиент, получивший отказ от Центрофинанс от 1 до 30 дней назад. Присутствует в базе как отказной и нет заключенного договора.',
       points_of_entry:['SEO','Контекстная реклама','Ремаркетинг','Соц. сети'],
       how_arrives:'Посещение сайтов финансовой тематики (Ремаркетинг), прямой поиск по ключам «Займы онлайн» и т.д. (SEO+ЯД), скроллинг ленты в соцсетях.',
       why_here:'Скорее всего, клиент, получивший отказ в одной или нескольких МФО, находится в поиске решения своих вопросов. Ищет МФО, где ему точно не откажут или с высоким шансом одобрения (посещает каталоги, читает отзывы).',
@@ -377,6 +377,37 @@
   }
 
   // --- Funnel tab (per segment): 10 000 users + manual inputs + justify -----
+  // Lightweight refresh — only updates derived outputs (steps, CAC) and dependent
+  // panels without rebuilding the manual-input fields. Used from input handlers
+  // so that the focused <input> survives every keystroke (бывший баг: курсор
+  // пропадал после первой введённой цифры из-за полной перестройки DOM).
+  function refreshFunnelOutputs(){
+    if(isMatrixView())return;
+    var s=currentSegment();
+    var f=funnelFor(s.id);
+    var host=$('cjmSegmentFunnel');
+    if(host){
+      var steps=[
+        ['Visit',f.visit,'100% базы симуляции'],
+        ['Контакт',f.contact,pct(f.crVC,1)+' Визит → Контакт · общая на все сегменты'],
+        ['Клик по офферу',f.click,pct(f.crVK,1)+' Визит → Клик по офферу'],
+        ['Заявка',f.app,pct(f.crKA,1)+' Клик → Заявка'],
+        ['Выдача',f.issue,pct(f.crAI,1)+' Заявка → Выдача · мы зарабатываем']
+      ];
+      host.innerHTML=steps.map(function(st){
+        return '<div class="cjm-funnel-step"><span>'+esc(st[0])+'</span><b>'+fmt(st[1])+'</b><p class="metric-sub">'+esc(st[2])+'</p></div>';
+      }).join('');
+    }
+    var m=manualFor(s.id);
+    var cacEl=document.querySelector('#cjmManualInputs .cjm-derived-value');
+    var cacFormulaEl=document.querySelector('#cjmManualInputs .cjm-derived-formula');
+    if(cacEl) cacEl.textContent=rub(cacFor(s.id));
+    if(cacFormulaEl){
+      cacFormulaEl.textContent='= Стоимость контакта × Контакты сегмента / Выдачи сегмента = '+
+        rub(m.contactCost)+' × '+fmt(f.contact)+' / '+fmt(f.issue);
+    }
+  }
+
   function renderFunnelPanel(){
     if(isMatrixView())return;
     var s=currentSegment();
@@ -481,7 +512,8 @@
           var raw=input.value;
           if(raw===''){unsetManual(s.id,key);}
           else{setManual(s.id,key,Number(raw));}
-          renderFunnelPanel();renderUnitPanel();renderCalcPanel();
+          input.classList.toggle('is-edited',isEdited(s.id,key));
+          refreshFunnelOutputs();renderUnitPanel();renderCalcPanel();renderJourneyPanel();
           if(activeInnerTab()==='unit')requestAnimationFrame(renderCharts);
         });
       });
@@ -492,6 +524,7 @@
           var raw=input.value;
           if(raw===''){unsetSample(s.id,key);}
           else{setSample(s.id,key,Number(raw));}
+          input.classList.toggle('is-edited',isEdited(s.id,'n_'+key));
           // Объём выборки не влияет на расчёт, только на отображение
         });
       });
@@ -502,7 +535,8 @@
           var raw=input.value;
           if(raw===''){unsetGlobal(key);}
           else{setGlobal(key,Number(raw));}
-          renderFunnelPanel();renderUnitPanel();renderCalcPanel();
+          input.classList.toggle('is-edited',isGlobalEdited(key));
+          refreshFunnelOutputs();renderUnitPanel();renderCalcPanel();renderJourneyPanel();
           if(activeInnerTab()==='unit')requestAnimationFrame(renderCharts);
         });
       });
@@ -531,36 +565,42 @@
     }
   }
 
-  // --- CJM journey panel (per segment) -- одна цельная карточка «Описание сегмента»
+  // --- CJM journey panel (per segment) -- блочная карточка «Описание сегмента»
   function renderJourneyPanel(){
     if(isMatrixView()){renderRoutingDiagram();return;}
     var host=$('cjmJourneyHost');if(!host)return;
     var s=currentSegment();
     var poe=(s.points_of_entry&&s.points_of_entry.length)?s.points_of_entry.join(', '):'не утверждены';
-    // Соберём цельный естественный абзац из всех составляющих сегмента —
-    // никаких подколонок: только заголовок «Описание сегмента» + flowing text.
-    var paragraphs=[];
-    if(s.description) paragraphs.push(esc(s.description));
-    if(s.why_here) paragraphs.push(esc(s.why_here));
-    var routing='<b>Маршрутизация:</b> '+esc(s.router)+' <b>Витрина:</b> '+esc(s.showcase)+' <b>Монетизация:</b> '+esc(s.monetization)+'.';
-    paragraphs.push(routing);
-    var metricsParts=[];
     var m=manualFor(s.id);
-    metricsParts.push('Визит → Клик по офферу: <b>'+pct(m.visitClick,1)+'</b>');
-    metricsParts.push('Клик → Заявка: <b>'+pct(m.clickApp,0)+'</b>');
-    metricsParts.push('Заявка → Апрув: <b>'+pct(m.appIssue,0)+'</b>');
-    metricsParts.push('CPA: <b>'+esc(s.cpa_text||(m.cpa<=0?'внутр.':rub(m.cpa)))+'</b>');
-    metricsParts.push('LTV (1 год): <b>'+esc(s.ltv_text||rub(m.ltv))+'</b>');
-    var metricsLine='<b>Показатели:</b> '+metricsParts.join(' · ')+'.';
-    paragraphs.push(metricsLine);
-    var entriesLine='<b>Точки входа:</b> '+esc(poe)+'. <b>Как попадает:</b> '+esc(s.how_arrives||'—');
-    paragraphs.push(entriesLine);
-    var bodyHtml=paragraphs.map(function(p){return '<p>'+p+'</p>';}).join('');
+    var metricsParts=[
+      'Визит → Клик по офферу: <b>'+pct(m.visitClick,1)+'</b>',
+      'Клик → Заявка: <b>'+pct(m.clickApp,0)+'</b>',
+      'Заявка → Апрув: <b>'+pct(m.appIssue,0)+'</b>',
+      'CPA: <b>'+esc(s.cpa_text||(m.cpa<=0?'внутр.':rub(m.cpa)))+'</b>',
+      'LTV (1 год): <b>'+esc(s.ltv_text||rub(m.ltv))+'</b>'
+    ];
+
+    // Блочная структура: каждая секция — отдельная мини-карточка.
+    // Пропускаем пустые секции (например, у «Действующего» нет why_here/showcase).
+    var blocks=[
+      {h:'Описание сегмента',html:s.description?esc(s.description):'',wide:true},
+      {h:'Почему здесь',html:s.why_here?esc(s.why_here):''},
+      {h:'Маршрутизация',html:s.router?esc(s.router):''},
+      {h:'Витрина',html:s.showcase?esc(s.showcase):''},
+      {h:'Монетизация',html:s.monetization?esc(s.monetization):''},
+      {h:'Показатели',html:metricsParts.join(' · ')+'.',wide:true},
+      {h:'Точки входа',html:esc(poe)},
+      {h:'Как попадает',html:esc(s.how_arrives||'—')}
+    ];
+    var bodyHtml=blocks.filter(function(b){return b.html;}).map(function(b){
+      return '<section class="cjm-seg-block'+(b.wide?' is-wide':'')+'"><h3>'+esc(b.h)+'</h3><p>'+b.html+'</p></section>';
+    }).join('');
+
     host.innerHTML='<article class="card cjm-seg-desc" style="border-top:4px solid '+esc(s.color)+'">'+
       '<div class="card-title"><div>'+
         '<h2>'+esc(s.label)+'</h2>'+
       '</div></div>'+
-      '<div class="cjm-seg-desc-body">'+bodyHtml+'</div>'+
+      '<div class="cjm-seg-desc-body cjm-seg-desc-blocks">'+bodyHtml+'</div>'+
     '</article>';
     renderRoutingDiagram();
   }
