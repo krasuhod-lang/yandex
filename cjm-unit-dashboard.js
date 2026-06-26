@@ -570,15 +570,22 @@
     var poe=(s.points_of_entry&&s.points_of_entry.length)?s.points_of_entry.join(', '):'не утверждены';
 
     // Блок «Показатели» убран — те же значения доступны в «Юнит-экономике».
-    // Пропускаем пустые секции (например, у «Действующего» нет why_here/showcase).
+    // Пропускаем пустые секции (например, у «Действующего» нет showcase).
+    var c=calcFor(s.id);
+    var profitTone=c.profit>=0?'tone-green':'tone-red';
+    var profitExampleHtml='<b>База:</b> '+fmt(BASE_VISITS)+' визитов · '+
+      '<b>Выдач:</b> '+fmt(c.f.issue)+' · '+
+      '<b>Выручка:</b> '+rub(c.revenue)+' (LTV '+rub(c.m.ltv)+' × '+fmt(c.f.issue)+' выдач) · '+
+      '<b>Затраты на контакты:</b> '+rub(c.cost)+' ('+rub(c.m.contactCost)+' × '+fmt(c.f.contact)+' контактов) · '+
+      '<b>Прибыль:</b> <span class="'+profitTone+'">'+rub(c.profit)+'</span>';
     var blocks=[
       {h:'Описание сегмента',html:s.description?esc(s.description):'',wide:true},
-      {h:'Почему здесь',html:s.why_here?esc(s.why_here):''},
       {h:'Маршрутизация',html:s.router?esc(s.router):''},
       {h:'Витрина',html:s.showcase?esc(s.showcase):''},
       {h:'Монетизация',html:s.monetization?esc(s.monetization):''},
       {h:'Точки входа',html:esc(poe)},
-      {h:'Как попадает',html:esc(s.how_arrives||'—')}
+      {h:'Как попадает',html:esc(s.how_arrives||'—')},
+      {h:'Пример расчёта прибыли',html:profitExampleHtml,wide:true}
     ];
     var bodyHtml=blocks.filter(function(b){return b.html;}).map(function(b){
       return '<section class="cjm-seg-block'+(b.wide?' is-wide':'')+'"><h3>'+esc(b.h)+'</h3><p>'+b.html+'</p></section>';
