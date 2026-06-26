@@ -266,7 +266,7 @@ class Chart{
   }
  }
 }
-function chartFont(){return '-apple-system, BlinkMacSystemFont, "SF Pro Text", "Inter", sans-serif'}
+function chartFont(){return '"Golos Text", -apple-system, BlinkMacSystemFont, "SF Pro Text", sans-serif'}
 
 
 // Горизонт плана: июль 2026 — декабрь 2027 (18 мес.). Май и июнь 2026 уже в прошлом, поэтому из ряда отрезаются первые 2 значения.

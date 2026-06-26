@@ -12,9 +12,9 @@
 
   // 5 segments per CJM/JTBD spec (Miro):
   //  1. new        — Новый клиент            (yellow)
-  //  2. repeat     — Повторный клиент        (green)
-  //  3. rejected   — Отказной клиент         (red)
-  //  4. sleeping   — Спящий/БФЛ              (blue, описание пустое по схеме)
+  //  2. repeat     — Действующий клиент       (green)
+  //  3. rejected   — Отказной клиент         (red, ветка ПДН → МФО / БФЛ)
+  //  4. sleeping   — Спящий клиент           (blue, ромб «ЦФ готов одобрить?»)
   //  5. noncore    — Новый (непрофильный)    (violet)
   // Воронка (новая, согласована с бизнесом):
   //   Visit → Контакт (квиз) → Проверка ЦФ → Показ витрины → Заявка → Выдача
@@ -63,32 +63,32 @@
     },
     {
       id:'repeat',
-      name:'Повторный клиент',
-      label:'Повторный клиент (Зеленый)',
+      name:'Действующий клиент',
+      label:'Действующий клиент (Зеленый)',
       branch:'repeat',
       color:'var(--green)',
-      status:'REPEAT · 1+ займ в ЦФ',
-      description:'Клиент присутствует в базе Центрофинанс, имеет 1 или более займов в компании. По результатам проверки Центрофинанс готов предложить продукт.',
+      status:'ACTIVE · 1+ займ в ЦФ',
+      description:'Клиент присутствует в базе Центрофинанс, имеет 1 или более займов в компании. По результатам проверки Центрофинанс готов предложить продукт. Ядро лояльной аудитории ЦФ — точка роста через кросс-сейл.',
       points_of_entry:['SEO','Контекстная реклама','Ремаркетинг','Соц. сети'],
       how_arrives:'Посещение сайтов финансовой тематики (Ремаркетинг), прямой поиск по ключам «Займы онлайн» и т.д. (SEO+ЯД), скроллинг ленты в соцсетях.',
-      why_here:'Клиент возможно ищет более выгодное предложение (например, ставку 0% на первый заём). Возможно он про нас забыл, имеет несколько займов в разных МФО.',
-      pains:'Сравнивает условия: ставку, лимит, скорость; ищет «выгоднее, чем в прошлый раз».',
+      why_here:'Клиент, возможно, ищет более выгодное предложение (например, ставку 0% на первый заём) или просто про нас забыл, так как имеет несколько займов в разных МФО. Но после ввода телефона роутер узнаёт его как «Действующего» и вместо стандартной анкеты переводит в Личный кабинет.',
+      pains:'Возвращается, чтобы добрать лимит (Top-up), управлять займом или получить удобную банковскую карту.',
       source:'SEO + ретаргет + CRM-касания + соц. сети',
-      router:'API REPEAT → проверка скоррингом → при одобрении выдача ЦФ',
-      showcase:'ЦФ repeat-оффер; при отказе — текстовый блок «Ну нет и нет, ПК мы подаём»',
-      monetization:'Repeat-выдача Центрофинанс',
-      defaultCr:{visitQuiz:8.4,quizCfCheck:98,cfCheckShowcase:42,showcaseApp:92,appIssue:82},
+      router:'Телефон → Авторизация → Личный кабинет (Top-up + витрина банковских карт). Роутер узнаёт «Действующего» и ведёт в ЛК, минуя стандартную анкету.',
+      showcase:'Личный кабинет: Top-up (добор займа ЦФ) + витрина банковских карт (дебетовая / кредитная).',
+      monetization:'Процентная прибыль ЦФ с Top-up + CPA с оформленных банковских карт. CPA: 1 000–1 500 ₽ (дебетовые), 3 000–5 000 ₽ (кредитные).',
+      defaultCr:{visitQuiz:8.4,quizCfCheck:98,cfCheckShowcase:42,showcaseApp:92,appIssue:90},
       cac:380,cpa:0,ltv:2600,payback:3,share:0.25,
       mix:{seo:0.28,paid:0.20,crm:0.42,pr:0.10},
       justify:{
-        visitQuiz:'8,4% Visit → Контакт — клиент уже знаком с брендом, охотнее проходит квиз.',
-        quizCfCheck:'98% Контакт → Проверка ЦФ — почти весь повторный поток подтягивается из CRM в ЦФ.',
-        cfCheckShowcase:'42% Проверка ЦФ → CF-витрина — положительная история в ЦФ ускоряет автоодобрение.',
-        showcaseApp:'92% Витрина → Заявка — клиент знает продукт и сразу подтверждает оффер.',
-        appIssue:'82% Заявка → Выдача — KYC и карта уже привязаны, отвал минимальный.',
+        visitQuiz:'8,4% Visit → Контакт — клиент уже знаком с брендом, охотнее оставляет телефон.',
+        quizCfCheck:'98% Контакт → Авторизация — почти весь действующий поток узнаётся роутером и подтягивается из базы ЦФ.',
+        cfCheckShowcase:'42% Авторизация → Личный кабинет — заходят в ЛК за Top-up и предложениями по картам.',
+        showcaseApp:'CR в заявку (от авторизованных): Top-up ~15–20%, дебетовая карта ~5–8%, кредитная карта ~3–5%.',
+        appIssue:'Апрув: Top-up ЦФ ~85–95%, дебетовая карта партнёра ~95–99%, кредитная карта партнёра ~20–30%.',
         cac:'CAC 380 ₽ — основная масса возврата идёт через CRM и ретаргет.',
-        cpa:'CPA 0 ₽ (внутр.) — repeat-выдача в собственный продукт ЦФ.',
-        ltv:'LTV 2 600 ₽ — повторные циклы и увеличение лимита.'
+        cpa:'CPA: 1 000–1 500 ₽ (дебетовые карты), 3 000–5 000 ₽ (кредитные карты). Top-up — внутренняя выдача ЦФ.',
+        ltv:'LTV 2 600 ₽ — процентная прибыль ЦФ с Top-up + CPA с оформленных банковских карт.'
       }
     },
     {
@@ -102,53 +102,53 @@
       points_of_entry:['SEO','Контекстная реклама','Ремаркетинг','Соц. сети'],
       how_arrives:'Посещение сайтов финансовой тематики (Ремаркетинг), прямой поиск по ключам «Займы онлайн» и т.д. (SEO+ЯД), скроллинг ленты в соцсетях.',
       why_here:'Скорее всего, клиент, получивший отказ в одной или нескольких МФО, находится в поиске решения своих вопросов. Ищет МФО, где ему точно не откажут или с высоким шансом одобрения (посещает каталоги, читает отзывы).',
-      pains:'Только что получил отказ; срочно нужны деньги, повторную анкету заполнять не хочет.',
+      pains:'Только что получил отказ; срочно нужны деньги, согласен почти на любые условия.',
       source:'Платный трафик и ретаргет на срочный заём',
-      router:'API REJECTED → Пробив чеккером по номеру телефона → витрина монетизации',
-      showcase:'Показ 5 офферов МФО, где клиента нет в базе (витрина монетизации)',
-      monetization:'CPA-выплата от МФО-партнёров за оформленный заём',
-      defaultCr:{visitQuiz:5.4,quizCfCheck:95,cfCheckShowcase:100,showcaseApp:18,appIssue:72},
+      router:'Телефон → Статус: Отказ → ромб «Проверка ПДН (долговой нагрузки)»: ПДН нормальный → витрина CPA-МФО; ПДН высокий (закредитован) → офферы БФЛ (Банкротство).',
+      showcase:'Ветка МФО: витрина 5 офферов МФО, где клиента нет в базе. Ветка БФЛ: офферы юристов по банкротству физлиц.',
+      monetization:'Компенсация маркетингового бюджета. Ветка МФО: CPA ~2 000–2 400 ₽. Ветка БФЛ: CPA ~3 500–5 000 ₽. LTV ≈ разовая CPA (растится через CRM: Push/СМС).',
+      defaultCr:{visitQuiz:5.4,quizCfCheck:95,cfCheckShowcase:42,showcaseApp:5,appIssue:72},
       cac:870,cpa:2400,ltv:2400,payback:5,share:0.25,
       mix:{seo:0.18,paid:0.70,crm:0.05,pr:0.07},
       justify:{
         visitQuiz:'5,4% Visit → Контакт — «горячая» потребность в деньгах удерживает CR на среднерыночном уровне.',
-        quizCfCheck:'95% Контакт → Проверка ЦФ — даже отказным гоним проверку, чтобы корректно распределить ветку.',
-        cfCheckShowcase:'100% Проверка ЦФ → Витрина — отказным сразу показываем CPA-витрину МФО-партнёров.',
-        showcaseApp:'18% Витрина → Заявка — отказная аудитория осторожнее кликает, многие закрывают вкладку.',
-        appIssue:'72% Заявка → Выдача — типичный PDL-отвал: бросают SMS, не подтверждают карту.',
+        quizCfCheck:'95% Контакт → Статус: Отказ — отказным гоним проверку ПДН, чтобы корректно распределить ветку (МФО / БФЛ).',
+        cfCheckShowcase:'Переход по витрине: МФО ~40–45%, БФЛ ~15–20% (зависит от результата проверки ПДН).',
+        showcaseApp:'CR в заявку партнёра: ветка МФО ~4–6%, ветка БФЛ — апрув юристами ~5–7%.',
+        appIssue:'Апрув партнёра: ветка МФО ~5–8% (КИ испорчена). Ветка БФЛ — квалификация юристами.',
         cac:'CAC 870 ₽ — основной источник Яндекс.Директ + ретаргет в дорогой нише «срочный заём».',
-        cpa:'CPA 2 400 ₽ — рыночная выплата МФО за выданный займ.',
-        ltv:'LTV 2 400 ₽ — повторных выкупов мало, LTV ≈ CPA.'
+        cpa:'CPA: ветка МФО ~2 000–2 400 ₽, ветка БФЛ ~3 500–5 000 ₽.',
+        ltv:'LTV ≈ разовая CPA-выплата; растится только через CRM-маркетинг (Push/СМС с новыми витринами).'
       }
     },
     {
       id:'sleeping',
-      name:'Спящий / БФЛ',
-      label:'Спящий / БФЛ (Синий)',
+      name:'Спящий клиент',
+      label:'Спящий клиент (Синий)',
       branch:'sleeping',
       color:'var(--blue)',
-      status:'DORMANT · описание в проработке',
-      description:'',
-      points_of_entry:[],
-      how_arrives:'',
-      why_here:'',
-      pains:'Описание сегмента ещё не утверждено — ожидаем данные из Miro.',
-      source:'—',
-      router:'Узел Smart Safe Router «Спящий/БФЛ» — ветка в разработке',
-      showcase:'—',
-      monetization:'—',
-      defaultCr:{visitQuiz:7.0,quizCfCheck:95,cfCheckShowcase:100,showcaseApp:28,appIssue:75},
-      cac:600,cpa:3500,ltv:3500,payback:3,share:0.05,
-      mix:{seo:0.60,paid:0.20,crm:0.10,pr:0.10},
+      status:'DORMANT · в базе ЦФ, неактивен >30 дней',
+      description:'Клиент присутствует в базе Центрофинанс, но не проявлял активности более 30 дней (ранее успешно закрыл займ или несколько займов и не вернулся, либо бросил старую заявку). Возврат ушедшей аудитории, защита базы от «слива» конкурентам.',
+      points_of_entry:['Retention-кампании (СМС/Email/Push)','SEO','Контекстная реклама','Ремаркетинг','Соц. сети'],
+      how_arrives:'Переход по ссылке из реактивационной рассылки (например, оффер «Мы скучали, вот вам скидка»), посещение сайтов финансовой тематики (Ремаркетинг), прямой поиск по ключам «Займы онлайн» и т.д. (SEO+ЯД).',
+      why_here:'У клиента снова возникла финансовая потребность. Он мог забыть про Центрофинанс и искать новые МФО через поиск (Яндекс/Google), либо напрямую отреагировал на наше спецпредложение. Главная цель системы — «перехватить» его и вернуть в контур ЦФ до того, как он оставит заявку конкурентам.',
+      pains:'Снова возникла потребность; вспомнил про нас или отреагировал на рассылку. Анкета уже заполнена.',
+      source:'Retention (СМС/Email/Push) + SEO + ретаргет + соц. сети',
+      router:'Телефон → Статус: Спящий → ромб «ЦФ готов одобрить?»: ДА → Welcome-back бонус ЦФ → выдача ЦФ; НЕТ (испортил КИ) → витрина CPA-МФО.',
+      showcase:'Если ЦФ одобряет — Welcome-back оффер ЦФ. Если нет — витрина 5 офферов МФО-партнёров.',
+      monetization:'Если забирает ЦФ: CPA = 0 ₽, клиент возвращается в цикл ЦФ (реактивация высокого LTV). Если витрина: CPA ~2 000–2 400 ₽, LTV = разовый CPA.',
+      defaultCr:{visitQuiz:7.0,quizCfCheck:95,cfCheckShowcase:45,showcaseApp:25,appIssue:75},
+      cac:600,cpa:2400,ltv:3500,payback:3,share:0.05,
+      mix:{seo:0.30,paid:0.20,crm:0.40,pr:0.10},
       justify:{
-        visitQuiz:'Оценка взята из ранней версии: SEO «займ без отказа», «БФЛ» даёт высокий вовлечённый трафик.',
-        quizCfCheck:'95% Контакт → Проверка ЦФ — спящих также прогоняем по базе на случай возврата активности.',
-        cfCheckShowcase:'100% Проверка ЦФ → Витрина — сразу показываем БФЛ-офферы партнёров.',
-        showcaseApp:'28% Витрина → Заявка — конверсия в форму партнёра БФЛ.',
-        appIssue:'75% Заявка → Выдача — высокая закрываемость продукта БФЛ, отвал на сборе документов.',
-        cac:'CAC оценочный — сегмент ещё в проработке.',
-        cpa:'Целевая CPA — БФЛ-партнёр платит 3–5 тыс. ₽ за квалифицированный лид.',
-        ltv:'LTV ≈ CPA — разовая монетизация на этапе лида.'
+        visitQuiz:'7,0% Visit → Контакт — реактивационные рассылки и знакомый бренд поднимают долю оставивших телефон.',
+        quizCfCheck:'95% Контакт → Статус: Спящий — прогоняем по базе ЦФ, чтобы попытаться вернуть в контур.',
+        cfCheckShowcase:'45% Спящий → Решение «ЦФ готов одобрить?» — апрув ЦФ для спящих ~40–50%.',
+        showcaseApp:'CR в заявку ~20–30% (от вернувшихся в ЦФ) — анкета уже заполнена, проходит быстро.',
+        appIssue:'Апрув ЦФ ~40–50%; при отказе клиент уходит на витрину CPA-МФО.',
+        cac:'CAC 600 ₽ — дешёвый возврат через собственный CRM-канал.',
+        cpa:'Если ЦФ — CPA 0 ₽ (внутр.). Если витрина — CPA ~2 000–2 400 ₽.',
+        ltv:'LTV до 3 500 ₽ при возврате в цикл ЦФ; на витрине LTV = разовый CPA.'
       }
     },
     {
@@ -475,43 +475,54 @@
     host.classList.toggle('has-active',!!activeBranch);
 
     // Geometry --------------------------------------------------------------
-    // Координаты подобраны так, чтобы ветки не перекрывались между собой
-    // (для веток с ромбом «Одобрено?» под основным рядом размещается доп.
-    // блок «НЕТ → …», поэтому им выделяется по 220px вертикали).
-    var W=1480,H=1100;
-    var BW=240,BH=72;                       // box width/height
+    // Каждая ветка идёт по колонкам: seg (col2) → step (col3) → fork (col4).
+    // fork.type: 'diamond' — узел-ромб с двумя выходами (ДА/НЕТ, Норма/Высокий);
+    //            'split'   — узел-разветвление на два продукта (Top-up / Карты);
+    //            'terminal'— один конечный блок (витрина CPA-МФО).
+    // Выходы ставятся справа от узла двумя стопками (верхний/нижний), поэтому холст
+    // шире самого правого узла (W=1820), а центры веток разнесены на 240px, чтобы
+    // кластеры выходов соседних веток не накладывались.
+    var W=1820,H=1240;
+    var BW=240,BH=72;                        // box width/height
+    var DW=200,DH=84;                        // diamond width/height
     var col=[60,360,660,960,1240];          // x of column lefts
     // Entry column (4 stacked boxes at x=col[0])
-    var entryY=[80,200,320,440];
+    var entryY=[120,240,360,480];
     var entries=['SEO','Контекстная реклама','Ремаркетинг','Соц. сети'];
     // Hub column
     var hubX=col[1], hubW=BW;
-    var siteY=220,routerY=420;
-    // Branch rows — равномерно распределены с учётом доп. блока «НЕТ»
+    var siteY=260,routerY=460;
+    // Branch model — центры (cy) разнесены равномерно с запасом под два выхода.
     var branches=[
-      {key:'new',     y:80,  color:'var(--yellow)', name:'Новый клиент',
-        nodes:[ {t:'Новый клиент',s:'Желтый сегмент'},
-                {t:'Проверка скоррингом',s:'Скоринг ЦФ'},
-                {t:'Одобрено?',s:'Решение',shape:'diamond'},
-                {t:'Выдача ЦФ',s:'ДА · целевой результат',out:true} ]},
-      {key:'repeat',  y:300, color:'var(--green)',  name:'Повторный клиент',
-        nodes:[ {t:'Повторный клиент',s:'Зеленый сегмент'},
-                {t:'Проверка скоррингом',s:'Скоринг ЦФ · repeat'},
-                {t:'Одобрено?',s:'Решение',shape:'diamond'},
-                {t:'Выдача ЦФ',s:'ДА · repeat-выдача',out:true} ]},
-      {key:'rejected',y:560, color:'var(--red)',    name:'Отказной клиент',
-        nodes:[ {t:'Отказной клиент',s:'Красный сегмент'},
-                {t:'Пробив чеккером',s:'по номеру телефона'},
-                null,
-                {t:'5 офферов МФО',s:'Витрина монетизации',out:true} ]},
-      {key:'sleeping',y:720, color:'var(--blue)',   name:'Спящий / БФЛ',
-        nodes:[ {t:'Спящий / БФЛ',s:'Синий сегмент · в разработке'},
-                null,null,null ]},
-      {key:'noncore', y:880, color:'var(--violet)', name:'Новый (непрофильный)',
-        nodes:[ {t:'Новый (непрофильный)',s:'Фиолетовый сегмент'},
-                {t:'Пробив чеккером',s:'по номеру телефона'},
-                null,
-                {t:'5 офферов МФО',s:'Витрина монетизации',out:true} ]}
+      { key:'new', cy:130, color:'var(--yellow)', name:'Новый клиент',
+        seg:{t:'Новый клиент',s:'Жёлтый сегмент'},
+        step:{t:'Анкета · Скоринг ЦФ',s:'Первичная проверка'},
+        fork:{ type:'diamond', t:'Одобрено?', s:'Скоринг ЦФ',
+          outs:[ {t:'Выдача ЦФ',s:'ДА · целевой результат',label:'ДА',color:'var(--green)'},
+                 {t:'Чеккер → CPA-витрина',s:'НЕТ · ветка «Непрофильный»',label:'НЕТ',color:'var(--orange)'} ] } },
+      { key:'repeat', cy:370, color:'var(--green)', name:'Действующий клиент',
+        seg:{t:'Действующий клиент',s:'Зелёный сегмент'},
+        step:{t:'Авторизация → Личный кабинет',s:'Роутер: REPEAT'},
+        fork:{ type:'split', t:'Личный кабинет', s:'Top-up + банковские карты',
+          outs:[ {t:'Top-up (добор займа ЦФ)',s:'CR 15–20% · апрув 85–95%',label:'Top-up',color:'var(--green)'},
+                 {t:'Витрина банковских карт',s:'Дебет 5–8% / Кредит 3–5%',label:'Карты',color:'var(--blue)'} ] } },
+      { key:'rejected', cy:610, color:'var(--red)', name:'Отказной клиент',
+        seg:{t:'Отказной клиент',s:'Красный сегмент'},
+        step:{t:'Статус: Отказ',s:'Отказ ЦФ 1–14 дней'},
+        fork:{ type:'diamond', t:'Проверка ПДН', s:'Долговая нагрузка',
+          outs:[ {t:'Витрина CPA-МФО',s:'ПДН нормальный · CPA 2,0–2,4 т.₽',label:'Норма',color:'var(--orange)'},
+                 {t:'Офферы БФЛ (банкротство)',s:'ПДН высокий · CPA 3,5–5 т.₽',label:'Высокий',color:'var(--red)'} ] } },
+      { key:'sleeping', cy:850, color:'var(--blue)', name:'Спящий клиент',
+        seg:{t:'Спящий клиент',s:'Синий сегмент · >30 дней'},
+        step:{t:'Статус: Спящий',s:'Возврат в контур ЦФ'},
+        fork:{ type:'diamond', t:'ЦФ готов одобрить?', s:'Реактивация',
+          outs:[ {t:'Welcome-back бонус ЦФ',s:'ДА · выдача ЦФ',label:'ДА',color:'var(--green)'},
+                 {t:'Витрина CPA-МФО',s:'НЕТ · испорчена КИ',label:'НЕТ',color:'var(--orange)'} ] } },
+      { key:'noncore', cy:1090, color:'var(--violet)', name:'Новый (непрофильный)',
+        seg:{t:'Новый (непрофильный)',s:'Фиолетовый сегмент'},
+        step:{t:'Чекер: Отказ',s:'Не прошёл первичный чекер ЦФ'},
+        fork:{ type:'terminal',
+          outs:[ {t:'Витрина CPA-МФО',s:'5 офферов · CPA 2,0–2,4 т.₽',color:'var(--orange)'} ] } }
     ];
 
     var svg=[];
@@ -538,7 +549,7 @@
       var color=opts.borderColor||'var(--line-strong)';
       return '<polygon points="'+pts+'" fill="var(--surface)" stroke="'+color+'" stroke-width="2"/>'+
         '<foreignObject x="'+x+'" y="'+y+'" width="'+w+'" height="'+h+'">'+
-          '<div xmlns="http://www.w3.org/1999/xhtml" style="height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:0 18px">'+
+          '<div xmlns="http://www.w3.org/1999/xhtml" style="height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:0 16px">'+
             '<div class="rd-t" style="font-size:14px">'+esc(opts.t)+'</div>'+
             (opts.s?'<div class="rd-s" style="font-size:12px">'+esc(opts.s)+'</div>':'')+
           '</div></foreignObject>';
@@ -557,7 +568,7 @@
     // Hub: Выручай.ру
     svg.push(box(hubX,siteY,hubW,BH,{t:'Выручай.ру',s:'Единая точка входа',hub:true}));
     // Hub: Проверка по базе ЦФ
-    svg.push(box(hubX,routerY,hubW,BH,{t:'Проверка по базе ЦФ',s:'Smart Safe Router',hub:true}));
+    svg.push(box(hubX,routerY,hubW,BH,{t:'Проверка по базе ЦФ',s:'Smart Safe Router · после ввода телефона',hub:true}));
     // Entry → Выручай.ру
     entries.forEach(function(_,i){
       svg.push(edge(col[0]+BW,entryY[i]+BH/2,hubX,siteY+BH/2));
@@ -568,51 +579,38 @@
     // Branches
     branches.forEach(function(br){
       svg.push('<g class="ssr-branch ssr-branch-'+br.key+(activeBranch===br.key?' is-active':'')+'">');
-      // First node (segment box) anchored at col[2]
-      var x0=col[2],y0=br.y;
-      svg.push(box(x0,y0,BW,BH,{t:br.nodes[0].t,s:br.nodes[0].s,borderColor:br.color}));
-      // Router → segment box
-      svg.push(edge(hubX+hubW,routerY+BH/2,x0,y0+BH/2));
+      var cy=br.cy, segX=col[2], stepX=col[3], forkX=col[4];
+      function top(c){return c-BH/2;}
+      // Segment box + router → segment
+      svg.push(box(segX,top(cy),BW,BH,{t:br.seg.t,s:br.seg.s,borderColor:br.color}));
+      svg.push(edge(hubX+hubW,routerY+BH/2,segX,cy));
+      // Step box
+      svg.push(box(stepX,top(cy),BW,BH,{t:br.step.t,s:br.step.s,borderColor:br.color}));
+      svg.push(edge(segX+BW,cy,stepX,cy));
 
-      var n1=br.nodes[1];
-      if(n1){
-        var x1=col[3],y1=br.y;
-        svg.push(box(x1,y1,BW,BH,{t:n1.t,s:n1.s,borderColor:br.color}));
-        svg.push(edge(x0+BW,y0+BH/2,x1,y1+BH/2));
-        var n2=br.nodes[2],n3=br.nodes[3];
-        if(n2&&n2.shape==='diamond'){
-          var dx=col[4],dy=br.y-4,dw=200,dh=80;
-          svg.push(diamond(dx,dy,dw,dh,{t:n2.t,s:n2.s,borderColor:br.color}));
-          svg.push(edge(x1+BW,y1+BH/2,dx,dy+dh/2,'Да'));
-          // YES branch — Выдача ЦФ (n3)
-          if(n3){
-            var yx=dx+dw+30,yy=dy-30;
-            svg.push(box(yx,yy,BW,BH,{t:n3.t,s:n3.s,out:true,borderColor:'var(--green)'}));
-            svg.push(edge(dx+dw,dy+dh/2,yx,yy+BH/2,'ДА'));
-          }
-          // NO branch — depends on segment
-          var noY=dy+dh+40;
-          var noText=br.key==='new'
-            ? 'НЕТ → Пробив чеккером (ветка «Непрофильный»)'
-            : 'НЕТ → «Ну нет и нет, ПК мы подаём»';
-          svg.push('<foreignObject x="'+dx+'" y="'+noY+'" width="'+(BW+60)+'" height="'+BH+'">'+
-            '<div xmlns="http://www.w3.org/1999/xhtml" class="rd-box" style="border-top:4px solid var(--orange);font-size:12px">'+
-              '<div class="rd-t" style="font-size:13px">'+esc(noText)+'</div>'+
-            '</div></foreignObject>');
-          svg.push(edge(dx+dw/2,dy+dh,dx+dw/2,noY,'НЕТ'));
-        }else if(n3){
-          var x3=col[4],y3=br.y;
-          svg.push(box(x3,y3,BW,BH,{t:n3.t,s:n3.s,out:true,borderColor:br.color}));
-          svg.push(edge(x1+BW,y1+BH/2,x3,y3+BH/2));
-        }
+      var fork=br.fork;
+      if(fork.type==='terminal'){
+        var o=fork.outs[0];
+        svg.push(box(forkX,top(cy),BW,BH,{t:o.t,s:o.s,out:true,borderColor:o.color}));
+        svg.push(edge(stepX+BW,cy,forkX,cy));
       }else{
-        // Branch ends here (sleeping/БФЛ) — small badge
-        svg.push('<foreignObject x="'+(col[3])+'" y="'+(br.y)+'" width="'+BW+'" height="'+BH+'">'+
-          '<div xmlns="http://www.w3.org/1999/xhtml" class="rd-box" style="border-top:4px dashed var(--blue);font-size:12px">'+
-            '<div class="rd-t" style="font-size:13px">Ветка в разработке</div>'+
-            '<div class="rd-s">Логика будет дополнена позже</div>'+
-          '</div></foreignObject>');
-        svg.push(edge(x0+BW,y0+BH/2,col[3],br.y+BH/2));
+        var nodeRight;
+        if(fork.type==='diamond'){
+          svg.push(diamond(forkX,cy-DH/2,DW,DH,{t:fork.t,s:fork.s,borderColor:br.color}));
+          nodeRight=forkX+DW;
+        }else{ // split — узел-разветвление (блок-хаб)
+          svg.push(box(forkX,top(cy),BW,BH,{t:fork.t,s:fork.s,hub:true,borderColor:br.color}));
+          nodeRight=forkX+BW;
+        }
+        svg.push(edge(stepX+BW,cy,forkX,cy));
+        // Два выхода — верхний и нижний
+        var outX=nodeRight+40;
+        var upCy=cy-(BH/2+16), loCy=cy+(BH/2+16);
+        fork.outs.forEach(function(out,i){
+          var ocy=i===0?upCy:loCy;
+          svg.push(box(outX,ocy-BH/2,BW,BH,{t:out.t,s:out.s,out:true,borderColor:out.color}));
+          svg.push(edge(nodeRight,cy,outX,ocy,out.label));
+        });
       }
       svg.push('</g>');
     });
