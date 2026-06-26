@@ -1353,13 +1353,25 @@ body[data-app-version="legacy"] .original-app-hidden{display:block}
 .cjm-seg-tab.is-matrix{border-style:dashed;font-weight:750}
 .cjm-seg-tab.is-matrix.active{border-style:solid;background:linear-gradient(135deg,color-mix(in srgb,var(--violet) 14%,var(--surface)),var(--surface))}
 /* Manual inputs grid for funnel tab */
-.cjm-manual-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
-@media(max-width:760px){.cjm-manual-grid{grid-template-columns:1fr}}
+.cjm-manual-grid{display:flex;flex-direction:column;gap:14px}
+.cjm-manual-section{display:flex;flex-direction:column;gap:10px}
+.cjm-manual-section-title{font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:var(--muted)}
+.cjm-manual-grid-inner{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+@media(max-width:760px){.cjm-manual-grid-inner{grid-template-columns:1fr}}
 .cjm-manual-grid label{display:grid;gap:6px;color:var(--muted);font-size:11.5px;font-weight:800;text-transform:uppercase;letter-spacing:.05em}
+.cjm-manual-grid label .cjm-manual-label{display:block}
 .cjm-manual-grid label .cjm-manual-suffix{font-size:11px;font-weight:700;color:var(--muted);text-transform:none;letter-spacing:0}
 .cjm-manual-grid input{border:1px solid var(--line-strong);border-radius:var(--radius-xs);padding:11px 13px;background:var(--surface-2);font-size:14px;font-weight:600;color:var(--text);font-variant-numeric:tabular-nums}
 .cjm-manual-grid input:focus{outline:2px solid var(--blue);outline-offset:1px}
 .cjm-manual-grid input.is-edited{border-color:var(--blue);background:color-mix(in srgb,var(--blue) 7%,var(--surface-2))}
+.cjm-manual-sample{display:grid;gap:4px;margin-top:4px}
+.cjm-manual-sample-label{font-size:10.5px;font-weight:700;color:var(--muted);text-transform:none;letter-spacing:0}
+.cjm-manual-grid input.cjm-manual-sample-input{padding:8px 11px;font-size:13px;font-weight:500;background:var(--surface)}
+.cjm-manual-derived{padding:12px 14px;border:1px dashed var(--line-strong);border-radius:var(--radius-xs);background:color-mix(in srgb,var(--blue) 5%,var(--surface))}
+.cjm-derived-row{display:flex;flex-wrap:wrap;align-items:baseline;gap:10px 16px}
+.cjm-derived-label{font-size:11.5px;font-weight:800;text-transform:uppercase;letter-spacing:.05em;color:var(--muted)}
+.cjm-derived-value{font-size:18px;font-weight:800;color:var(--text);font-variant-numeric:tabular-nums}
+.cjm-derived-formula{font-size:11.5px;color:var(--muted);font-weight:600;flex:1 1 100%}
 .cjm-reset-btn{border:1px dashed var(--line-strong);background:transparent;color:var(--muted);padding:8px 14px;border-radius:980px;font-size:12px;font-weight:700;cursor:pointer;letter-spacing:.02em}
 .cjm-reset-btn:hover{color:var(--text);border-color:var(--text)}
 /* Matrix funnels grid */
