@@ -1768,7 +1768,7 @@
     var style = '';
     try {
       // Соберём базовые стили текста, чтобы PNG выглядел читабельно (минимально).
-      style = 'body,div,table,h3,h4,p,td,th,b,span{font-family:-apple-system,Segoe UI,Roboto,sans-serif;color:#111}' +
+      style = 'body,div,table,h3,h4,p,td,th,b,span{font-family:"Golos Text",-apple-system,Segoe UI,Roboto,sans-serif;color:#111}' +
         'table{border-collapse:collapse;width:100%;font-size:12px}td,th{border:1px solid #ddd;padding:6px 8px;text-align:left}' +
         'h3,h4{margin:8px 0}.ue-modal-card{padding:18px;background:#fff}';
     } catch (e) {}
