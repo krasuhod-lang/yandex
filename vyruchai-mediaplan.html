@@ -435,9 +435,10 @@ canvas{display:block;width:100%;max-width:100%;height:auto;cursor:crosshair}
 .route-diagram-wrap.is-dragging{cursor:grabbing;scroll-behavior:auto}
 .route-diagram-wrap.is-dragging *{pointer-events:none}
 .route-diagram svg{width:100%;min-width:1480px;height:auto;display:block}
-/* CJM Smart Safe Router canvas is wider (viewBox 1760) — guarantee space for the
-   «ДА → Выдача ЦФ» / «НЕТ» blocks so nodes never get squished or clipped. */
-#cjmRouteDiagram svg{min-width:1760px}
+/* CJM Smart Safe Router canvas is wider (viewBox 1820) — guarantee space for the
+   diamond forks (ПДН / «ЦФ готов одобрить?») and their two output blocks so nodes
+   never get squished or clipped. */
+#cjmRouteDiagram svg{min-width:1820px}
 .route-diagram .rd-edge{fill:none;stroke:var(--line-strong);stroke-width:2.5;stroke-linecap:round;stroke-linejoin:round}
 .route-diagram .rd-arrow{fill:var(--line-strong)}
 .route-diagram .rd-elabel{fill:var(--muted);font-family:var(--font);font-size:13px;font-weight:700}

@@ -12,9 +12,9 @@
 
   // 5 segments per CJM/JTBD spec (Miro):
   //  1. new        — Новый клиент            (yellow)
-  //  2. repeat     — Повторный клиент        (green)
-  //  3. rejected   — Отказной клиент         (red)
-  //  4. sleeping   — Спящий/БФЛ              (blue, описание пустое по схеме)
+  //  2. repeat     — Действующий клиент       (green)
+  //  3. rejected   — Отказной клиент         (red, ветка ПДН → МФО / БФЛ)
+  //  4. sleeping   — Спящий клиент           (blue, ромб «ЦФ готов одобрить?»)
   //  5. noncore    — Новый (непрофильный)    (violet)
   // Воронка (новая, согласована с бизнесом):
   //   Visit → Контакт (квиз) → Проверка ЦФ → Показ витрины → Заявка → Выдача
@@ -475,47 +475,54 @@
     host.classList.toggle('has-active',!!activeBranch);
 
     // Geometry --------------------------------------------------------------
-    // Координаты подобраны так, чтобы ветки не перекрывались между собой.
-    // Для веток с ромбом «Одобрено?» справа от ромба ставится блок «ДА → Выдача
-    // ЦФ» (x = col[4] + ширина ромба + 30), а под ним — блок «НЕТ → …». Поэтому
-    // холст шире самого правого узла (W=1760), а ряды с ромбом получают повышенный
-    // вертикальный шаг, чтобы кластер «ДА/НЕТ» одной ветки не наезжал на соседнюю.
-    var W=1760,H=1080;
+    // Каждая ветка идёт по колонкам: seg (col2) → step (col3) → fork (col4).
+    // fork.type: 'diamond' — узел-ромб с двумя выходами (ДА/НЕТ, Норма/Высокий);
+    //            'split'   — узел-разветвление на два продукта (Top-up / Карты);
+    //            'terminal'— один конечный блок (витрина CPA-МФО).
+    // Выходы ставятся справа от узла двумя стопками (верхний/нижний), поэтому холст
+    // шире самого правого узла (W=1820), а центры веток разнесены на 240px, чтобы
+    // кластеры выходов соседних веток не накладывались.
+    var W=1820,H=1240;
     var BW=240,BH=72;                       // box width/height
+    var DW=200,DH=84;                        // diamond width/height
     var col=[60,360,660,960,1240];          // x of column lefts
     // Entry column (4 stacked boxes at x=col[0])
-    var entryY=[80,200,320,440];
+    var entryY=[120,240,360,480];
     var entries=['SEO','Контекстная реклама','Ремаркетинг','Соц. сети'];
     // Hub column
     var hubX=col[1], hubW=BW;
-    var siteY=220,routerY=420;
-    // Branch rows — равномерно распределены с учётом доп. блока «НЕТ».
-    // Ветки с ромбом (new/repeat) занимают по вертикали ~222px (блок «ДА» сверху,
-    // ромб по центру, блок «НЕТ» снизу), поэтому между ними увеличенный отступ.
+    var siteY=260,routerY=460;
+    // Branch model — центры (cy) разнесены равномерно с запасом под два выхода.
     var branches=[
-      {key:'new',     y:80,  color:'var(--yellow)', name:'Новый клиент',
-        nodes:[ {t:'Новый клиент',s:'Желтый сегмент'},
-                {t:'Проверка скоррингом',s:'Скоринг ЦФ'},
-                {t:'Одобрено?',s:'Решение',shape:'diamond'},
-                {t:'Выдача ЦФ',s:'ДА · целевой результат',out:true} ]},
-      {key:'repeat',  y:360, color:'var(--green)',  name:'Повторный клиент',
-        nodes:[ {t:'Повторный клиент',s:'Зеленый сегмент'},
-                {t:'Проверка скоррингом',s:'Скоринг ЦФ · repeat'},
-                {t:'Одобрено?',s:'Решение',shape:'diamond'},
-                {t:'Выдача ЦФ',s:'ДА · repeat-выдача',out:true} ]},
-      {key:'rejected',y:620, color:'var(--red)',    name:'Отказной клиент',
-        nodes:[ {t:'Отказной клиент',s:'Красный сегмент'},
-                {t:'Пробив чеккером',s:'по номеру телефона'},
-                null,
-                {t:'5 офферов МФО',s:'Витрина монетизации',out:true} ]},
-      {key:'sleeping',y:780, color:'var(--blue)',   name:'Спящий / БФЛ',
-        nodes:[ {t:'Спящий / БФЛ',s:'Синий сегмент · в разработке'},
-                null,null,null ]},
-      {key:'noncore', y:940, color:'var(--violet)', name:'Новый (непрофильный)',
-        nodes:[ {t:'Новый (непрофильный)',s:'Фиолетовый сегмент'},
-                {t:'Пробив чеккером',s:'по номеру телефона'},
-                null,
-                {t:'5 офферов МФО',s:'Витрина монетизации',out:true} ]}
+      { key:'new', cy:130, color:'var(--yellow)', name:'Новый клиент',
+        seg:{t:'Новый клиент',s:'Жёлтый сегмент'},
+        step:{t:'Анкета · Скоринг ЦФ',s:'Первичная проверка'},
+        fork:{ type:'diamond', t:'Одобрено?', s:'Скоринг ЦФ',
+          outs:[ {t:'Выдача ЦФ',s:'ДА · целевой результат',label:'ДА',color:'var(--green)'},
+                 {t:'Чеккер → CPA-витрина',s:'НЕТ · ветка «Непрофильный»',label:'НЕТ',color:'var(--orange)'} ] } },
+      { key:'repeat', cy:370, color:'var(--green)', name:'Действующий клиент',
+        seg:{t:'Действующий клиент',s:'Зелёный сегмент'},
+        step:{t:'Авторизация → Личный кабинет',s:'Роутер: REPEAT'},
+        fork:{ type:'split', t:'Личный кабинет', s:'Top-up + банковские карты',
+          outs:[ {t:'Top-up (добор займа ЦФ)',s:'CR 15–20% · апрув 85–95%',label:'Top-up',color:'var(--green)'},
+                 {t:'Витрина банковских карт',s:'Дебет 5–8% / Кредит 3–5%',label:'Карты',color:'var(--blue)'} ] } },
+      { key:'rejected', cy:610, color:'var(--red)', name:'Отказной клиент',
+        seg:{t:'Отказной клиент',s:'Красный сегмент'},
+        step:{t:'Статус: Отказ',s:'Отказ ЦФ 1–14 дней'},
+        fork:{ type:'diamond', t:'Проверка ПДН', s:'Долговая нагрузка',
+          outs:[ {t:'Витрина CPA-МФО',s:'ПДН нормальный · CPA 2,0–2,4 т.₽',label:'Норма',color:'var(--orange)'},
+                 {t:'Офферы БФЛ (банкротство)',s:'ПДН высокий · CPA 3,5–5 т.₽',label:'Высокий',color:'var(--red)'} ] } },
+      { key:'sleeping', cy:850, color:'var(--blue)', name:'Спящий клиент',
+        seg:{t:'Спящий клиент',s:'Синий сегмент · >30 дней'},
+        step:{t:'Статус: Спящий',s:'Возврат в контур ЦФ'},
+        fork:{ type:'diamond', t:'ЦФ готов одобрить?', s:'Реактивация',
+          outs:[ {t:'Welcome-back бонус ЦФ',s:'ДА · выдача ЦФ',label:'ДА',color:'var(--green)'},
+                 {t:'Витрина CPA-МФО',s:'НЕТ · испорчена КИ',label:'НЕТ',color:'var(--orange)'} ] } },
+      { key:'noncore', cy:1090, color:'var(--violet)', name:'Новый (непрофильный)',
+        seg:{t:'Новый (непрофильный)',s:'Фиолетовый сегмент'},
+        step:{t:'Чекер: Отказ',s:'Не прошёл первичный чекер ЦФ'},
+        fork:{ type:'terminal',
+          outs:[ {t:'Витрина CPA-МФО',s:'5 офферов · CPA 2,0–2,4 т.₽',color:'var(--orange)'} ] } }
     ];
 
     var svg=[];
@@ -542,7 +549,7 @@
       var color=opts.borderColor||'var(--line-strong)';
       return '<polygon points="'+pts+'" fill="var(--surface)" stroke="'+color+'" stroke-width="2"/>'+
         '<foreignObject x="'+x+'" y="'+y+'" width="'+w+'" height="'+h+'">'+
-          '<div xmlns="http://www.w3.org/1999/xhtml" style="height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:0 18px">'+
+          '<div xmlns="http://www.w3.org/1999/xhtml" style="height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:0 16px">'+
             '<div class="rd-t" style="font-size:14px">'+esc(opts.t)+'</div>'+
             (opts.s?'<div class="rd-s" style="font-size:12px">'+esc(opts.s)+'</div>':'')+
           '</div></foreignObject>';
@@ -561,7 +568,7 @@
     // Hub: Выручай.ру
     svg.push(box(hubX,siteY,hubW,BH,{t:'Выручай.ру',s:'Единая точка входа',hub:true}));
     // Hub: Проверка по базе ЦФ
-    svg.push(box(hubX,routerY,hubW,BH,{t:'Проверка по базе ЦФ',s:'Smart Safe Router',hub:true}));
+    svg.push(box(hubX,routerY,hubW,BH,{t:'Проверка по базе ЦФ',s:'Smart Safe Router · после ввода телефона',hub:true}));
     // Entry → Выручай.ру
     entries.forEach(function(_,i){
       svg.push(edge(col[0]+BW,entryY[i]+BH/2,hubX,siteY+BH/2));
@@ -572,51 +579,38 @@
     // Branches
     branches.forEach(function(br){
       svg.push('<g class="ssr-branch ssr-branch-'+br.key+(activeBranch===br.key?' is-active':'')+'">');
-      // First node (segment box) anchored at col[2]
-      var x0=col[2],y0=br.y;
-      svg.push(box(x0,y0,BW,BH,{t:br.nodes[0].t,s:br.nodes[0].s,borderColor:br.color}));
-      // Router → segment box
-      svg.push(edge(hubX+hubW,routerY+BH/2,x0,y0+BH/2));
+      var cy=br.cy, segX=col[2], stepX=col[3], forkX=col[4];
+      function top(c){return c-BH/2;}
+      // Segment box + router → segment
+      svg.push(box(segX,top(cy),BW,BH,{t:br.seg.t,s:br.seg.s,borderColor:br.color}));
+      svg.push(edge(hubX+hubW,routerY+BH/2,segX,cy));
+      // Step box
+      svg.push(box(stepX,top(cy),BW,BH,{t:br.step.t,s:br.step.s,borderColor:br.color}));
+      svg.push(edge(segX+BW,cy,stepX,cy));
 
-      var n1=br.nodes[1];
-      if(n1){
-        var x1=col[3],y1=br.y;
-        svg.push(box(x1,y1,BW,BH,{t:n1.t,s:n1.s,borderColor:br.color}));
-        svg.push(edge(x0+BW,y0+BH/2,x1,y1+BH/2));
-        var n2=br.nodes[2],n3=br.nodes[3];
-        if(n2&&n2.shape==='diamond'){
-          var dx=col[4],dy=br.y-4,dw=200,dh=80;
-          svg.push(diamond(dx,dy,dw,dh,{t:n2.t,s:n2.s,borderColor:br.color}));
-          svg.push(edge(x1+BW,y1+BH/2,dx,dy+dh/2,'Да'));
-          // YES branch — Выдача ЦФ (n3)
-          if(n3){
-            var yx=dx+dw+30,yy=dy-30;
-            svg.push(box(yx,yy,BW,BH,{t:n3.t,s:n3.s,out:true,borderColor:'var(--green)'}));
-            svg.push(edge(dx+dw,dy+dh/2,yx,yy+BH/2,'ДА'));
-          }
-          // NO branch — depends on segment
-          var noY=dy+dh+40;
-          var noText=br.key==='new'
-            ? 'НЕТ → Пробив чеккером (ветка «Непрофильный»)'
-            : 'НЕТ → «Ну нет и нет, ПК мы подаём»';
-          svg.push('<foreignObject x="'+dx+'" y="'+noY+'" width="'+(BW+60)+'" height="'+BH+'">'+
-            '<div xmlns="http://www.w3.org/1999/xhtml" class="rd-box" style="border-top:4px solid var(--orange);font-size:12px">'+
-              '<div class="rd-t" style="font-size:13px">'+esc(noText)+'</div>'+
-            '</div></foreignObject>');
-          svg.push(edge(dx+dw/2,dy+dh,dx+dw/2,noY,'НЕТ'));
-        }else if(n3){
-          var x3=col[4],y3=br.y;
-          svg.push(box(x3,y3,BW,BH,{t:n3.t,s:n3.s,out:true,borderColor:br.color}));
-          svg.push(edge(x1+BW,y1+BH/2,x3,y3+BH/2));
-        }
+      var fork=br.fork;
+      if(fork.type==='terminal'){
+        var o=fork.outs[0];
+        svg.push(box(forkX,top(cy),BW,BH,{t:o.t,s:o.s,out:true,borderColor:o.color}));
+        svg.push(edge(stepX+BW,cy,forkX,cy));
       }else{
-        // Branch ends here (sleeping/БФЛ) — small badge
-        svg.push('<foreignObject x="'+(col[3])+'" y="'+(br.y)+'" width="'+BW+'" height="'+BH+'">'+
-          '<div xmlns="http://www.w3.org/1999/xhtml" class="rd-box" style="border-top:4px dashed var(--blue);font-size:12px">'+
-            '<div class="rd-t" style="font-size:13px">Ветка в разработке</div>'+
-            '<div class="rd-s">Логика будет дополнена позже</div>'+
-          '</div></foreignObject>');
-        svg.push(edge(x0+BW,y0+BH/2,col[3],br.y+BH/2));
+        var nodeRight;
+        if(fork.type==='diamond'){
+          svg.push(diamond(forkX,cy-DH/2,DW,DH,{t:fork.t,s:fork.s,borderColor:br.color}));
+          nodeRight=forkX+DW;
+        }else{ // split — узел-разветвление (блок-хаб)
+          svg.push(box(forkX,top(cy),BW,BH,{t:fork.t,s:fork.s,hub:true,borderColor:br.color}));
+          nodeRight=forkX+BW;
+        }
+        svg.push(edge(stepX+BW,cy,forkX,cy));
+        // Два выхода — верхний и нижний
+        var outX=nodeRight+40;
+        var upCy=cy-(BH/2+16), loCy=cy+(BH/2+16);
+        fork.outs.forEach(function(out,i){
+          var ocy=i===0?upCy:loCy;
+          svg.push(box(outX,ocy-BH/2,BW,BH,{t:out.t,s:out.s,out:true,borderColor:out.color}));
+          svg.push(edge(nodeRight,cy,outX,ocy,out.label));
+        });
       }
       svg.push('</g>');
     });
