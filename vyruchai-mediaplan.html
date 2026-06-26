@@ -431,7 +431,9 @@ canvas{display:block;width:100%;max-width:100%;height:auto;cursor:crosshair}
 .quiz-cjm-card.s-rejected .qcm-grade,.quiz-cjm-card.s-overdue .qcm-grade{background:color-mix(in srgb,var(--red) 14%,transparent);color:var(--red)}
 .quiz-cjm-card.s-noncore .qcm-grade,.quiz-cjm-card.s-dormant .qcm-grade{background:color-mix(in srgb,var(--orange) 14%,transparent);color:var(--orange)}
 /* ---------- Block-flow diagram (Miro-style) ---------- */
-.route-diagram-wrap{overflow-x:auto;padding:6px 2px 2px}
+.route-diagram-wrap{overflow-x:auto;padding:6px 2px 2px;cursor:grab;user-select:none;-webkit-user-select:none}
+.route-diagram-wrap.is-dragging{cursor:grabbing;scroll-behavior:auto}
+.route-diagram-wrap.is-dragging *{pointer-events:none}
 .route-diagram svg{width:100%;min-width:1480px;height:auto;display:block}
 .route-diagram .rd-edge{fill:none;stroke:var(--line-strong);stroke-width:2.5;stroke-linecap:round;stroke-linejoin:round}
 .route-diagram .rd-arrow{fill:var(--line-strong)}
@@ -1445,13 +1447,12 @@ body[data-app-version="legacy"] .original-app-hidden{display:block}
       <div id="cjmJourneyHost"></div>
       <div class="card">
         <div class="card-title"><div><h2>Блок-схема Smart Safe Router</h2><p>Сквозной путь от точки входа до выдачи в ЦФ или монетизации через витрину. Выбранная ветка подсвечена, остальные — приглушены.</p></div></div>
-        <div class="route-diagram-wrap"><div class="route-diagram" id="cjmRouteDiagram"></div></div>
+        <div class="route-diagram-wrap" data-drag-scroll><div class="route-diagram" id="cjmRouteDiagram"></div></div>
       </div>
     </section>
     <section id="cjm-tab-calc" class="cjm-panel">
-      <div class="cjm-section-head"><div><h2>Пример расчёта · Выручка с воронки 10 000</h2><p>Полная цепочка от первых визитов до денег: визиты → лиды → одобрения → выдачи → выручка по выбранному сегменту, плюс сводка по всем сегментам.</p></div></div>
+      <div class="cjm-section-head"><div><h2>Пример расчёта · Выручка с воронки 10 000</h2><p>Полная цепочка от первых визитов до денег: визиты → контакт через квиз → проверка ЦФ → витрина → заявка → выдача по выбранному сегменту.</p></div></div>
       <div class="card" id="cjmCalcSegmentCard"></div>
-      <div class="card"><div class="card-title"><div><h2>Сводка по всем сегментам</h2><p>Сколько денег принесёт каждый сегмент при базе 10 000 визитов</p></div></div><div class="ue2-table-wrap"><table class="ue2-scn-table" id="cjmCalcTable"></table></div></div>
     </section>
     <section id="cjm-tab-unit" class="cjm-panel">
       <div class="cjm-section-head"><div><h2>Юнит-экономика</h2><p>KPI, светофор LTV/CAC, детализация воронки и симуляция As-Is / To-Be.</p></div><div class="cjm-switch" role="group" aria-label="Режим модели"><button type="button" data-cjm-mode="asIs" class="active">As-Is</button><button type="button" data-cjm-mode="toBe">To-Be +5% CR</button></div></div>
@@ -1466,6 +1467,7 @@ body[data-app-version="legacy"] .original-app-hidden{display:block}
     <section id="cjm-tab-matrix" class="cjm-panel">
       <div class="cjm-section-head"><div><h2>📊 Сводная матрица всех сегментов</h2><p>Полное сравнение 4 сегментов: воронки на 10 000 пользователей, экономика, каналы привлечения и LTV/CAC.</p></div></div>
       <div class="card"><div class="card-title"><div><h2>Воронки на 10 000 пользователей · по сегментам</h2><p>Все 4 сегмента рядом — видны абсолютные значения и CR%</p></div></div><div class="cjm-matrix-funnels" id="cjmMatrixFunnels"></div></div>
+      <div class="card"><div class="card-title"><div><h2>Сводка по всем сегментам</h2><p>Сколько денег принесёт каждый сегмент при базе 10 000 визитов</p></div></div><div class="ue2-table-wrap"><table class="ue2-scn-table" id="cjmCalcTable"></table></div></div>
       <div class="card"><div class="card-title"><div><h2>Сравнительная экономика</h2><p>Лучшие значения подсвечены зелёным, худшие — красным</p></div></div><div class="ue2-table-wrap"><table class="ue2-scn-table" id="cjmSummaryTable"></table></div></div>
       <div class="grid two">
         <div class="card"><div class="card-title"><div><h2>Каналы привлечения (взвешенно)</h2><p>SEO, платный трафик, CRM/Push и PR по доле сегментов</p></div></div><div class="cjm-pie" id="cjmChannelMix"></div></div>
@@ -1727,7 +1729,7 @@ body[data-app-version="legacy"] .original-app-hidden{display:block}
 
       <h2 class="divider-title">Блок-схема Smart Safe Router · Единый экран</h2>
       <p class="route-lead">Сквозной путь внешнего трафика (SEO, соцсети/PR и рекламные источники вроде Яндекс.Директа). Ядро — Smart Safe Router: система просеивает входящий поток по S2S API, защищает действующих клиентов ЦФ от перекредитованности и окупает маркетинговые расходы (CAC) за счёт резервной CPA-монетизации непрофильных лидов.</p>
-      <div class="card route-diagram-card"><div class="route-diagram-wrap"><div id="routeDiagram" class="route-diagram"></div></div></div>
+      <div class="card route-diagram-card"><div class="route-diagram-wrap" data-drag-scroll><div id="routeDiagram" class="route-diagram"></div></div></div>
 
       <h2 class="divider-title">3-шаговые интерфейсные сценарии</h2>
       <p class="route-lead">Три ключевые ветки показаны как короткие UI-фрагменты: что видит пользователь до статуса, во время решения роутера и на финальной витрине.</p>
