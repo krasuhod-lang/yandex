@@ -6,6 +6,7 @@
   var MODE_KEY='cjm_unit_mode_v1';
   var MANUAL_KEY='cjm_manual_inputs_v3';
   var GLOBAL_KEY='cjm_global_inputs_v1';
+  var SHARES_KEY='cjm_segment_shares_v1';
   var VERSION_KEY='vyruchai_app_version_v1';
   var BASE_VISITS=10000;
   // Глобальные параметры, общие для всех сегментов:
@@ -271,6 +272,34 @@
   function unsetSample(id,key){unsetManual(id,'n_'+key);}
   function globalSampleFor(key){var g=globalStore();var sk='n_'+key;return g[sk]!=null?Number(g[sk]):null;}
 
+  // --- Segment shares (matrix-only editor) ---------------------------------
+  // Хранятся как объект {segmentId: percent}. По умолчанию используется
+  // s.share (доля 0..1) из дефолтов сегмента. Пользовательские значения
+  // применяются к segments[i].share при инициализации и при изменении.
+  var DEFAULT_SHARES=segments.reduce(function(acc,s){acc[s.id]=s.share;return acc;},{});
+  function applyStoredShares(){
+    var saved=read(SHARES_KEY,null);
+    if(!saved||typeof saved!=='object')return;
+    segments.forEach(function(s){
+      if(saved[s.id]!=null){
+        var v=Number(saved[s.id]);
+        if(isFinite(v)&&v>=0)s.share=v;
+      }
+    });
+  }
+  function setShare(id,fraction){
+    var s=segmentById(id);if(!s)return;
+    var v=clamp(fraction,0,1);
+    s.share=v;
+    var saved=read(SHARES_KEY,{})||{};
+    saved[id]=v;
+    write(SHARES_KEY,saved);
+  }
+  function resetShares(){
+    write(SHARES_KEY,null);
+    segments.forEach(function(s){s.share=DEFAULT_SHARES[s.id];});
+  }
+
   // --- Funnel computation ---------------------------------------------------
   // Шаги воронки: Visit → Контакт (общая CR) — параллельный замер контактов.
   //               Visit → Клик по офферу → Заявка → Выдача — путь монетизации.
@@ -313,12 +342,14 @@
     var host=$('cjmSegmentTabs');
     if(!host)return;
     var current=selectedId();
+    var totalShare=segments.reduce(function(a,s){return a+(Number(s.share)||0);},0)||1;
     var html=segments.map(function(s){
       var active=current===s.id?' active':'';
+      var norm=(s.share/totalShare)*100;
       return '<button class="cjm-seg-tab'+active+'" type="button" data-seg="'+esc(s.id)+'">'+
         '<span class="cjm-seg-dot" style="background:'+esc(s.color)+'"></span>'+
         '<span>'+esc(s.name)+'</span>'+
-        '<span class="cjm-seg-share">'+pct(s.share*100,0)+'</span>'+
+        '<span class="cjm-seg-share">'+pct(norm,0)+'</span>'+
       '</button>';
     }).join('');
     html+='<button class="cjm-seg-tab is-matrix'+(current==='matrix'?' active':'')+'" type="button" data-seg="matrix">'+
@@ -430,19 +461,18 @@
     var cacDerived=cacFor(s.id);
 
     var globalFields=[
-      {key:'visitContact',label:'CR · Визит → Контакт (общая для всех сегментов)',suffix:'%',step:'0.1',min:0,max:100,sampleLabel:'визитов в выборке',sampleStep:'1'},
-      {key:'contactCost',label:'Стоимость привлечения контакта (общая)',suffix:'₽',step:'1',min:0,max:1000000,sampleLabel:'контактов в выборке',sampleStep:'1'}
+      {key:'visitContact',label:'CR · Визит → Контакт (общая для всех сегментов)',suffix:'%',step:'0.1',min:0,max:100},
+      {key:'contactCost',label:'Стоимость привлечения контакта (общая)',suffix:'₽',step:'1',min:0,max:1000000}
     ];
     var segFields=[
-      {key:'visitClick',label:'CR · Визит → Клик по офферу',suffix:'%',step:'0.1',min:0,max:100,sampleLabel:'визитов в выборке',sampleStep:'1'},
-      {key:'clickApp',label:'CR · Клик по офферу → Заявка',suffix:'%',step:'0.1',min:0,max:100,sampleLabel:'кликов в выборке',sampleStep:'1'},
-      {key:'appIssue',label:'CR · Заявка → Выдача',suffix:'%',step:'0.1',min:0,max:100,sampleLabel:'заявок в выборке',sampleStep:'1'},
-      {key:'cpa',label:'CPA / выплата партнёра',suffix:'₽',step:'1',min:0,max:1000000,sampleLabel:'выдач в выборке',sampleStep:'1'},
-      {key:'ltv',label:'LTV (1 год)',suffix:'₽',step:'1',min:0,max:1000000,sampleLabel:'клиентов в выборке',sampleStep:'1'}
+      {key:'visitClick',label:'CR · Визит → Клик по офферу',suffix:'%',step:'0.1',min:0,max:100},
+      {key:'clickApp',label:'CR · Клик по офферу → Заявка',suffix:'%',step:'0.1',min:0,max:100},
+      {key:'appIssue',label:'CR · Заявка → Выдача',suffix:'%',step:'0.1',min:0,max:100},
+      {key:'cpa',label:'CPA / выплата партнёра',suffix:'₽',step:'1',min:0,max:1000000},
+      {key:'ltv',label:'LTV (1 год)',suffix:'₽',step:'1',min:0,max:1000000}
     ];
 
-    function fieldInputHtml(f,value,edited,inputAttr,sampleValue,sampleEdited,sampleAttr){
-      var sampleHtml=sampleValue==null?'':String(sampleValue);
+    function fieldInputHtml(f,value,edited,inputAttr){
       return '<label>'+
         '<span class="cjm-manual-label">'+esc(f.label)+
           (edited?' <span class="cjm-manual-suffix" title="Значение изменено вручную">· изменено</span>':'')+
@@ -451,14 +481,6 @@
           'min="'+f.min+'" max="'+f.max+'" step="'+f.step+'" '+
           'value="'+esc(value)+'" '+inputAttr+' '+
           (edited?'class="is-edited"':'')+'>'+
-        '<span class="cjm-manual-sample">'+
-          '<span class="cjm-manual-sample-label">Объём выборки · '+esc(f.sampleLabel)+
-            (sampleEdited?' <span class="cjm-manual-suffix" title="Значение изменено вручную">· изменено</span>':'')+
-          '</span>'+
-          '<input type="number" inputmode="numeric" min="0" step="'+f.sampleStep+'" '+
-            'value="'+esc(sampleHtml)+'" placeholder="—" '+sampleAttr+' '+
-            (sampleEdited?'class="is-edited cjm-manual-sample-input"':'class="cjm-manual-sample-input"')+'>'+
-        '</span>'+
       '</label>';
     }
 
@@ -468,14 +490,7 @@
       var globalHtml='<div class="cjm-manual-section"><div class="cjm-manual-section-title">Общие показатели (для всех сегментов)</div><div class="cjm-manual-grid-inner">';
       globalHtml+=globalFields.map(function(f){
         var edited=isGlobalEdited(f.key);
-        var sampleEdited=isGlobalEdited('n_'+f.key);
-        var sampleValue=globalSampleFor(f.key);
-        return fieldInputHtml(
-          f,m[f.key],edited,
-          'data-global="'+esc(f.key)+'"',
-          sampleValue,sampleEdited,
-          'data-global="n_'+esc(f.key)+'"'
-        );
+        return fieldInputHtml(f,m[f.key],edited,'data-global="'+esc(f.key)+'"');
       }).join('');
       globalHtml+='</div></div>';
       // 2) производный CAC
@@ -493,14 +508,7 @@
       var segHtml='<div class="cjm-manual-section"><div class="cjm-manual-section-title">Показатели сегмента «'+esc(s.name)+'»</div><div class="cjm-manual-grid-inner">';
       segHtml+=segFields.map(function(f){
         var edited=isEdited(s.id,f.key);
-        var sampleEdited=isEdited(s.id,'n_'+f.key);
-        var sampleValue=sampleFor(s.id,f.key);
-        return fieldInputHtml(
-          f,m[f.key],edited,
-          'data-key="'+esc(f.key)+'"',
-          sampleValue,sampleEdited,
-          'data-sample="'+esc(f.key)+'"'
-        );
+        return fieldInputHtml(f,m[f.key],edited,'data-key="'+esc(f.key)+'"');
       }).join('');
       segHtml+='</div></div>';
       inputs.innerHTML=globalHtml+cacBlock+segHtml;
@@ -517,18 +525,7 @@
           if(activeInnerTab()==='unit')requestAnimationFrame(renderCharts);
         });
       });
-      // bindings — segment sample sizes
-      inputs.querySelectorAll('input[data-sample]').forEach(function(input){
-        input.addEventListener('input',function(){
-          var key=input.getAttribute('data-sample');
-          var raw=input.value;
-          if(raw===''){unsetSample(s.id,key);}
-          else{setSample(s.id,key,Number(raw));}
-          input.classList.toggle('is-edited',isEdited(s.id,'n_'+key));
-          // Объём выборки не влияет на расчёт, только на отображение
-        });
-      });
-      // bindings — global inputs (CR · Визит→Контакт, Стоимость контакта, и их выборки)
+      // bindings — global inputs (CR · Визит→Контакт, Стоимость контакта)
       inputs.querySelectorAll('input[data-global]').forEach(function(input){
         input.addEventListener('input',function(){
           var key=input.getAttribute('data-global');
@@ -571,16 +568,8 @@
     var host=$('cjmJourneyHost');if(!host)return;
     var s=currentSegment();
     var poe=(s.points_of_entry&&s.points_of_entry.length)?s.points_of_entry.join(', '):'не утверждены';
-    var m=manualFor(s.id);
-    var metricsParts=[
-      'Визит → Клик по офферу: <b>'+pct(m.visitClick,1)+'</b>',
-      'Клик → Заявка: <b>'+pct(m.clickApp,0)+'</b>',
-      'Заявка → Апрув: <b>'+pct(m.appIssue,0)+'</b>',
-      'CPA: <b>'+esc(s.cpa_text||(m.cpa<=0?'внутр.':rub(m.cpa)))+'</b>',
-      'LTV (1 год): <b>'+esc(s.ltv_text||rub(m.ltv))+'</b>'
-    ];
 
-    // Блочная структура: каждая секция — отдельная мини-карточка.
+    // Блок «Показатели» убран — те же значения доступны в «Юнит-экономике».
     // Пропускаем пустые секции (например, у «Действующего» нет why_here/showcase).
     var blocks=[
       {h:'Описание сегмента',html:s.description?esc(s.description):'',wide:true},
@@ -588,7 +577,6 @@
       {h:'Маршрутизация',html:s.router?esc(s.router):''},
       {h:'Витрина',html:s.showcase?esc(s.showcase):''},
       {h:'Монетизация',html:s.monetization?esc(s.monetization):''},
-      {h:'Показатели',html:metricsParts.join(' · ')+'.',wide:true},
       {h:'Точки входа',html:esc(poe)},
       {h:'Как попадает',html:esc(s.how_arrives||'—')}
     ];
@@ -901,9 +889,11 @@
     // Funnels card per segment
     var funnels=$('cjmMatrixFunnels');
     if(funnels){
+      var totalShare=segments.reduce(function(a,s){return a+(Number(s.share)||0);},0)||1;
       funnels.innerHTML=segments.map(function(s){
         var f=funnelFor(s.id);
         var isLeader=s.id===leaderId;
+        var normShare=(s.share/totalShare)*100;
         return '<article class="cjm-matrix-segment'+(isLeader?' is-leader':'')+'" style="border-top-color:'+esc(s.color)+'">'+
           '<header><h3>'+esc(s.name)+'</h3></header>'+
           '<div class="cjm-matrix-step"><span class="cjm-matrix-step-name">Visit</span><span class="cjm-matrix-step-val">'+fmt(f.visit)+'</span><span class="cjm-matrix-step-cr">100%</span></div>'+
@@ -911,13 +901,13 @@
           '<div class="cjm-matrix-step"><span class="cjm-matrix-step-name">Клик по офферу</span><span class="cjm-matrix-step-val">'+fmt(f.click)+'</span><span class="cjm-matrix-step-cr">'+pct(f.crVK,1)+'</span></div>'+
           '<div class="cjm-matrix-step"><span class="cjm-matrix-step-name">Заявка</span><span class="cjm-matrix-step-val">'+fmt(f.app)+'</span><span class="cjm-matrix-step-cr">'+pct(f.crKA,1)+'</span></div>'+
           '<div class="cjm-matrix-step"><span class="cjm-matrix-step-name">Выдача</span><span class="cjm-matrix-step-val">'+fmt(f.issue)+'</span><span class="cjm-matrix-step-cr">'+pct(f.crAI,1)+'</span></div>'+
-          '<footer><span>Доля сегмента</span><b>'+pct(s.share*100,0)+'</b></footer>'+
+          '<footer><span>Доля сегмента</span><b>'+pct(normShare,0)+'</b></footer>'+
         '</article>';
       }).join('');
     }
     renderCalcSummaryTable(leaderId);
     renderSummaryTable(leaderId);
-    renderMatrixChannelMix();
+    renderShareEditor();
   }
   function renderSummaryTable(leaderId){
     var table=$('cjmSummaryTable');if(!table)return;
@@ -934,34 +924,99 @@
     table.innerHTML='<thead><tr><th>Сегмент</th><th>Выдач (на 10 000)</th><th>CAC (произв.)</th><th>CPA</th><th>LTV</th><th>LTV/CAC</th><th>Payback</th></tr></thead><tbody>'+
       data.map(function(d){
         var leader=leaderId&&d.s.id===leaderId?' class="is-leader"':'';
+        var lcTone='lc-'+ratioTone(d.ltvCac);
+        var lcCls=[cls(d,'ltvCac'),lcTone].filter(Boolean).join(' ');
         return '<tr'+leader+'><td class="ue2-t-name"><span class="ue2-seg-dot" style="background:'+esc(d.s.color)+'"></span>'+esc(d.s.name)+'</td>'+
           '<td class="'+cls(d,'issue')+'">'+fmt(d.issue)+'</td>'+
           '<td class="'+cls(d,'cac')+'">'+rub(d.cac)+'</td>'+
           '<td class="'+cls(d,'cpa')+'">'+(d.cpa<=0?'внутр.':rub(d.cpa))+'</td>'+
           '<td class="'+cls(d,'ltv')+'">'+rub(d.ltv)+'</td>'+
-          '<td class="'+cls(d,'ltvCac')+'">'+d.ltvCac.toFixed(1)+'×</td>'+
+          '<td class="'+lcCls+'">'+d.ltvCac.toFixed(1)+'×</td>'+
           '<td class="'+cls(d,'payback')+'">'+d.payback+' мес.</td></tr>';
       }).join('')+'</tbody>';
   }
-  function renderMatrixChannelMix(){
-    var host=$('cjmChannelMix');if(!host)return;
-    var total=segments.reduce(function(a,s){return a+s.share;},0)||1;
-    var mix={seo:0,paid:0,crm:0,pr:0};
-    segments.forEach(function(s){mix.seo+=s.mix.seo*s.share/total;mix.paid+=s.mix.paid*s.share/total;mix.crm+=s.mix.crm*s.share/total;mix.pr+=s.mix.pr*s.share/total;});
-    var seo=mix.seo*100, paid=seo+mix.paid*100, crm=paid+mix.crm*100;
-    host.innerHTML='<div class="cjm-pie-visual" style="--seo:'+seo+'%;--paid:'+paid+'%;--crm:'+crm+'%"></div><div class="cjm-legend">'+
-      [['SEO',mix.seo,'var(--blue)'],['Платный трафик',mix.paid,'var(--orange)'],['CRM / Push',mix.crm,'var(--violet)'],['PR / Organic',mix.pr,'var(--green)']]
-      .map(function(r){return '<div class="cjm-legend-row"><span><i class="cjm-dot" style="background:'+r[2]+'"></i>'+esc(r[0])+'</span><b>'+pct(r[1]*100,0)+'</b></div>';}).join('')+'</div>';
+  // --- Segment-share editor (matrix-only) -----------------------------------
+  function renderShareEditor(){
+    var host=$('cjmShareEditor');if(!host)return;
+    var total=segments.reduce(function(a,s){return a+(Number(s.share)||0);},0);
+    var totalPct=total*100;
+    var rowsHtml=segments.map(function(s){
+      var raw=(Number(s.share)||0)*100;
+      var norm=total>0?(s.share/total)*100:0;
+      var pctText=norm.toLocaleString('ru-RU',{maximumFractionDigits:1})+'%';
+      return '<div class="cjm-share-row" data-seg="'+esc(s.id)+'">'+
+        '<span class="cjm-share-name"><span class="cjm-share-dot" style="background:'+esc(s.color)+'"></span>'+esc(s.name)+'</span>'+
+        '<input type="range" min="0" max="100" step="1" value="'+raw.toFixed(0)+'" data-share-range="'+esc(s.id)+'" aria-label="Доля сегмента «'+esc(s.name)+'»">'+
+        '<input type="number" min="0" max="100" step="1" value="'+raw.toFixed(0)+'" data-share-number="'+esc(s.id)+'">'+
+        '<span class="cjm-share-norm" data-share-norm="'+esc(s.id)+'">'+esc(pctText)+'</span>'+
+      '</div>';
+    }).join('');
+    var sumWarn=Math.abs(totalPct-100)>0.5?' is-warn':'';
+    var footerHtml='<div class="cjm-share-footer">'+
+      '<span class="cjm-share-footer-sum'+sumWarn+'">Сумма указанных долей: <b>'+totalPct.toLocaleString('ru-RU',{maximumFractionDigits:0})+'%</b>. Доли в правой колонке нормируются к 100%.</span>'+
+      '<button type="button" class="cjm-share-reset" data-share-reset>Сбросить к дефолту</button>'+
+    '</div>';
+    host.innerHTML='<div class="cjm-share-editor-rows">'+rowsHtml+'</div>'+footerHtml;
+
+    function onChange(id,raw){
+      var v=Math.max(0,Math.min(100,Number(raw)||0));
+      setShare(id,v/100);
+      // Sync the paired input on the same row, refresh normalized labels + dependent UI.
+      var row=host.querySelector('.cjm-share-row[data-seg="'+CSS.escape(id)+'"]');
+      if(row){
+        var rng=row.querySelector('input[type="range"]');
+        var num=row.querySelector('input[type="number"]');
+        if(rng&&rng.value!==String(v))rng.value=String(v);
+        if(num&&document.activeElement!==num&&num.value!==String(v))num.value=String(v);
+      }
+      var newTotal=segments.reduce(function(a,s){return a+(Number(s.share)||0);},0);
+      host.querySelectorAll('[data-share-norm]').forEach(function(el){
+        var sid=el.getAttribute('data-share-norm');
+        var seg=segmentById(sid);if(!seg)return;
+        var n=newTotal>0?(seg.share/newTotal)*100:0;
+        el.textContent=n.toLocaleString('ru-RU',{maximumFractionDigits:1})+'%';
+      });
+      var sumEl=host.querySelector('.cjm-share-footer-sum');
+      if(sumEl){
+        var pctSum=newTotal*100;
+        sumEl.classList.toggle('is-warn',Math.abs(pctSum-100)>0.5);
+        sumEl.innerHTML='Сумма указанных долей: <b>'+pctSum.toLocaleString('ru-RU',{maximumFractionDigits:0})+'%</b>. Доли в правой колонке нормируются к 100%.';
+      }
+      // Refresh segment tabs (показывает доли) и подвал воронок матрицы.
+      renderSegmentTabs();
+      renderMatrixFunnelsFooter();
+    }
+    host.querySelectorAll('input[data-share-range]').forEach(function(input){
+      input.addEventListener('input',function(){onChange(input.getAttribute('data-share-range'),input.value);});
+    });
+    host.querySelectorAll('input[data-share-number]').forEach(function(input){
+      input.addEventListener('input',function(){onChange(input.getAttribute('data-share-number'),input.value);});
+    });
+    var reset=host.querySelector('[data-share-reset]');
+    if(reset){
+      reset.addEventListener('click',function(){
+        resetShares();
+        renderShareEditor();
+        renderSegmentTabs();
+        renderMatrixFunnelsFooter();
+      });
+    }
+  }
+  // Обновляет только подвал «Доля сегмента» в карточках матрицы — без полной перестройки.
+  function renderMatrixFunnelsFooter(){
+    var total=segments.reduce(function(a,s){return a+(Number(s.share)||0);},0)||1;
+    document.querySelectorAll('.cjm-matrix-segment').forEach(function(card,i){
+      var s=segments[i];if(!s)return;
+      var footer=card.querySelector('footer b');
+      if(footer)footer.textContent=pct((s.share/total)*100,0);
+    });
   }
 
   // --- Charts ---------------------------------------------------------------
   function renderCharts(){
-    var colors={blue:'#0071e3',green:'#1d9d52'};
     if(isMatrixView()){
-      drawChart('cjmTrendChart',{
-        type:'bar',
-        data:{labels:segments.map(function(s){return s.name;}),datasets:[{label:'LTV/CAC, ×',data:segments.map(function(s){return ltvCacFor(s.id);}),backgroundColor:segments.map(function(s){return s.color;})}]}
-      });
+      // LTV/CAC bar chart removed per spec; LTV/CAC теперь читается из таблицы
+      // «Сравнительная экономика» (светофор: ≥3 ×, 1.5–2.9 ×, <1.5 ×).
     }
     if(!isMatrixView()){
       // As-Is / To-Be chart removed per spec; nothing to draw in segment view.
@@ -1012,6 +1067,7 @@
   }
 
   function init(){
+    applyStoredShares();
     initVersionSwitcher();
     initInnerTabs();
     initUnitMode();

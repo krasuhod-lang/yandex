@@ -7,13 +7,13 @@
 <script defer src="https://cdn.jsdelivr.net/npm/apexcharts@3.49.1/dist/apexcharts.min.js"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Golos+Text:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@500;600;700&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Montserrat:wght@500;600;700;800&family=JetBrains+Mono:wght@500;600;700&display=swap">
 <style>
 :root{
   color-scheme:light;
-  /* Golos Text — гротеск с высокой читаемостью на экране, табличные цифры,
-     отличный контраст плотности текста (KPI, таблицы, мелкие подписи). */
-  --font:"Golos Text",-apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",Roboto,Arial,sans-serif;
+  /* Montserrat — фирменный гротеск дашборда. Bold для заголовков/чисел,
+     Medium для основного текста, Light/Regular для метаданных. */
+  --font:"Montserrat",-apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",Roboto,Arial,sans-serif;
   --font-mono:"JetBrains Mono","SF Mono",ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
   --bg:#f5f5f7;--surface:#ffffff;--surface-2:#fbfbfd;--surface-3:#f0f0f5;
   --text:#1d1d1f;--muted:#6e6e73;--faint:#a1a1a6;--line:#e3e3e8;--line-strong:#d2d2d7;
@@ -1433,6 +1433,65 @@ body[data-app-version="legacy"] .original-app-hidden{display:block}
 .cjm-calc-step .cs-sub{font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums}
 .cjm-calc-step.cs-revenue{border-color:var(--green);background:color-mix(in srgb,var(--green) 8%,var(--surface-2))}
 .cjm-calc-step.cs-revenue .cs-val{color:var(--green)}
+
+/* ---------- Montserrat typography fine-tuning ---------- */
+body{font-weight:500}
+h1,h2,h3,h4,h5{font-weight:700;letter-spacing:-.02em}
+.brand-title,.brand-sub,.tab,.tab.active,.cjm-tab,.chip,.ghost-btn,select,button{font-family:var(--font)}
+.card-title h2,.card-title h3{font-weight:700}
+.lead-card .lead,.muted,.card-title p,.metric-sub,.cjm-section-head p{font-weight:500}
+b,strong{font-weight:700}
+.cjm-section-head h2{font-weight:800}
+.cjm-seg-tab{font-weight:600}
+.cjm-seg-tab.active{font-weight:700}
+
+/* ---------- Apple-style hover animations ---------- */
+.card{transition:transform .35s cubic-bezier(.2,.8,.2,1),box-shadow .35s cubic-bezier(.2,.8,.2,1),border-color .35s var(--ease)}
+.card:hover{transform:translateY(-3px);box-shadow:var(--shadow-hover);border-color:color-mix(in srgb,var(--line-strong) 80%,var(--blue) 20%)}
+.cjm-matrix-segment{transition:transform .35s cubic-bezier(.2,.8,.2,1),box-shadow .35s cubic-bezier(.2,.8,.2,1),border-color .35s var(--ease)}
+.cjm-matrix-segment:hover{transform:translateY(-4px) scale(1.012);box-shadow:0 22px 50px rgba(17,17,22,.14);z-index:2}
+.cjm-seg-tab{transition:transform .25s cubic-bezier(.2,.8,.2,1),box-shadow .25s var(--ease),border-color .25s var(--ease),background .25s var(--ease)}
+.cjm-seg-tab:hover{transform:translateY(-2px);box-shadow:var(--shadow-soft)}
+.cjm-seg-tab:active{transform:translateY(0) scale(.985)}
+.ue2-kpi{transition:transform .3s cubic-bezier(.2,.8,.2,1),box-shadow .3s var(--ease)}
+.ue2-kpi:hover{transform:translateY(-2px);box-shadow:var(--shadow-soft)}
+.ue2-scn-table tbody tr{transition:background .2s var(--ease),transform .2s var(--ease)}
+.ue2-scn-table tbody tr:hover{background:color-mix(in srgb,var(--blue) 5%,transparent)}
+button,.chip,.ghost-btn,select{transition:transform .2s cubic-bezier(.2,.8,.2,1),border-color .2s var(--ease),background .2s var(--ease),color .2s var(--ease),box-shadow .2s var(--ease)}
+button:hover:not(:disabled){transform:translateY(-1px)}
+button:active:not(:disabled){transform:translateY(0) scale(.97)}
+.cjm-funnel-step{transition:transform .3s cubic-bezier(.2,.8,.2,1),box-shadow .3s var(--ease),border-color .3s var(--ease)}
+.cjm-funnel-step:hover{transform:translateY(-2px);box-shadow:var(--shadow-soft);border-color:color-mix(in srgb,var(--line-strong) 70%,var(--blue) 30%)}
+.cjm-seg-block{transition:transform .3s cubic-bezier(.2,.8,.2,1),box-shadow .3s var(--ease),border-color .3s var(--ease)}
+.cjm-seg-block:hover{transform:translateY(-1px);box-shadow:var(--shadow-soft);border-color:var(--line-strong)}
+@media (prefers-reduced-motion: reduce){
+  .card,.cjm-matrix-segment,.cjm-seg-tab,.ue2-kpi,.cjm-funnel-step,.cjm-seg-block,button{transition:none !important;transform:none !important}
+}
+
+/* ---------- LTV/CAC traffic-light cell in summary table ---------- */
+.ue2-scn-table td.lc-green{background:color-mix(in srgb,var(--green) 14%,transparent);color:var(--green);font-weight:700}
+.ue2-scn-table td.lc-yellow{background:color-mix(in srgb,var(--yellow) 18%,transparent);color:#8a6500;font-weight:700}
+.ue2-scn-table td.lc-red{background:color-mix(in srgb,var(--red) 14%,transparent);color:var(--red);font-weight:700}
+[data-theme="dark"] .ue2-scn-table td.lc-yellow{color:var(--yellow)}
+
+/* ---------- Segment-share editor (matrix view) ---------- */
+.cjm-share-editor{display:flex;flex-direction:column;gap:14px}
+.cjm-share-editor-rows{display:grid;grid-template-columns:1fr;gap:10px}
+.cjm-share-row{display:grid;grid-template-columns:minmax(160px,200px) 1fr 78px 60px;align-items:center;gap:14px;padding:10px 12px;border:1px solid var(--line);border-radius:var(--radius-sm);background:var(--surface-2);transition:border-color .25s var(--ease),box-shadow .25s var(--ease),transform .25s var(--ease)}
+.cjm-share-row:hover{border-color:var(--line-strong);box-shadow:var(--shadow-soft);transform:translateY(-1px)}
+.cjm-share-name{display:flex;align-items:center;gap:8px;font-weight:600;font-size:13.5px}
+.cjm-share-dot{width:10px;height:10px;border-radius:50%;flex:none}
+.cjm-share-row input[type="range"]{width:100%;accent-color:var(--blue);height:4px}
+.cjm-share-row input[type="number"]{width:72px;border:1px solid var(--line-strong);border-radius:10px;padding:6px 8px;background:var(--surface);font-variant-numeric:tabular-nums;font-weight:700;text-align:right;transition:border-color .2s var(--ease),box-shadow .2s var(--ease)}
+.cjm-share-row input[type="number"]:focus{outline:none;border-color:var(--blue);box-shadow:0 0 0 3px color-mix(in srgb,var(--blue) 20%,transparent)}
+.cjm-share-norm{font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums;text-align:right;font-weight:600}
+.cjm-share-footer{display:flex;justify-content:space-between;align-items:center;gap:14px;padding:10px 14px;border:1px dashed var(--line-strong);border-radius:var(--radius-sm);background:var(--surface)}
+.cjm-share-footer-sum{font-size:13px;color:var(--muted)}
+.cjm-share-footer-sum b{color:var(--text);font-weight:700;font-variant-numeric:tabular-nums}
+.cjm-share-footer-sum.is-warn b{color:var(--orange)}
+.cjm-share-reset{border:1px solid var(--line-strong);background:var(--surface);color:var(--text);border-radius:980px;padding:7px 16px;font-size:12.5px;font-weight:600}
+.cjm-share-reset:hover{border-color:var(--blue);color:var(--blue)}
+@media (max-width:720px){.cjm-share-row{grid-template-columns:1fr;gap:8px}.cjm-share-norm{text-align:left}}
 </style>
 </head>
 <body>
@@ -1486,14 +1545,11 @@ body[data-app-version="legacy"] .original-app-hidden{display:block}
 
     <!-- Cross-segment matrix panel -->
     <section id="cjm-tab-matrix" class="cjm-panel">
-      <div class="cjm-section-head"><div><h2>Сводная матрица всех сегментов</h2><p>Полное сравнение 5 сегментов: воронки на 10 000 пользователей, экономика, каналы привлечения и LTV/CAC. Сегмент-лидер по выручке подсвечен зелёным.</p></div></div>
+      <div class="cjm-section-head"><div><h2>Сводная матрица всех сегментов</h2></div></div>
+      <div class="card"><div class="card-title"><div><h2>Доли сегментов</h2><p>Управляйте распределением аудитории — сумма автоматически нормируется к 100%</p></div></div><div id="cjmShareEditor" class="cjm-share-editor"></div></div>
       <div class="card"><div class="card-title"><div><h2>Воронки на 10 000 пользователей · по сегментам</h2><p>Все 5 сегментов рядом — видны абсолютные значения и CR%. Лидер по выручке подсвечен зелёным.</p></div></div><div class="cjm-matrix-funnels" id="cjmMatrixFunnels"></div></div>
       <div class="card"><div class="card-title"><div><h2>Сводка по всем сегментам</h2><p>Сколько денег принесёт каждый сегмент при базе 10 000 визитов</p></div></div><div class="ue2-table-wrap"><table class="ue2-scn-table" id="cjmCalcTable"></table></div></div>
-      <div class="card"><div class="card-title"><div><h2>Сравнительная экономика</h2><p>Лучшие значения подсвечены зелёным, худшие — красным</p></div></div><div class="ue2-table-wrap"><table class="ue2-scn-table" id="cjmSummaryTable"></table></div></div>
-      <div class="grid two">
-        <div class="card"><div class="card-title"><div><h2>Каналы привлечения (взвешенно)</h2><p>SEO, платный трафик, CRM/Push и PR по доле сегментов</p></div></div><div class="cjm-pie" id="cjmChannelMix"></div></div>
-        <div class="card chart-card"><div class="card-title"><div><h2>LTV/CAC по сегментам</h2><p>Окупаемость, ×</p></div></div><div class="chart-box"><canvas id="cjmTrendChart"></canvas></div></div>
-      </div>
+      <div class="card"><div class="card-title"><div><h2>Сравнительная экономика</h2><p>Лучшие значения подсвечены зелёным, худшие — красным · LTV/CAC оценивается светофором (≥3 ×, 1.5–2.9 ×, &lt;1.5 ×)</p></div></div><div class="ue2-table-wrap"><table class="ue2-scn-table" id="cjmSummaryTable"></table></div></div>
     </section>
   </main>
 </div>
