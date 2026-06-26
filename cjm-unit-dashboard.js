@@ -78,7 +78,7 @@
       why_here:'',
       pains:'Возвращается, чтобы добрать лимит (Top-up), управлять займом или получить удобную банковскую карту.',
       source:'SEO + ретаргет + CRM-касания + соц. сети',
-      router:'Телефон → Авторизация. Роутер узнаёт «Действующего». Предложение добрать денег в другой МФО, либо банковские карты (дебетовая / кредитная).',
+      router:'Телефон → Роутер узнаёт «Действующего». Предложение добрать денег в другой МФО, либо банковские карты (дебетовая / кредитная).',
       showcase:'',
       monetization:'Процентная прибыль ЦФ с Top-up + CPA с оформленных банковских карт. CPA: 1 000–1 500 ₽ (дебетовые), 3 000–5 000 ₽ (кредитные).',
       defaultCr:{visitClick:7.5,clickApp:35,appIssue:30},
@@ -576,14 +576,17 @@
       '<b>Выручка:</b> '+rub(c.revenue)+' (LTV '+rub(c.m.ltv)+' × '+fmt(c.f.issue)+' выдач) · '+
       '<b>Затраты на контакты:</b> '+rub(c.cost)+' ('+rub(c.m.contactCost)+' × '+fmt(c.f.contact)+' контактов) · '+
       '<b>Прибыль:</b> <span class="'+profitTone+'">'+rub(c.profit)+'</span>';
+    // «Пример расчёта прибыли» скрыт для отказного / спящего / непрофильного сегментов
+    // (значения доступны во вкладке «Юнит-экономика»). Блок «Витрина» убран из описания
+    // всех сегментов по согласованию.
+    var hideProfitExample={rejected:true,sleeping:true,noncore:true}[s.id];
     var blocks=[
       {h:'Описание сегмента',html:s.description?esc(s.description):'',wide:true},
       {h:'Маршрутизация',html:s.router?esc(s.router):''},
-      {h:'Витрина',html:s.showcase?esc(s.showcase):''},
       {h:'Монетизация',html:s.monetization?esc(s.monetization):''},
       {h:'Точки входа',html:esc(poe)},
       {h:'Как попадает',html:esc(s.how_arrives||'—')},
-      {h:'Пример расчёта прибыли',html:profitExampleHtml,wide:true}
+      {h:'Пример расчёта прибыли',html:hideProfitExample?'':profitExampleHtml,wide:true}
     ];
     var bodyHtml=blocks.filter(function(b){return b.html;}).map(function(b){
       return '<section class="cjm-seg-block'+(b.wide?' is-wide':'')+'"><h3>'+esc(b.h)+'</h3><p>'+b.html+'</p></section>';
@@ -622,10 +625,10 @@
                  {t:'Чекер → CPA-витрина 5 МФО',s:'НЕТ · монетизация отказа',label:'НЕТ',color:'var(--orange)'} ] } },
       { key:'repeat', color:'var(--green)', name:'Действующий клиент',
         seg:{t:'Действующий клиент',s:'Зелёный · 1+ займ в ЦФ'},
-        step:{t:'Авторизация СМС → Прескоринг',s:'Top-up / Витрина ЛК'},
-        fork:{ type:'diamond', t:'Одобрено?', s:'Прескоринг ЦФ',
-          outs:[ {t:'Личный кабинет: Top-up ЦФ + карты',s:'ДА · выдача ЦФ + кросс-сейл карт',label:'ДА',color:'var(--green)'},
-                 {t:'Витрина партнёрских кредитов / МФО',s:'НЕТ · «Ну нет и нет, ПК подаём»',label:'НЕТ',color:'var(--orange)'} ] } },
+        step:{t:'Роутер узнаёт «Действующего»',s:'Идентификация по базе ЦФ'},
+        fork:{ type:'split', t:'Кросс-сейл предложение', s:'Партнёрские офферы',
+          outs:[ {t:'Добор в другой МФО',s:'Партнёрская МФО · доп. лимит',label:'МФО',color:'var(--orange)'},
+                 {t:'Банковские карты (дебет / кредит)',s:'CPA 1 000–5 000 ₽',label:'Карты',color:'var(--blue)'} ] } },
       { key:'rejected', color:'var(--red)', name:'Отказной клиент',
         seg:{t:'Отказной клиент',s:'Красный · отказ ЦФ'},
         step:{t:'Пробив чекером по номеру',s:'Фильтрация баз партнёров'},
