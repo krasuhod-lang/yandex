@@ -576,10 +576,10 @@
       '<b>Выручка:</b> '+rub(c.revenue)+' (LTV '+rub(c.m.ltv)+' × '+fmt(c.f.issue)+' выдач) · '+
       '<b>Затраты на контакты:</b> '+rub(c.cost)+' ('+rub(c.m.contactCost)+' × '+fmt(c.f.contact)+' контактов) · '+
       '<b>Прибыль:</b> <span class="'+profitTone+'">'+rub(c.profit)+'</span>';
-    // «Пример расчёта прибыли» скрыт для отказного / спящего / непрофильного сегментов
-    // (значения доступны во вкладке «Юнит-экономика»). Блок «Витрина» убран из описания
-    // всех сегментов по согласованию.
-    var hideProfitExample={rejected:true,sleeping:true,noncore:true}[s.id];
+    // «Пример расчёта прибыли» скрыт во всех сегментах описания: значения доступны
+    // во вкладке «Юнит-экономика» и в блоке «Пример расчёта на 10 000 пользователей».
+    // Блок «Витрина» убран из описания всех сегментов по согласованию.
+    var hideProfitExample={new:true,repeat:true,rejected:true,sleeping:true,noncore:true}[s.id];
     var blocks=[
       {h:'Описание сегмента',html:s.description?esc(s.description):'',wide:true},
       {h:'Маршрутизация',html:s.router?esc(s.router):''},
@@ -788,11 +788,12 @@
         {n:'5. Выдача',v:fmt(c.f.issue),sub:pct(c.f.crAI,1)+' Заявка → Выдача'},
         {n:'6. Затраты на контакты',v:rub(c.cost),sub:'Стоимость контакта '+rub(c.m.contactCost)+' × '+fmt(c.f.contact)+' контактов'},
         {n:'7. CAC (произв.)',v:rub(c.cac),sub:'= Затраты / выдачи = '+rub(c.cost)+' / '+fmt(c.f.issue)},
-        {n:'8. Выручка',v:rub(c.revenue),sub:'LTV '+rub(c.m.ltv)+' × '+fmt(c.f.issue)+' выдач',revenue:true}
+        {n:'8. Выручка',v:rub(c.revenue),sub:'LTV '+rub(c.m.ltv)+' × '+fmt(c.f.issue)+' выдач',revenue:true},
+        {n:'9. Прибыль',v:rub(c.profit),sub:'= Выручка − Затраты = '+rub(c.revenue)+' − '+rub(c.cost),profit:true,negative:c.profit<0}
       ];
       card.innerHTML='<div class="card-title"><div><span class="eyebrow" style="color:'+esc(s.color)+'">'+esc(s.label)+'</span><h2>Сквозной расчёт по сегменту</h2></div></div>'+
         '<div class="cjm-calc-flow">'+steps.map(function(st){
-          return '<div class="cjm-calc-step'+(st.revenue?' cs-revenue':'')+'"><span class="cs-name">'+esc(st.n)+'</span><span class="cs-val">'+esc(st.v)+'</span><span class="cs-sub">'+esc(st.sub)+'</span></div>';
+          return '<div class="cjm-calc-step'+(st.revenue?' cs-revenue':'')+(st.profit?(st.negative?' cs-loss':' cs-profit'):'')+'"><span class="cs-name">'+esc(st.n)+'</span><span class="cs-val">'+esc(st.v)+'</span><span class="cs-sub">'+esc(st.sub)+'</span></div>';
         }).join('')+'</div>';
     }
   }
