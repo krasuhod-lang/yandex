@@ -435,6 +435,7 @@ canvas{display:block;width:100%;max-width:100%;height:auto;cursor:crosshair}
 .route-diagram-wrap.is-dragging{cursor:grabbing;scroll-behavior:auto}
 .route-diagram-wrap.is-dragging *{pointer-events:none}
 .route-diagram svg{width:100%;min-width:1480px;height:auto;display:block}
+.route-diagram.is-single svg{min-width:1100px}
 /* CJM Smart Safe Router canvas is wider (viewBox 1820) — guarantee space for the
    diamond forks (ПДН / «ЦФ готов одобрить?») and their two output blocks so nodes
    never get squished or clipped. */
@@ -1394,6 +1395,15 @@ body[data-app-version="legacy"] .original-app-hidden{display:block}
 #cjmRouteDiagram .ssr-branch{transition:opacity .25s var(--ease)}
 #cjmRouteDiagram.has-active .ssr-branch:not(.is-active){opacity:.32}
 #cjmRouteDiagram.has-active .ssr-branch.is-active{opacity:1}
+.cjm-seg-desc .card-title h2{margin:0;font-size:clamp(20px,2vw,26px);letter-spacing:-.02em}
+.cjm-seg-desc-body{display:flex;flex-direction:column;gap:10px;margin-top:6px;font-size:15px;line-height:1.55;color:var(--text)}
+.cjm-seg-desc-body p{margin:0}
+.cjm-seg-desc-body b{color:var(--text)}
+.cjm-matrix-segment.is-leader{box-shadow:0 0 0 2px var(--green),var(--shadow-soft);position:relative}
+.cjm-matrix-segment.is-leader::after{content:'Лидер по выручке';position:absolute;top:-12px;right:14px;background:var(--green);color:#fff;font-size:11px;font-weight:800;letter-spacing:.04em;text-transform:uppercase;padding:3px 10px;border-radius:980px}
+.ue2-scn-table tr.is-leader{background:color-mix(in srgb,var(--green) 10%,transparent)}
+.ue2-scn-table tr.is-leader td:first-child{position:relative}
+.ue2-scn-table tr.is-leader td:first-child::after{content:'';margin-left:0}
 /* Пример расчёта tab */
 .cjm-calc-flow{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:10px;margin-top:14px}
 @media(max-width:1100px){.cjm-calc-flow{grid-template-columns:repeat(3,minmax(0,1fr))}}
@@ -1423,54 +1433,46 @@ body[data-app-version="legacy"] .original-app-hidden{display:block}
       </div>
     </div>
     <nav class="cjm-seg-tabs" id="cjmSegmentTabs" aria-label="Сегменты клиентов"></nav>
-    <nav class="cjm-tabs tabs" id="cjmInnerTabs" aria-label="Разделы выбранного сегмента">
-      <button class="cjm-tab active" type="button" data-cjm-tab="funnel">Воронка 10 000</button>
-      <button class="cjm-tab" type="button" data-cjm-tab="cjm">CJM · Путь клиента</button>
-      <button class="cjm-tab" type="button" data-cjm-tab="calc">Пример расчёта</button>
-      <button class="cjm-tab" type="button" data-cjm-tab="unit">Юнит-экономика</button>
-    </nav>
+    <nav class="cjm-tabs tabs" id="cjmInnerTabs" aria-label="Разделы выбранного сегмента" style="display:none" hidden></nav>
   </header>
   <main>
     <section class="card cjm-hero">
       <span class="eyebrow" id="cjmHeroEyebrow">Раздел сайта · CJM &amp; Юнит-экономика</span>
       <h1 id="cjmHeroTitle" style="margin:0;font-size:clamp(30px,3.4vw,48px);line-height:1.03;letter-spacing:-.045em">CJM &amp; Юнит-экономика</h1>
-      <p class="lead" id="cjmHeroLead">Выберите сегмент сверху — внутри откроется переключатель из 4 вкладок: воронка на 10 000 пользователей с ручными показателями, путь клиента со Smart Safe Router, пример расчёта выручки и юнит-экономика. Отдельная вкладка «📊 Сводная матрица» показывает все 5 сегментов рядом.</p>
+      <p class="lead" id="cjmHeroLead">Выберите сегмент сверху — на одном листе откроется: описание сегмента, схема взаимодействия, юнит-экономика по конверсиям (с абсолютными конверсиями «в заявку из визита» и «в выдачу из визита») и пример расчёта на 10 000 пользователей. Отдельная вкладка «Сводная матрица» показывает все 5 сегментов рядом.</p>
     </section>
 
-    <!-- Per-segment panels -->
-    <section id="cjm-tab-funnel" class="cjm-panel active">
-      <div class="cjm-section-head"><div><h2>Воронка на 10 000 пользователей</h2><p>Расчёт по выбранному сегменту. Показатели CR%, CAC, CPA и LTV можно править вручную — пересчёт происходит мгновенно и сохраняется в localStorage.</p></div><button type="button" class="cjm-reset-btn" id="cjmFunnelReset" title="Сбросить ручные правки к значениям по умолчанию">Сбросить к дефолтам</button></div>
-      <div class="cjm-funnel" id="cjmSegmentFunnel"></div>
-      <div class="grid two">
-        <div class="card"><div class="card-title"><div><h2>Ручной ввод показателей</h2><p>Дефолты проставлены и обоснованы — измените любое значение, чтобы пересчитать воронку</p></div></div><div class="cjm-manual-grid" id="cjmManualInputs"></div></div>
-        <div class="card"><div class="card-title"><div><h2>Обоснование показателей</h2><p>Почему именно такие значения для выбранного сегмента</p></div></div><ul class="cjm-rec-list" id="cjmJustifications"></ul></div>
-      </div>
-    </section>
+    <!-- Per-segment panels: единый лист, без внутренних вкладок -->
     <section id="cjm-tab-cjm" class="cjm-panel">
-      <div class="cjm-section-head"><div><h2>CJM · Путь клиента</h2><p>JTBD по сегментам и сквозная блок-схема Smart Safe Router. При выборе сегмента сверху подсветится соответствующая ветка маршрутизации.</p></div></div>
+      <div class="cjm-section-head"><div><h2>Описание сегмента</h2><p>Кто этот клиент, как он приходит, по какой ветке маршрутизируется и как монетизируется — в одном цельном блоке.</p></div></div>
       <div id="cjmJourneyHost"></div>
       <div class="card">
-        <div class="card-title"><div><h2>Блок-схема Smart Safe Router</h2><p>Сквозной путь от точки входа до выдачи в ЦФ или монетизации через витрину. Выбранная ветка подсвечена, остальные — приглушены.</p></div></div>
+        <div class="card-title"><div><h2>Схема взаимодействия по сегменту</h2><p>Сквозной путь от точки входа до выдачи в ЦФ или монетизации через витрину. Подсвечена ветка выбранного сегмента.</p></div></div>
         <div class="route-diagram-wrap" data-drag-scroll><div class="route-diagram" id="cjmRouteDiagram"></div></div>
       </div>
     </section>
-    <section id="cjm-tab-calc" class="cjm-panel">
-      <div class="cjm-section-head"><div><h2>Пример расчёта · Выручка с воронки 10 000</h2><p>Полная цепочка от первых визитов до денег: визиты → контакт через квиз → проверка ЦФ → витрина → заявка → выдача по выбранному сегменту.</p></div></div>
-      <div class="card" id="cjmCalcSegmentCard"></div>
-    </section>
     <section id="cjm-tab-unit" class="cjm-panel">
-      <div class="cjm-section-head"><div><h2>Юнит-экономика</h2><p>KPI, светофор LTV/CAC, детализация воронки и симуляция As-Is / To-Be.</p></div><div class="cjm-switch" role="group" aria-label="Режим модели"><button type="button" data-cjm-mode="asIs" class="active">As-Is</button><button type="button" data-cjm-mode="toBe">To-Be +5% CR</button></div></div>
+      <div class="cjm-section-head"><div><h2>Юнит-экономика по конверсиям</h2><p>KPI, светофор LTV/CAC и абсолютные конверсии: «Визит → Заявка» и «Визит → Выдача». Показатели CR%, CAC, CPA и LTV можно править вручную — пересчёт мгновенный, сохраняется в localStorage.</p></div><div class="cjm-switch" role="group" aria-label="Режим модели"><button type="button" data-cjm-mode="asIs" class="active">As-Is</button><button type="button" data-cjm-mode="toBe">To-Be +5% CR</button></div></div>
       <div class="ue2-kpis" id="cjmUnitKpis"></div>
       <div class="grid two">
         <div class="card"><div class="card-title"><div><h2>Таблица воронки</h2><p>CR% и абсолютные значения на базе 10 000 визитов</p></div></div><div class="ue2-table-wrap"><table class="ue2-scn-table" id="cjmUnitFunnel"></table></div></div>
         <div class="card chart-card"><div class="card-title"><div><h2>As-Is / To-Be</h2><p>Абсолютная выдача и эффект от улучшения конверсии</p></div></div><div class="chart-box"><canvas id="cjmUnitChart"></canvas></div></div>
       </div>
+      <div class="cjm-section-head"><div><h2>Ручной ввод показателей</h2><p>Дефолты проставлены и обоснованы — измените любое значение, чтобы пересчитать воронку и экономику</p></div><button type="button" class="cjm-reset-btn" id="cjmFunnelReset" title="Сбросить ручные правки к значениям по умолчанию">Сбросить к дефолтам</button></div>
+      <div class="grid two">
+        <div class="card"><div class="card-title"><div><h2>Параметры сегмента</h2><p>CR по шагам, CAC, CPA, LTV</p></div></div><div class="cjm-manual-grid" id="cjmManualInputs"></div></div>
+        <div class="card"><div class="card-title"><div><h2>Обоснование показателей</h2><p>Почему именно такие значения для выбранного сегмента</p></div></div><ul class="cjm-rec-list" id="cjmJustifications"></ul></div>
+      </div>
+    </section>
+    <section id="cjm-tab-calc" class="cjm-panel">
+      <div class="cjm-section-head"><div><h2>Пример расчёта на 10 000 пользователей</h2><p>Полная цепочка от первых визитов до денег: визиты → контакт через квиз → проверка ЦФ → витрина → заявка → выдача по выбранному сегменту.</p></div></div>
+      <div class="card" id="cjmCalcSegmentCard"></div>
     </section>
 
     <!-- Cross-segment matrix panel -->
     <section id="cjm-tab-matrix" class="cjm-panel">
-      <div class="cjm-section-head"><div><h2>📊 Сводная матрица всех сегментов</h2><p>Полное сравнение 4 сегментов: воронки на 10 000 пользователей, экономика, каналы привлечения и LTV/CAC.</p></div></div>
-      <div class="card"><div class="card-title"><div><h2>Воронки на 10 000 пользователей · по сегментам</h2><p>Все 4 сегмента рядом — видны абсолютные значения и CR%</p></div></div><div class="cjm-matrix-funnels" id="cjmMatrixFunnels"></div></div>
+      <div class="cjm-section-head"><div><h2>Сводная матрица всех сегментов</h2><p>Полное сравнение 5 сегментов: воронки на 10 000 пользователей, экономика, каналы привлечения и LTV/CAC. Сегмент-лидер по выручке подсвечен зелёным.</p></div></div>
+      <div class="card"><div class="card-title"><div><h2>Воронки на 10 000 пользователей · по сегментам</h2><p>Все 5 сегментов рядом — видны абсолютные значения и CR%. Лидер по выручке подсвечен зелёным.</p></div></div><div class="cjm-matrix-funnels" id="cjmMatrixFunnels"></div></div>
       <div class="card"><div class="card-title"><div><h2>Сводка по всем сегментам</h2><p>Сколько денег принесёт каждый сегмент при базе 10 000 визитов</p></div></div><div class="ue2-table-wrap"><table class="ue2-scn-table" id="cjmCalcTable"></table></div></div>
       <div class="card"><div class="card-title"><div><h2>Сравнительная экономика</h2><p>Лучшие значения подсвечены зелёным, худшие — красным</p></div></div><div class="ue2-table-wrap"><table class="ue2-scn-table" id="cjmSummaryTable"></table></div></div>
       <div class="grid two">
