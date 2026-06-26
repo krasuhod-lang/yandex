@@ -732,7 +732,7 @@
   function calcFor(id,opts){
     var s=segmentById(id);var f=funnelFor(id,opts);var m=manualFor(id);
     var revenue=f.issue*m.ltv;
-    var cac=f.issue>0?m.contactCost*f.contact/f.issue:0;
+    var cac=cacFor(id,opts);
     // Маркетинговые затраты по сегменту = стоимость контактов сегмента.
     var cost=m.contactCost*f.contact;
     var profit=revenue-cost;
