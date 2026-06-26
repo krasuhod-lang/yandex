@@ -4,9 +4,15 @@
   var STORAGE_KEY='cjm_unit_dashboard_v2';
   var TAB_KEY='cjm_inner_tab_v2';
   var MODE_KEY='cjm_unit_mode_v1';
-  var MANUAL_KEY='cjm_manual_inputs_v2';
+  var MANUAL_KEY='cjm_manual_inputs_v3';
+  var GLOBAL_KEY='cjm_global_inputs_v1';
   var VERSION_KEY='vyruchai_app_version_v1';
   var BASE_VISITS=10000;
+  // Глобальные параметры, общие для всех сегментов:
+  //  - visitContact — CR · Визит → Контакт (одна для всех сегментов)
+  //  - contactCost  — Стоимость привлечения одного контакта (₽), общая
+  //  - n_visitContact / n_contactCost — объём выборки, на котором посчитан показатель
+  var GLOBAL_DEFAULTS={visitContact:5.4,contactCost:140,n_visitContact:50000,n_contactCost:50000};
   var HTML_ESCAPE_MAP={'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;','/':'&#x2F;','`':'&#96;'};
   var charts={};
 
@@ -16,15 +22,14 @@
   //  3. rejected   — Отказной клиент         (red, ветка ПДН → МФО / БФЛ)
   //  4. sleeping   — Спящий клиент           (blue, ромб «ЦФ готов одобрить?»)
   //  5. noncore    — Новый (непрофильный)    (violet)
-  // Воронка (новая, согласована с бизнесом):
-  //   Visit → Контакт (квиз) → Проверка ЦФ → Показ витрины → Заявка → Выдача
-  // CR-показатели сегмента (% к предыдущему шагу):
-  //   visitQuiz       — Visit → Контакт через квиз
-  //   quizCfCheck     — Контакт → Проверка в ЦФ
-  //   cfCheckShowcase — Проверка ЦФ → Показ витрины (для new/repeat это CF-витрина;
-  //                     если клиент уходит в ЦФ, заявка и выдача идут уже по пути ЦФ)
-  //   showcaseApp     — Витрина → Заявка
-  //   appIssue        — Заявка → Выдача (мы зарабатываем на этом шаге)
+  // Воронка (упрощённая, согласована с бизнесом):
+  //   Visit → Контакт (общая CR на все сегменты)
+  //   Visit → Клик по офферу → Заявка → Выдача (CR — по сегментам)
+  // CR-показатели:
+  //   visitContact — Визит → Контакт (общий, в GLOBAL_DEFAULTS)
+  //   visitClick   — Визит → Клик по офферу (по сегменту)
+  //   clickApp     — Клик по офферу → Заявка
+  //   appIssue     — Заявка → Выдача (мы зарабатываем на этом шаге)
   //  - cac/cpa/ltv: правимая экономика
   //  - description / points_of_entry / how_arrives / why_here: JTBD-блоки CJM
   //  - branch: ключ ветки в Smart Safe Router (см. renderRoutingDiagram)
@@ -47,18 +52,15 @@
       router:'Клиент не найден в базе ЦФ → проверка скорингом → при одобрении выдача ЦФ',
       showcase:'Лид-форма ЦФ; при отказе — Пробив чеккером по номеру телефона и переход в ветку «Непрофильный»',
       monetization:'Основная: выдача Центрофинанс; при отказе — CPA-витрина непрофильной ветки',
-      defaultCr:{visitQuiz:5.0,quizCfCheck:95,cfCheckShowcase:90,showcaseApp:80,appIssue:20},
+      defaultCr:{visitClick:4.5,clickApp:80,appIssue:20},
       cac:780,cpa:0,ltv:1800,payback:5,share:0.20,
       mix:{seo:0.42,paid:0.34,crm:0.04,pr:0.20},
       cpa_text:'0 ₽ (монетизация через собственную выдачу ЦФ)',
       ltv_text:'Высокий — у 20% зашедших 3–5 займов ЦФ за год; остальные 80% уходят на витрины партнёров.',
       justify:{
-        visitQuiz:'5,0% Visit → Контакт — холодный трафик; квиз снимает контакт у мотивированной части аудитории.',
-        quizCfCheck:'95% Контакт → Проверка ЦФ — почти весь контакт прогоняется через S2S API ЦФ.',
-        cfCheckShowcase:'90% Контакт → Переход на оффер ЦФ — после прескоринга мотивированный клиент идёт в анкету ЦФ.',
-        showcaseApp:'80% Переход → Заявка (анкета ЦФ) — конверсия в полностью заполненную анкету.',
+        visitClick:'4,5% Визит → Клик по офферу — мотивированный «холодный» клиент кликает на анкету ЦФ.',
+        clickApp:'80% Клик → Заявка (анкета ЦФ) — конверсия в полностью заполненную анкету.',
         appIssue:'20% Заявка → Апрув (выдача ЦФ) — типичный апрув-рейт ЦФ для новой аудитории.',
-        cac:'CAC 780 ₽ — микс SEO + контекста, ставка в нише «займы онлайн» высокая.',
         cpa:'CPA 0 ₽ — монетизация идёт через собственную выдачу ЦФ, без партнёрских CPA.',
         ltv:'LTV (1 год) высокий: у 20% зашедших — 3–5 займов ЦФ, остальные 80% уходят на партнёрские витрины.'
       }
@@ -79,18 +81,15 @@
       router:'Телефон → Авторизация → Личный кабинет (Top-up + витрина банковских карт). Роутер узнаёт «Действующего» и ведёт в ЛК, минуя стандартную анкету.',
       showcase:'Личный кабинет: Top-up (добор займа ЦФ) + витрина банковских карт (дебетовая / кредитная).',
       monetization:'Процентная прибыль ЦФ с Top-up + CPA с оформленных банковских карт. CPA: 1 000–1 500 ₽ (дебетовые), 3 000–5 000 ₽ (кредитные).',
-      defaultCr:{visitQuiz:8.4,quizCfCheck:98,cfCheckShowcase:50,showcaseApp:35,appIssue:30},
+      defaultCr:{visitClick:7.5,clickApp:35,appIssue:30},
       cac:380,cpa:3000,ltv:4500,payback:3,share:0.15,
       mix:{seo:0.28,paid:0.20,crm:0.42,pr:0.10},
       cpa_text:'1 000 – 5 000 ₽ (зависит от типа: дебет / кредитка)',
       ltv_text:'До 7 займов ЦФ за год + кросс-сейл банковских карт у ~20% (зависит от типа карты).',
       justify:{
-        visitQuiz:'8,4% Visit → Контакт — клиент уже знаком с брендом, охотнее оставляет телефон.',
-        quizCfCheck:'98% Контакт → Авторизация — почти весь действующий поток узнаётся роутером и подтягивается из базы ЦФ.',
-        cfCheckShowcase:'50% Контакт → Переход на оффер ЛК (Top-up / Витрина) — клиент идёт в персональное предложение в ЛК.',
-        showcaseApp:'35% Переход → Заявка — в среднем по Top-up и кросс-сейлу карт.',
+        visitClick:'7,5% Визит → Клик по офферу — клиент уже знаком с брендом, охотнее идёт в Top-up / витрину ЛК.',
+        clickApp:'35% Клик → Заявка — в среднем по Top-up и кросс-сейлу карт.',
         appIssue:'30% Заявка → Апрув — суммарно по Top-up ЦФ и банковским картам партнёров. Карты: ~20% (зависит от типа).',
-        cac:'CAC 380 ₽ — основная масса возврата идёт через CRM и ретаргет.',
         cpa:'CPA 1 000 – 5 000 ₽ — дебетовые ~1 000–1 500 ₽, кредитные ~3 000–5 000 ₽. Top-up — внутренняя выдача ЦФ.',
         ltv:'LTV (1 год): до 7 займов ЦФ — самый прибыльный сегмент за счёт повторных выдач и кросс-сейла карт.'
       }
@@ -111,18 +110,15 @@
       router:'Телефон → Статус: Отказ → ромб «Проверка ПДН (долговой нагрузки)»: ПДН нормальный → витрина CPA-МФО; ПДН высокий (закредитован) → офферы БФЛ (Банкротство).',
       showcase:'Ветка МФО: витрина 5 офферов МФО, где клиента нет в базе. Ветка БФЛ: офферы юристов по банкротству физлиц.',
       monetization:'Компенсация маркетингового бюджета. Ветка МФО: CPA ~2 000–2 400 ₽. Ветка БФЛ: CPA ~3 500–5 000 ₽. LTV ≈ разовая CPA (растится через CRM: Push/СМС).',
-      defaultCr:{visitQuiz:5.4,quizCfCheck:95,cfCheckShowcase:40,showcaseApp:18,appIssue:27},
+      defaultCr:{visitClick:2.1,clickApp:18,appIssue:27},
       cac:870,cpa:2200,ltv:2400,payback:5,share:0.10,
       mix:{seo:0.18,paid:0.70,crm:0.05,pr:0.07},
       cpa_text:'2 000 – 2 400 ₽ (среднее по рынку CPA-витрины МФО)',
       ltv_text:'2–3 займа в год через партнёрские МФО (LTV ≈ накопленная CPA-выручка).',
       justify:{
-        visitQuiz:'5,4% Visit → Контакт — «горячая» потребность в деньгах удерживает CR на среднерыночном уровне.',
-        quizCfCheck:'95% Контакт → Статус: Отказ — отказным гоним проверку, чтобы корректно сформировать витрину МФО.',
-        cfCheckShowcase:'40% Контакт → Переход на оффер (витрина МФО) — клиент кликает по партнёрскому офферу из топ-5.',
-        showcaseApp:'18% Переход → Заявка (анкета партнёра) — типичный CR заполнения анкеты у партнёров.',
+        visitClick:'2,1% Визит → Клик по офферу — клиент кликает по партнёрскому офферу из топ-5 МФО.',
+        clickApp:'18% Клик → Заявка (анкета партнёра) — типичный CR заполнения анкеты у партнёров.',
         appIssue:'27% Заявка → Апрув (выдача партнёра) — среднерыночный апрув по сложному трафику.',
-        cac:'CAC 870 ₽ — основной источник Яндекс.Директ + ретаргет в дорогой нише «срочный заём».',
         cpa:'CPA 2 000 – 2 400 ₽ — средняя выплата CPA-витрины МФО за оформленный заём.',
         ltv:'LTV (1 год): 2–3 займа — растим через CRM (Push/СМС с новыми витринами).'
       }
@@ -143,18 +139,15 @@
       router:'Телефон → Статус: Спящий → ромб «ЦФ готов одобрить?»: ДА → Welcome-back бонус ЦФ → выдача ЦФ; НЕТ (испортил КИ) → витрина CPA-МФО.',
       showcase:'Если ЦФ одобряет — Welcome-back оффер ЦФ. Если нет — витрина 5 офферов МФО-партнёров.',
       monetization:'Если забирает ЦФ: CPA = 0 ₽, клиент возвращается в цикл ЦФ (реактивация высокого LTV). Если витрина: CPA ~2 000–2 400 ₽, LTV = разовый CPA.',
-      defaultCr:{visitQuiz:7.0,quizCfCheck:95,cfCheckShowcase:50,showcaseApp:45,appIssue:45},
+      defaultCr:{visitClick:3.3,clickApp:45,appIssue:45},
       cac:600,cpa:0,ltv:3500,payback:3,share:0.30,
       mix:{seo:0.30,paid:0.20,crm:0.40,pr:0.10},
       cpa_text:'0 ₽ — экономия CAC + возобновление маржи ЦФ',
       ltv_text:'До 3–4 займов ЦФ в год после реактивации.',
       justify:{
-        visitQuiz:'7,0% Visit → Контакт — реактивационные рассылки и знакомый бренд поднимают долю оставивших телефон.',
-        quizCfCheck:'95% Контакт → Статус: Спящий — прогоняем по базе ЦФ, чтобы попытаться вернуть в контур.',
-        cfCheckShowcase:'50% Контакт → Переход на оффер ЦФ (Welcome-back) — клиент видит реактивационное предложение и кликает.',
-        showcaseApp:'45% Переход → Заявка — анкета уже заполнена, проходит быстро.',
+        visitClick:'3,3% Визит → Клик по офферу — клиент видит реактивационное предложение Welcome-back и кликает.',
+        clickApp:'45% Клик → Заявка — анкета уже заполнена, проходит быстро.',
         appIssue:'45% Заявка → Апрув (выдача ЦФ) — апрув-рейт ЦФ для спящих ~40–50%.',
-        cac:'CAC 600 ₽ — дешёвый возврат через собственный CRM-канал.',
         cpa:'CPA 0 ₽ — экономия CAC, возобновление маржи ЦФ через собственную выдачу.',
         ltv:'LTV (1 год): до 3–4 займов ЦФ при возврате в цикл.'
       }
@@ -175,18 +168,15 @@
       router:'Клиент не найден в базе ЦФ (после поверхностной проверки) → Пробив чеккером по номеру телефона → витрина банковских продуктов или 5 МФО',
       showcase:'Витрина банковских продуктов (кредиты + дебетовые карты) или 5 офферов МФО, где клиента нет в базе',
       monetization:'CPA от банков-партнёров (кредиты, дебетовые карты) + CPA от МФО-партнёров за оформленный заём',
-      defaultCr:{visitQuiz:4.2,quizCfCheck:95,cfCheckShowcase:35,showcaseApp:25,appIssue:18},
+      defaultCr:{visitClick:1.4,clickApp:25,appIssue:18},
       cac:920,cpa:3500,ltv:3500,payback:6,share:0.25,
       mix:{seo:0.40,paid:0.30,crm:0.05,pr:0.25},
       cpa_text:'1 000 – 6 000 ₽ (банки + МФО)',
       ltv_text:'Средний — 2–3 партнёрских продукта (кредиты / дебетовые карты / займы МФО) за год.',
       justify:{
-        visitQuiz:'4,2% Visit → Контакт — холодный трафик с низким доверием.',
-        quizCfCheck:'95% Контакт → Проверка ЦФ — поверхностная проверка обязательна для всех новых.',
-        cfCheckShowcase:'35% Контакт → Переход на оффер (банки / МФО) — кликают на витрину банковских продуктов или МФО.',
-        showcaseApp:'25% Переход → Заявка (анкета банка / МФО) — типичный CR заполнения анкеты.',
+        visitClick:'1,4% Визит → Клик по офферу — кликают на витрину банковских продуктов или МФО.',
+        clickApp:'25% Клик → Заявка (анкета банка / МФО) — типичный CR заполнения анкеты.',
         appIssue:'15–20% Заявка → Апрув по кредитам, ~20% по дебетовым картам, отдельный апрув у МФО.',
-        cac:'CAC 920 ₽ — стоимость касания в перегретой нише + бренд-затраты.',
         cpa:'CPA 1 000 – 6 000 ₽ — спред по типам продуктов: дебетовые карты дешевле, кредиты и кредитки дороже.',
         ltv:'LTV (1 год) средний: 2–3 партнёрских продукта на клиента.'
       }
@@ -224,18 +214,30 @@
   function setActiveInnerTab(tab){write(TAB_KEY,tab);}
 
   // --- Manual inputs management ---------------------------------------------
-  // Stored shape: { [segmentId]: { visitQuiz, quizCfCheck, cfCheckShowcase, showcaseApp, appIssue, cac, cpa, ltv } }
+  // Per-segment shape: { [segmentId]: { visitClick, clickApp, appIssue, cpa, ltv,
+  //                                     n_visitClick, n_clickApp, n_appIssue, n_cpa, n_ltv } }
+  // Global (общие для всех сегментов): { visitContact, contactCost, n_visitContact, n_contactCost }
   function manualStore(){return read(MANUAL_KEY,{});}
+  function globalStore(){var g=read(GLOBAL_KEY,{})||{};var out={};
+    Object.keys(GLOBAL_DEFAULTS).forEach(function(k){out[k]=g[k]!=null?Number(g[k]):GLOBAL_DEFAULTS[k];});
+    return out;
+  }
+  function globalRaw(){return read(GLOBAL_KEY,{})||{};}
+  function setGlobal(key,value){var g=globalRaw();g[key]=value;write(GLOBAL_KEY,g);}
+  function unsetGlobal(key){var g=globalRaw();delete g[key];write(GLOBAL_KEY,g);}
+  function isGlobalEdited(key){var g=globalRaw();return g[key]!=null;}
   function manualFor(id){
     var seg=segmentById(id);if(!seg)return null;
     var store=manualStore();var saved=store[id]||{};
+    var g=globalStore();
     return {
-      visitQuiz:saved.visitQuiz!=null?Number(saved.visitQuiz):seg.defaultCr.visitQuiz,
-      quizCfCheck:saved.quizCfCheck!=null?Number(saved.quizCfCheck):seg.defaultCr.quizCfCheck,
-      cfCheckShowcase:saved.cfCheckShowcase!=null?Number(saved.cfCheckShowcase):seg.defaultCr.cfCheckShowcase,
-      showcaseApp:saved.showcaseApp!=null?Number(saved.showcaseApp):seg.defaultCr.showcaseApp,
+      // глобальные показатели — общие для всех сегментов
+      visitContact:g.visitContact,
+      contactCost:g.contactCost,
+      // показатели сегмента
+      visitClick:saved.visitClick!=null?Number(saved.visitClick):seg.defaultCr.visitClick,
+      clickApp:saved.clickApp!=null?Number(saved.clickApp):seg.defaultCr.clickApp,
       appIssue:saved.appIssue!=null?Number(saved.appIssue):seg.defaultCr.appIssue,
-      cac:saved.cac!=null?Number(saved.cac):seg.cac,
       cpa:saved.cpa!=null?Number(saved.cpa):seg.cpa,
       ltv:saved.ltv!=null?Number(saved.ltv):seg.ltv
     };
@@ -247,38 +249,60 @@
     store[id][key]=value;
     write(MANUAL_KEY,store);
   }
+  function unsetManual(id,key){
+    var store=manualStore();
+    if(store[id]&&store[id][key]!=null){
+      delete store[id][key];
+      if(Object.keys(store[id]).length===0)delete store[id];
+      write(MANUAL_KEY,store);
+    }
+  }
   function resetManual(id){
     var store=manualStore();
     delete store[id];
     write(MANUAL_KEY,store);
   }
+  // sample size helpers (объём выборки)
+  function sampleFor(id,key){
+    var store=manualStore();var saved=store[id]||{};var sk='n_'+key;
+    return saved[sk]!=null?Number(saved[sk]):null;
+  }
+  function setSample(id,key,value){setManual(id,'n_'+key,value);}
+  function unsetSample(id,key){unsetManual(id,'n_'+key);}
+  function globalSampleFor(key){var g=globalStore();var sk='n_'+key;return g[sk]!=null?Number(g[sk]):null;}
 
   // --- Funnel computation ---------------------------------------------------
-  // Шесть шагов: Visit → Контакт (квиз) → Проверка ЦФ → Показ витрины → Заявка → Выдача.
-  // Пять конверсий между ними (visitQuiz, quizCfCheck, cfCheckShowcase, showcaseApp, appIssue).
+  // Шаги воронки: Visit → Контакт (общая CR) — параллельный замер контактов.
+  //               Visit → Клик по офферу → Заявка → Выдача — путь монетизации.
+  // Контакт и Клик считаются обе от Visit (parallel branches); цепочка
+  // Клик → Заявка → Выдача — последовательная (как и раньше).
   function funnelFor(id,opts){
     opts=opts||{};
     var m=manualFor(id);
     var visit=BASE_VISITS;
-    var crVQ=clamp(m.visitQuiz,0,100);
-    var crQC=clamp(m.quizCfCheck,0,100);
-    var crCS=clamp(m.cfCheckShowcase,0,100);
-    var crSA=clamp(m.showcaseApp,0,100);
-    var crAI=clamp(m.appIssue,0,100);
-    if(opts.mode==='toBe'){crVQ*=1.05;crQC*=1.05;crCS*=1.05;crSA*=1.05;crAI*=1.05;}
-    crVQ=Math.min(crVQ,100);crQC=Math.min(crQC,100);crCS=Math.min(crCS,100);
-    crSA=Math.min(crSA,100);crAI=Math.min(crAI,100);
-    var quiz=Math.round(visit*crVQ/100);
-    var cfCheck=Math.round(quiz*crQC/100);
-    var showcase=Math.round(cfCheck*crCS/100);
-    var app=Math.round(showcase*crSA/100);
+    var crVC=clamp(m.visitContact,0,100);     // Визит → Контакт (общая)
+    var crVK=clamp(m.visitClick,0,100);       // Визит → Клик по офферу
+    var crKA=clamp(m.clickApp,0,100);         // Клик → Заявка
+    var crAI=clamp(m.appIssue,0,100);         // Заявка → Выдача
+    if(opts.mode==='toBe'){crVC*=1.05;crVK*=1.05;crKA*=1.05;crAI*=1.05;}
+    crVC=Math.min(crVC,100);crVK=Math.min(crVK,100);crKA=Math.min(crKA,100);crAI=Math.min(crAI,100);
+    var contact=Math.round(visit*crVC/100);
+    var click=Math.round(visit*crVK/100);
+    var app=Math.round(click*crKA/100);
     var issue=Math.round(app*crAI/100);
     return {
-      visit:visit,quiz:quiz,cfCheck:cfCheck,showcase:showcase,app:app,issue:issue,
-      crVQ:crVQ,crQC:crQC,crCS:crCS,crSA:crSA,crAI:crAI
+      visit:visit,contact:contact,click:click,app:app,issue:issue,
+      crVC:crVC,crVK:crVK,crKA:crKA,crAI:crAI
     };
   }
-  function ltvCacFor(id){var m=manualFor(id);return m.cac>0?m.ltv/m.cac:0;}
+  // CAC (производный): стоимость привлечённого клиента =
+  //   contactCost (общая стоимость одного контакта) × контакты сегмента / выдачи сегмента.
+  function cacFor(id,opts){
+    var m=manualFor(id);var f=funnelFor(id,opts);
+    if(f.issue<=0)return 0;
+    return m.contactCost*f.contact/f.issue;
+  }
+  function ltvCacFor(id){var m=manualFor(id);var cac=cacFor(id);return cac>0?m.ltv/cac:0;}
 
   // --- Charts wrapper -------------------------------------------------------
   function clearChart(id){if(charts[id]){charts[id].destroy();delete charts[id];}}
@@ -359,10 +383,9 @@
     var f=funnelFor(s.id);
     var steps=[
       ['Visit',f.visit,'100% базы симуляции'],
-      ['Контакт · квиз',f.quiz,pct(f.crVQ,1)+' Visit → Контакт'],
-      ['Проверка ЦФ',f.cfCheck,pct(f.crQC,1)+' Контакт → Проверка ЦФ'],
-      ['Показ витрины',f.showcase,pct(f.crCS,1)+' Проверка ЦФ → Витрина'],
-      ['Заявка',f.app,pct(f.crSA,1)+' Витрина → Заявка'],
+      ['Контакт',f.contact,pct(f.crVC,1)+' Визит → Контакт · общая на все сегменты'],
+      ['Клик по офферу',f.click,pct(f.crVK,1)+' Визит → Клик по офферу'],
+      ['Заявка',f.app,pct(f.crKA,1)+' Клик → Заявка'],
       ['Выдача',f.issue,pct(f.crAI,1)+' Заявка → Выдача · мы зарабатываем']
     ];
     var host=$('cjmSegmentFunnel');
@@ -372,43 +395,114 @@
       }).join('');
     }
 
-    var fields=[
-      {key:'visitQuiz',label:'CR · Visit → Контакт (квиз)',suffix:'%',step:'0.1',min:0,max:100},
-      {key:'quizCfCheck',label:'CR · Контакт → Проверка ЦФ',suffix:'%',step:'0.1',min:0,max:100},
-      {key:'cfCheckShowcase',label:'CR · Проверка ЦФ → Витрина',suffix:'%',step:'0.1',min:0,max:100},
-      {key:'showcaseApp',label:'CR · Витрина → Заявка',suffix:'%',step:'0.1',min:0,max:100},
-      {key:'appIssue',label:'CR · Заявка → Выдача',suffix:'%',step:'0.1',min:0,max:100},
-      {key:'cac',label:'CAC',suffix:'₽',step:'1',min:0,max:1000000},
-      {key:'cpa',label:'CPA / выплата партнёра',suffix:'₽',step:'1',min:0,max:1000000},
-      {key:'ltv',label:'LTV',suffix:'₽',step:'1',min:0,max:1000000}
-    ];
     var m=manualFor(s.id);
+    var cacDerived=cacFor(s.id);
+
+    var globalFields=[
+      {key:'visitContact',label:'CR · Визит → Контакт (общая для всех сегментов)',suffix:'%',step:'0.1',min:0,max:100,sampleLabel:'визитов в выборке',sampleStep:'1'},
+      {key:'contactCost',label:'Стоимость привлечения контакта (общая)',suffix:'₽',step:'1',min:0,max:1000000,sampleLabel:'контактов в выборке',sampleStep:'1'}
+    ];
+    var segFields=[
+      {key:'visitClick',label:'CR · Визит → Клик по офферу',suffix:'%',step:'0.1',min:0,max:100,sampleLabel:'визитов в выборке',sampleStep:'1'},
+      {key:'clickApp',label:'CR · Клик по офферу → Заявка',suffix:'%',step:'0.1',min:0,max:100,sampleLabel:'кликов в выборке',sampleStep:'1'},
+      {key:'appIssue',label:'CR · Заявка → Выдача',suffix:'%',step:'0.1',min:0,max:100,sampleLabel:'заявок в выборке',sampleStep:'1'},
+      {key:'cpa',label:'CPA / выплата партнёра',suffix:'₽',step:'1',min:0,max:1000000,sampleLabel:'выдач в выборке',sampleStep:'1'},
+      {key:'ltv',label:'LTV (1 год)',suffix:'₽',step:'1',min:0,max:1000000,sampleLabel:'клиентов в выборке',sampleStep:'1'}
+    ];
+
+    function fieldInputHtml(f,value,edited,inputAttr,sampleValue,sampleEdited,sampleAttr){
+      var sampleHtml=sampleValue==null?'':String(sampleValue);
+      return '<label>'+
+        '<span class="cjm-manual-label">'+esc(f.label)+
+          (edited?' <span class="cjm-manual-suffix" title="Значение изменено вручную">· изменено</span>':'')+
+        '</span>'+
+        '<input type="number" inputmode="decimal" '+
+          'min="'+f.min+'" max="'+f.max+'" step="'+f.step+'" '+
+          'value="'+esc(value)+'" '+inputAttr+' '+
+          (edited?'class="is-edited"':'')+'>'+
+        '<span class="cjm-manual-sample">'+
+          '<span class="cjm-manual-sample-label">Объём выборки · '+esc(f.sampleLabel)+
+            (sampleEdited?' <span class="cjm-manual-suffix" title="Значение изменено вручную">· изменено</span>':'')+
+          '</span>'+
+          '<input type="number" inputmode="numeric" min="0" step="'+f.sampleStep+'" '+
+            'value="'+esc(sampleHtml)+'" placeholder="—" '+sampleAttr+' '+
+            (sampleEdited?'class="is-edited cjm-manual-sample-input"':'class="cjm-manual-sample-input"')+'>'+
+        '</span>'+
+      '</label>';
+    }
+
     var inputs=$('cjmManualInputs');
     if(inputs){
-      inputs.innerHTML=fields.map(function(f){
-        var edited=isEdited(s.id,f.key);
-        return '<label for="cjmIn_'+esc(f.key)+'">'+esc(f.label)+
-          (edited?' <span class="cjm-manual-suffix" title="Значение изменено вручную">· изменено</span>':'')+
-          '<input id="cjmIn_'+esc(f.key)+'" type="number" inputmode="decimal" '+
-            'min="'+f.min+'" max="'+f.max+'" step="'+f.step+'" '+
-            'value="'+esc(m[f.key])+'" data-key="'+esc(f.key)+'" '+
-            (edited?'class="is-edited"':'')+'>'+
-        '</label>';
+      // 1) глобальный блок
+      var globalHtml='<div class="cjm-manual-section"><div class="cjm-manual-section-title">Общие показатели (для всех сегментов)</div><div class="cjm-manual-grid-inner">';
+      globalHtml+=globalFields.map(function(f){
+        var edited=isGlobalEdited(f.key);
+        var sampleEdited=isGlobalEdited('n_'+f.key);
+        var sampleValue=globalSampleFor(f.key);
+        return fieldInputHtml(
+          f,m[f.key],edited,
+          'data-global="'+esc(f.key)+'"',
+          sampleValue,sampleEdited,
+          'data-global="n_'+esc(f.key)+'"'
+        );
       }).join('');
+      globalHtml+='</div></div>';
+      // 2) производный CAC
+      var cacBlock='<div class="cjm-manual-section cjm-manual-derived">'+
+        '<div class="cjm-manual-section-title">Производный показатель</div>'+
+        '<div class="cjm-derived-row">'+
+          '<span class="cjm-derived-label">CAC · стоимость привлечённого клиента (сегмент)</span>'+
+          '<span class="cjm-derived-value">'+esc(rub(cacDerived))+'</span>'+
+          '<span class="cjm-derived-formula">= Стоимость контакта × Контакты сегмента / Выдачи сегмента = '+
+            esc(rub(m.contactCost))+' × '+esc(fmt(f.contact))+' / '+esc(fmt(f.issue))+
+          '</span>'+
+        '</div>'+
+      '</div>';
+      // 3) сегментный блок
+      var segHtml='<div class="cjm-manual-section"><div class="cjm-manual-section-title">Показатели сегмента «'+esc(s.name)+'»</div><div class="cjm-manual-grid-inner">';
+      segHtml+=segFields.map(function(f){
+        var edited=isEdited(s.id,f.key);
+        var sampleEdited=isEdited(s.id,'n_'+f.key);
+        var sampleValue=sampleFor(s.id,f.key);
+        return fieldInputHtml(
+          f,m[f.key],edited,
+          'data-key="'+esc(f.key)+'"',
+          sampleValue,sampleEdited,
+          'data-sample="'+esc(f.key)+'"'
+        );
+      }).join('');
+      segHtml+='</div></div>';
+      inputs.innerHTML=globalHtml+cacBlock+segHtml;
+
+      // bindings — segment inputs
       inputs.querySelectorAll('input[data-key]').forEach(function(input){
         input.addEventListener('input',function(){
           var key=input.getAttribute('data-key');
           var raw=input.value;
-          if(raw===''){
-            // empty -> reset to default for this key
-            var store=manualStore();
-            if(store[s.id]&&store[s.id][key]!=null){delete store[s.id][key];if(Object.keys(store[s.id]).length===0)delete store[s.id];write(MANUAL_KEY,store);}
-          }else{
-            setManual(s.id,key,Number(raw));
-          }
-          // Re-render this tab + unit tab data; redraw chart only if visible
-          renderFunnelPanel();
-          renderUnitPanel();
+          if(raw===''){unsetManual(s.id,key);}
+          else{setManual(s.id,key,Number(raw));}
+          renderFunnelPanel();renderUnitPanel();renderCalcPanel();
+          if(activeInnerTab()==='unit')requestAnimationFrame(renderCharts);
+        });
+      });
+      // bindings — segment sample sizes
+      inputs.querySelectorAll('input[data-sample]').forEach(function(input){
+        input.addEventListener('input',function(){
+          var key=input.getAttribute('data-sample');
+          var raw=input.value;
+          if(raw===''){unsetSample(s.id,key);}
+          else{setSample(s.id,key,Number(raw));}
+          // Объём выборки не влияет на расчёт, только на отображение
+        });
+      });
+      // bindings — global inputs (CR · Визит→Контакт, Стоимость контакта, и их выборки)
+      inputs.querySelectorAll('input[data-global]').forEach(function(input){
+        input.addEventListener('input',function(){
+          var key=input.getAttribute('data-global');
+          var raw=input.value;
+          if(raw===''){unsetGlobal(key);}
+          else{setGlobal(key,Number(raw));}
+          renderFunnelPanel();renderUnitPanel();renderCalcPanel();
           if(activeInnerTab()==='unit')requestAnimationFrame(renderCharts);
         });
       });
@@ -417,12 +511,9 @@
     var just=$('cjmJustifications');
     if(just){
       var rows=[
-        ['CR · Visit → Контакт',s.justify.visitQuiz],
-        ['CR · Контакт → Проверка ЦФ',s.justify.quizCfCheck],
-        ['CR · Проверка ЦФ → Витрина',s.justify.cfCheckShowcase],
-        ['CR · Витрина → Заявка',s.justify.showcaseApp],
+        ['CR · Визит → Клик по офферу',s.justify.visitClick],
+        ['CR · Клик по офферу → Заявка',s.justify.clickApp],
         ['CR · Заявка → Выдача',s.justify.appIssue],
-        ['CAC',s.justify.cac],
         ['CPA',s.justify.cpa],
         ['LTV',s.justify.ltv]
       ];
@@ -434,7 +525,7 @@
       resetBtn.__bound=true;
       resetBtn.addEventListener('click',function(){
         resetManual(currentSegment().id);
-        renderFunnelPanel();renderUnitPanel();
+        renderFunnelPanel();renderUnitPanel();renderCalcPanel();
         if(activeInnerTab()==='unit')requestAnimationFrame(renderCharts);
       });
     }
@@ -455,8 +546,8 @@
     paragraphs.push(routing);
     var metricsParts=[];
     var m=manualFor(s.id);
-    metricsParts.push('Контакт → Переход на оффер: <b>'+pct(m.cfCheckShowcase,0)+'</b>');
-    metricsParts.push('Переход → Заявка: <b>'+pct(m.showcaseApp,0)+'</b>');
+    metricsParts.push('Визит → Клик по офферу: <b>'+pct(m.visitClick,1)+'</b>');
+    metricsParts.push('Клик → Заявка: <b>'+pct(m.clickApp,0)+'</b>');
     metricsParts.push('Заявка → Апрув: <b>'+pct(m.appIssue,0)+'</b>');
     metricsParts.push('CPA: <b>'+esc(s.cpa_text||(m.cpa<=0?'внутр.':rub(m.cpa)))+'</b>');
     metricsParts.push('LTV (1 год): <b>'+esc(s.ltv_text||rub(m.ltv))+'</b>');
@@ -467,7 +558,6 @@
     var bodyHtml=paragraphs.map(function(p){return '<p>'+p+'</p>';}).join('');
     host.innerHTML='<article class="card cjm-seg-desc" style="border-top:4px solid '+esc(s.color)+'">'+
       '<div class="card-title"><div>'+
-        '<span class="eyebrow">'+esc(s.status)+'</span>'+
         '<h2>'+esc(s.label)+'</h2>'+
       '</div></div>'+
       '<div class="cjm-seg-desc-body">'+bodyHtml+'</div>'+
@@ -639,12 +729,14 @@
   }
 
   // --- Пример расчёта (полная воронка → выручка) ----------------------------
-  function calcFor(id){
-    var s=segmentById(id);var f=funnelFor(id);var m=manualFor(id);
+  function calcFor(id,opts){
+    var s=segmentById(id);var f=funnelFor(id,opts);var m=manualFor(id);
     var revenue=f.issue*m.ltv;
-    var cost=f.visit*0 + (f.issue*m.cac); // CAC взимается за выдачу (на 1 issue)
+    var cac=f.issue>0?m.contactCost*f.contact/f.issue:0;
+    // Маркетинговые затраты по сегменту = стоимость контактов сегмента.
+    var cost=m.contactCost*f.contact;
     var profit=revenue-cost;
-    return {s:s,f:f,m:m,revenue:revenue,cost:cost,profit:profit};
+    return {s:s,f:f,m:m,cac:cac,revenue:revenue,cost:cost,profit:profit};
   }
   function renderCalcPanel(){
     if(isMatrixView())return;
@@ -654,12 +746,12 @@
     if(card){
       var steps=[
         {n:'1. Визиты',v:fmt(c.f.visit),sub:'База расчёта · 10 000'},
-        {n:'2. Контакт · квиз',v:fmt(c.f.quiz),sub:pct(c.f.crVQ,1)+' Visit → Контакт'},
-        {n:'3. Проверка ЦФ',v:fmt(c.f.cfCheck),sub:pct(c.f.crQC,1)+' Контакт → Проверка ЦФ'},
-        {n:'4. Показ витрины',v:fmt(c.f.showcase),sub:pct(c.f.crCS,1)+' Проверка ЦФ → Витрина'},
-        {n:'5. Заявка',v:fmt(c.f.app),sub:pct(c.f.crSA,1)+' Витрина → Заявка'},
-        {n:'6. Выдача',v:fmt(c.f.issue),sub:pct(c.f.crAI,1)+' Заявка → Выдача'},
-        {n:'7. Затраты на CAC',v:rub(c.cost),sub:'CAC '+rub(c.m.cac)+' × '+fmt(c.f.issue)+' выдач'},
+        {n:'2. Контакт',v:fmt(c.f.contact),sub:pct(c.f.crVC,1)+' Визит → Контакт · общая на все сегменты'},
+        {n:'3. Клик по офферу',v:fmt(c.f.click),sub:pct(c.f.crVK,1)+' Визит → Клик по офферу'},
+        {n:'4. Заявка',v:fmt(c.f.app),sub:pct(c.f.crKA,1)+' Клик → Заявка'},
+        {n:'5. Выдача',v:fmt(c.f.issue),sub:pct(c.f.crAI,1)+' Заявка → Выдача'},
+        {n:'6. Затраты на контакты',v:rub(c.cost),sub:'Стоимость контакта '+rub(c.m.contactCost)+' × '+fmt(c.f.contact)+' контактов'},
+        {n:'7. CAC (произв.)',v:rub(c.cac),sub:'= Затраты / выдачи = '+rub(c.cost)+' / '+fmt(c.f.issue)},
         {n:'8. Выручка',v:rub(c.revenue),sub:'LTV '+rub(c.m.ltv)+' × '+fmt(c.f.issue)+' выдач',revenue:true}
       ];
       card.innerHTML='<div class="card-title"><div><span class="eyebrow" style="color:'+esc(s.color)+'">'+esc(s.label)+'</span><h2>Сквозной расчёт по сегменту</h2></div></div>'+
@@ -680,17 +772,17 @@
     }
     var totalRev=rows.reduce(function(a,r){return a+r.revenue;},0);
     var totalProfit=rows.reduce(function(a,r){return a+r.profit;},0);
-    table.innerHTML='<thead><tr><th>Сегмент</th><th>Визиты</th><th>Контакт</th><th>Проверка ЦФ</th><th>Витрина</th><th>Заявка</th><th>Выдачи</th><th>CAC × выдачи</th><th>LTV</th><th>Выручка</th><th>Прибыль</th></tr></thead><tbody>'+
+    table.innerHTML='<thead><tr><th>Сегмент</th><th>Визиты</th><th>Контакт</th><th>Клик по офферу</th><th>Заявка</th><th>Выдачи</th><th>Затраты на контакты</th><th>CAC (произв.)</th><th>LTV</th><th>Выручка</th><th>Прибыль</th></tr></thead><tbody>'+
       rows.map(function(r){
         var leader=leaderId&&r.s.id===leaderId?' class="is-leader"':'';
         return '<tr'+leader+'><td class="ue2-t-name"><span class="ue2-seg-dot" style="background:'+esc(r.s.color)+'"></span>'+esc(r.s.name)+'</td>'+
           '<td>'+fmt(r.f.visit)+'</td>'+
-          '<td>'+fmt(r.f.quiz)+'</td>'+
-          '<td>'+fmt(r.f.cfCheck)+'</td>'+
-          '<td>'+fmt(r.f.showcase)+'</td>'+
+          '<td>'+fmt(r.f.contact)+'</td>'+
+          '<td>'+fmt(r.f.click)+'</td>'+
           '<td>'+fmt(r.f.app)+'</td>'+
           '<td>'+fmt(r.f.issue)+'</td>'+
           '<td>'+rub(r.cost)+'</td>'+
+          '<td>'+rub(r.cac)+'</td>'+
           '<td>'+rub(r.m.ltv)+'</td>'+
           '<td class="tone-green"><b>'+rub(r.revenue)+'</b></td>'+
           '<td class="'+(r.profit>=0?'tone-green':'tone-red')+'">'+rub(r.profit)+'</td></tr>';
@@ -708,21 +800,21 @@
     var mode=read(MODE_KEY,'asIs');
     var f=funnelFor(s.id,{mode:mode});
     var m=manualFor(s.id);
-    var ltvCac=m.cac>0?m.ltv/m.cac:0;
+    var c=calcFor(s.id,{mode:mode});
+    var ltvCac=c.cac>0?m.ltv/c.cac:0;
     var tone=ratioTone(ltvCac);
-    var c=calcFor(s.id);
     // Абсолютные конверсии от Visit (строго: значения берутся из той же воронки f).
     var crVisitToApp=f.visit>0?f.app/f.visit*100:0;
     var crVisitToIssue=f.visit>0?f.issue/f.visit*100:0;
     var kpis=[
-      ['CAC',rub(m.cac),'Стоимость привлечения на выдачу','blue'],
+      ['CAC (произв.)',rub(c.cac),'Стоимость контакта × контакты / выдачи','blue'],
       ['CPA',m.cpa<=0?'внутр.':rub(m.cpa),'Средняя выплата/ценность действия','blue'],
       ['LTV',rub(m.ltv),'Ожидаемая ценность клиента','green'],
       ['LTV/CAC',ltvCac.toFixed(1)+'×','Светофор: ≥3 green, 1.5–2.9 yellow, <1.5 red',tone],
       ['CR · Визит → Заявка',pct(crVisitToApp,2),'Абсолютная конверсия от визита до заявки','blue'],
       ['CR · Визит → Выдача',pct(crVisitToIssue,2),'Абсолютная конверсия от визита до выдачи','green'],
       ['Выручка',rub(c.revenue),'LTV × выдачи (на 10 000 визитов)','green'],
-      ['Прибыль',rub(c.profit),'Выручка − CAC × выдачи',c.profit>=0?'green':'red']
+      ['Прибыль',rub(c.profit),'Выручка − затраты на контакты',c.profit>=0?'green':'red']
     ];
     var kpiHost=$('cjmUnitKpis');
     if(kpiHost){
@@ -732,11 +824,10 @@
     }
     var rows=[
       ['Visit',f.visit,'—','100%'],
-      ['Контакт · квиз',f.quiz,pct(f.crVQ),pct(f.quiz/f.visit*100)],
-      ['Проверка ЦФ',f.cfCheck,pct(f.crQC),pct(f.cfCheck/f.visit*100)],
-      ['Показ витрины',f.showcase,pct(f.crCS),pct(f.showcase/f.visit*100)],
-      ['Заявка',f.app,pct(f.crSA),pct(f.app/f.visit*100)],
-      ['Выдача',f.issue,pct(f.crAI),pct(f.issue/f.visit*100)]
+      ['Контакт',f.contact,pct(f.crVC)+' от Visit · общая',pct(f.contact/f.visit*100)],
+      ['Клик по офферу',f.click,pct(f.crVK)+' от Visit',pct(f.click/f.visit*100)],
+      ['Заявка',f.app,pct(f.crKA)+' от клика',pct(f.app/f.visit*100)],
+      ['Выдача',f.issue,pct(f.crAI)+' от заявки',pct(f.issue/f.visit*100)]
     ];
     var t=$('cjmUnitFunnel');
     if(t){
@@ -774,12 +865,11 @@
         var f=funnelFor(s.id);
         var isLeader=s.id===leaderId;
         return '<article class="cjm-matrix-segment'+(isLeader?' is-leader':'')+'" style="border-top-color:'+esc(s.color)+'">'+
-          '<header><h3>'+esc(s.name)+'</h3><span class="cjm-matrix-status">'+esc(s.status)+'</span></header>'+
+          '<header><h3>'+esc(s.name)+'</h3></header>'+
           '<div class="cjm-matrix-step"><span class="cjm-matrix-step-name">Visit</span><span class="cjm-matrix-step-val">'+fmt(f.visit)+'</span><span class="cjm-matrix-step-cr">100%</span></div>'+
-          '<div class="cjm-matrix-step"><span class="cjm-matrix-step-name">Контакт</span><span class="cjm-matrix-step-val">'+fmt(f.quiz)+'</span><span class="cjm-matrix-step-cr">'+pct(f.crVQ,1)+'</span></div>'+
-          '<div class="cjm-matrix-step"><span class="cjm-matrix-step-name">Проверка ЦФ</span><span class="cjm-matrix-step-val">'+fmt(f.cfCheck)+'</span><span class="cjm-matrix-step-cr">'+pct(f.crQC,1)+'</span></div>'+
-          '<div class="cjm-matrix-step"><span class="cjm-matrix-step-name">Витрина</span><span class="cjm-matrix-step-val">'+fmt(f.showcase)+'</span><span class="cjm-matrix-step-cr">'+pct(f.crCS,1)+'</span></div>'+
-          '<div class="cjm-matrix-step"><span class="cjm-matrix-step-name">Заявка</span><span class="cjm-matrix-step-val">'+fmt(f.app)+'</span><span class="cjm-matrix-step-cr">'+pct(f.crSA,1)+'</span></div>'+
+          '<div class="cjm-matrix-step"><span class="cjm-matrix-step-name">Контакт</span><span class="cjm-matrix-step-val">'+fmt(f.contact)+'</span><span class="cjm-matrix-step-cr">'+pct(f.crVC,1)+'</span></div>'+
+          '<div class="cjm-matrix-step"><span class="cjm-matrix-step-name">Клик по офферу</span><span class="cjm-matrix-step-val">'+fmt(f.click)+'</span><span class="cjm-matrix-step-cr">'+pct(f.crVK,1)+'</span></div>'+
+          '<div class="cjm-matrix-step"><span class="cjm-matrix-step-name">Заявка</span><span class="cjm-matrix-step-val">'+fmt(f.app)+'</span><span class="cjm-matrix-step-cr">'+pct(f.crKA,1)+'</span></div>'+
           '<div class="cjm-matrix-step"><span class="cjm-matrix-step-name">Выдача</span><span class="cjm-matrix-step-val">'+fmt(f.issue)+'</span><span class="cjm-matrix-step-cr">'+pct(f.crAI,1)+'</span></div>'+
           '<footer><span>Доля сегмента</span><b>'+pct(s.share*100,0)+'</b></footer>'+
         '</article>';
@@ -792,7 +882,7 @@
   function renderSummaryTable(leaderId){
     var table=$('cjmSummaryTable');if(!table)return;
     var rows=segments.slice();
-    var data=rows.map(function(s){var m=manualFor(s.id);var f=funnelFor(s.id);return {s:s,cac:m.cac,cpa:m.cpa,ltv:m.ltv,ltvCac:m.cac>0?m.ltv/m.cac:0,payback:s.payback,issue:f.issue};});
+    var data=rows.map(function(s){var m=manualFor(s.id);var f=funnelFor(s.id);var cac=cacFor(s.id);return {s:s,cac:cac,cpa:m.cpa,ltv:m.ltv,ltvCac:cac>0?m.ltv/cac:0,payback:s.payback,issue:f.issue};});
     var metrics=['cac','cpa','ltv','ltvCac','payback','issue'];
     var best={},worst={};
     metrics.forEach(function(k){
@@ -801,7 +891,7 @@
       worst[k]=(k==='cac'||k==='payback')?Math.max.apply(Math,vals):Math.min.apply(Math,vals);
     });
     function cls(d,k){return d[k]===best[k]?'tone-green':d[k]===worst[k]?'tone-red':'';}
-    table.innerHTML='<thead><tr><th>Сегмент</th><th>Выдач (на 10 000)</th><th>CAC</th><th>CPA</th><th>LTV</th><th>LTV/CAC</th><th>Payback</th></tr></thead><tbody>'+
+    table.innerHTML='<thead><tr><th>Сегмент</th><th>Выдач (на 10 000)</th><th>CAC (произв.)</th><th>CPA</th><th>LTV</th><th>LTV/CAC</th><th>Payback</th></tr></thead><tbody>'+
       data.map(function(d){
         var leader=leaderId&&d.s.id===leaderId?' class="is-leader"':'';
         return '<tr'+leader+'><td class="ue2-t-name"><span class="ue2-seg-dot" style="background:'+esc(d.s.color)+'"></span>'+esc(d.s.name)+'</td>'+
