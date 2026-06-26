@@ -202,7 +202,7 @@
   function fmt(v){return Math.round(Number(v)||0).toLocaleString('ru-RU');}
   function rub(v){return fmt(v)+' ₽';}
   function pct(v,digits){return (Number(v)||0).toLocaleString('ru-RU',{maximumFractionDigits:digits==null?1:digits})+'%';}
-  function ratioTone(v){return v>=3?'green':v>=1.5?'yellow':'red';}
+  function ratioTone(v){return v>2?'green':v>=1?'yellow':'red';}
   function clamp(v,min,max){v=Number(v);if(!isFinite(v))v=min;return Math.max(min,Math.min(max,v));}
 
   function segmentById(id){return segments.find(function(s){return s.id===id;})||null;}
@@ -838,7 +838,7 @@
       ['CAC (произв.)',rub(c.cac),'Стоимость контакта × контакты / выдачи','blue'],
       ['CPA',m.cpa<=0?'внутр.':rub(m.cpa),'Средняя выплата/ценность действия','blue'],
       ['LTV',rub(m.ltv),'Ожидаемая ценность клиента','green'],
-      ['LTV/CAC',ltvCac.toFixed(1)+'×','Светофор: ≥3 green, 1.5–2.9 yellow, <1.5 red',tone],
+      ['LTV/CAC',ltvCac.toFixed(1)+'×','Светофор: >2 green, 1–2 yellow, <1 red',tone],
       ['CR · Визит → Заявка',pct(crVisitToApp,2),'Абсолютная конверсия от визита до заявки','blue'],
       ['CR · Визит → Выдача',pct(crVisitToIssue,2),'Абсолютная конверсия от визита до выдачи','green'],
       ['Выручка',rub(c.revenue),'LTV × выдачи (на 10 000 визитов)','green'],
@@ -1016,7 +1016,7 @@
   function renderCharts(){
     if(isMatrixView()){
       // LTV/CAC bar chart removed per spec; LTV/CAC теперь читается из таблицы
-      // «Сравнительная экономика» (светофор: ≥3 ×, 1.5–2.9 ×, <1.5 ×).
+      // «Сравнительная экономика» (светофор: >2 ×, 1–2 ×, <1 ×).
     }
     if(!isMatrixView()){
       // As-Is / To-Be chart removed per spec; nothing to draw in segment view.
