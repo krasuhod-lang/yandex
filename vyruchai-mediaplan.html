@@ -1327,9 +1327,6 @@ body[data-app-version="legacy"] .original-app-hidden{display:block}
 .cjm-stage p{margin:0;color:var(--muted);font-size:13px;line-height:1.45}
 .cjm-stage b{color:var(--text)}
 .cjm-jtbd{border-left:4px solid var(--violet);background:color-mix(in srgb,var(--violet) 6%,var(--surface))}
-.cjm-switch{display:inline-flex;gap:4px;border:1px solid var(--line);background:var(--surface-2);border-radius:980px;padding:4px}
-.cjm-switch button{border:0;background:transparent;border-radius:980px;padding:7px 13px;font-size:12px;font-weight:700;color:var(--muted)}
-.cjm-switch button.active{background:var(--surface);color:var(--text);box-shadow:var(--shadow-soft)}
 .cjm-payback-inputs{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
 @media(max-width:760px){.cjm-payback-inputs{grid-template-columns:1fr}}
 .cjm-payback-inputs label{display:grid;gap:7px;color:var(--muted);font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.05em}
@@ -1529,7 +1526,7 @@ button:active:not(:disabled){transform:translateY(0) scale(.97)}
       </div>
     </section>
     <section id="cjm-tab-unit" class="cjm-panel">
-      <div class="cjm-section-head"><div><h2>Юнит-экономика по конверсиям</h2></div><div class="cjm-switch" role="group" aria-label="Режим модели"><button type="button" data-cjm-mode="asIs" class="active">As-Is</button><button type="button" data-cjm-mode="toBe">To-Be +5% CR</button></div></div>
+      <div class="cjm-section-head"><div><h2>Юнит-экономика по конверсиям</h2></div></div>
       <div class="ue2-kpis" id="cjmUnitKpis"></div>
       <div class="card"><div class="card-title"><div><h2>Таблица воронки</h2></div></div><div class="ue2-table-wrap"><table class="ue2-scn-table" id="cjmUnitFunnel"></table></div></div>
       <div class="cjm-section-head"><div><h2>Ручной ввод показателей</h2></div><button type="button" class="cjm-reset-btn" id="cjmFunnelReset" title="Сбросить ручные правки к значениям по умолчанию">Сбросить к дефолтам</button></div>

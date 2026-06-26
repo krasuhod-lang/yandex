@@ -3,7 +3,6 @@
 
   var STORAGE_KEY='cjm_unit_dashboard_v2';
   var TAB_KEY='cjm_inner_tab_v2';
-  var MODE_KEY='cjm_unit_mode_v1';
   var MANUAL_KEY='cjm_manual_inputs_v3';
   var GLOBAL_KEY='cjm_global_inputs_v1';
   var SHARES_KEY='cjm_segment_shares_v1';
@@ -313,7 +312,6 @@
     var crVK=clamp(m.visitClick,0,100);       // Визит → Клик по офферу
     var crKA=clamp(m.clickApp,0,100);         // Клик → Заявка
     var crAI=clamp(m.appIssue,0,100);         // Заявка → Выдача
-    if(opts.mode==='toBe'){crVC*=1.05;crVK*=1.05;crKA*=1.05;crAI*=1.05;}
     crVC=Math.min(crVC,100);crVK=Math.min(crVK,100);crKA=Math.min(crKA,100);crAI=Math.min(crAI,100);
     var contact=Math.round(visit*crVC/100);
     var click=Math.round(visit*crVK/100);
@@ -832,10 +830,9 @@
   function renderUnitPanel(){
     if(isMatrixView())return;
     var s=currentSegment();
-    var mode=read(MODE_KEY,'asIs');
-    var f=funnelFor(s.id,{mode:mode});
+    var f=funnelFor(s.id);
     var m=manualFor(s.id);
-    var c=calcFor(s.id,{mode:mode});
+    var c=calcFor(s.id);
     var ltvCac=c.cac>0?m.ltv/c.cac:0;
     var tone=ratioTone(ltvCac);
     // Абсолютные конверсии от Visit (строго: значения берутся из той же воронки f).
@@ -869,18 +866,10 @@
       t.innerHTML='<thead><tr><th>Шаг</th><th>Абс.</th><th>CR шага</th><th>CR от Visit</th></tr></thead><tbody>'+
         rows.map(function(r){return '<tr><td class="ue2-t-name">'+esc(r[0])+'</td><td>'+fmt(r[1])+'</td><td>'+esc(r[2])+'</td><td>'+esc(r[3])+'</td></tr>';}).join('')+'</tbody>';
     }
-    document.querySelectorAll('[data-cjm-mode]').forEach(function(btn){btn.classList.toggle('active',btn.getAttribute('data-cjm-mode')===mode);});
   }
 
   // --- SSR panel (per segment) ---------------------------------------------
   // (removed per spec; routing diagram теперь рендерится внутри CJM-вкладки)
-
-  // --- Unit-economics mode toggle ------------------------------------------
-  function initUnitMode(){
-    document.querySelectorAll('[data-cjm-mode]').forEach(function(btn){
-      btn.addEventListener('click',function(){write(MODE_KEY,btn.getAttribute('data-cjm-mode'));renderUnitPanel();requestAnimationFrame(renderCharts);});
-    });
-  }
 
   // --- Matrix view ----------------------------------------------------------
   function renderMatrix(){
@@ -1077,7 +1066,6 @@
     applyStoredShares();
     initVersionSwitcher();
     initInnerTabs();
-    initUnitMode();
     initTheme();
     renderAll();
   }
