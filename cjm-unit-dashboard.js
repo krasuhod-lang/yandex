@@ -346,9 +346,9 @@
       lead.textContent='Сравнение 5 сегментов рядом: воронки на 10 000 пользователей, юнит-экономика, каналы привлечения и LTV/CAC. Сегмент-лидер по выручке подсвечен. Чтобы перейти к деталям конкретного сегмента — нажмите на его таб сверху.';
     }else{
       var s=currentSegment();
-      eyebrow.textContent='Раздел сайта · CJM & Юнит-экономика — сегмент: '+s.name;
+      eyebrow.textContent='';
       title.textContent=s.label;
-      lead.textContent=s.pains+' На одном листе: описание сегмента, схема взаимодействия, юнит-экономика по конверсиям (с абсолютными конверсиями в заявку и в выдачу из визита) и пример расчёта на 10 000 пользователей.';
+      lead.textContent='';
     }
   }
 
@@ -468,7 +468,7 @@
     host.innerHTML='<article class="card cjm-seg-desc" style="border-top:4px solid '+esc(s.color)+'">'+
       '<div class="card-title"><div>'+
         '<span class="eyebrow">'+esc(s.status)+'</span>'+
-        '<h2>Описание сегмента · '+esc(s.label)+'</h2>'+
+        '<h2>'+esc(s.label)+'</h2>'+
       '</div></div>'+
       '<div class="cjm-seg-desc-body">'+bodyHtml+'</div>'+
     '</article>';
@@ -662,7 +662,7 @@
         {n:'7. Затраты на CAC',v:rub(c.cost),sub:'CAC '+rub(c.m.cac)+' × '+fmt(c.f.issue)+' выдач'},
         {n:'8. Выручка',v:rub(c.revenue),sub:'LTV '+rub(c.m.ltv)+' × '+fmt(c.f.issue)+' выдач',revenue:true}
       ];
-      card.innerHTML='<div class="card-title"><div><span class="eyebrow" style="color:'+esc(s.color)+'">'+esc(s.label)+'</span><h2>Сквозной расчёт по сегменту</h2><p>От визитов до выручки: каждый шаг — результат предыдущего по введённым CR/CAC/LTV. Прогноз прибыли: <b>'+rub(c.profit)+'</b>.</p></div></div>'+
+      card.innerHTML='<div class="card-title"><div><span class="eyebrow" style="color:'+esc(s.color)+'">'+esc(s.label)+'</span><h2>Сквозной расчёт по сегменту</h2></div></div>'+
         '<div class="cjm-calc-flow">'+steps.map(function(st){
           return '<div class="cjm-calc-step'+(st.revenue?' cs-revenue':'')+'"><span class="cs-name">'+esc(st.n)+'</span><span class="cs-val">'+esc(st.v)+'</span><span class="cs-sub">'+esc(st.sub)+'</span></div>';
         }).join('')+'</div>';
@@ -710,6 +710,7 @@
     var m=manualFor(s.id);
     var ltvCac=m.cac>0?m.ltv/m.cac:0;
     var tone=ratioTone(ltvCac);
+    var c=calcFor(s.id);
     // Абсолютные конверсии от Visit (строго: значения берутся из той же воронки f).
     var crVisitToApp=f.visit>0?f.app/f.visit*100:0;
     var crVisitToIssue=f.visit>0?f.issue/f.visit*100:0;
@@ -719,7 +720,9 @@
       ['LTV',rub(m.ltv),'Ожидаемая ценность клиента','green'],
       ['LTV/CAC',ltvCac.toFixed(1)+'×','Светофор: ≥3 green, 1.5–2.9 yellow, <1.5 red',tone],
       ['CR · Визит → Заявка',pct(crVisitToApp,2),'Абсолютная конверсия от визита до заявки','blue'],
-      ['CR · Визит → Выдача',pct(crVisitToIssue,2),'Абсолютная конверсия от визита до выдачи','green']
+      ['CR · Визит → Выдача',pct(crVisitToIssue,2),'Абсолютная конверсия от визита до выдачи','green'],
+      ['Выручка',rub(c.revenue),'LTV × выдачи (на 10 000 визитов)','green'],
+      ['Прибыль',rub(c.profit),'Выручка − CAC × выдачи',c.profit>=0?'green':'red']
     ];
     var kpiHost=$('cjmUnitKpis');
     if(kpiHost){
@@ -831,15 +834,7 @@
       });
     }
     if(!isMatrixView()){
-      var s=currentSegment();
-      var asIs=funnelFor(s.id,{mode:'asIs'}),toBe=funnelFor(s.id,{mode:'toBe'});
-      drawChart('cjmUnitChart',{
-        type:'bar',
-        data:{labels:['Контакт','Проверка ЦФ','Витрина','Заявка','Выдача'],datasets:[
-          {label:'As-Is',data:[asIs.quiz,asIs.cfCheck,asIs.showcase,asIs.app,asIs.issue],backgroundColor:colors.blue},
-          {label:'To-Be +5% CR',data:[toBe.quiz,toBe.cfCheck,toBe.showcase,toBe.app,toBe.issue],backgroundColor:colors.green}
-        ]}
-      });
+      // As-Is / To-Be chart removed per spec; nothing to draw in segment view.
     }
   }
 
