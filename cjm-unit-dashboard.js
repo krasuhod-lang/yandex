@@ -483,7 +483,7 @@
     // шире самого правого узла (W=1820), а центры веток разнесены на 240px, чтобы
     // кластеры выходов соседних веток не накладывались.
     var W=1820,H=1240;
-    var BW=240,BH=72;                       // box width/height
+    var BW=240,BH=72;                        // box width/height
     var DW=200,DH=84;                        // diamond width/height
     var col=[60,360,660,960,1240];          // x of column lefts
     // Entry column (4 stacked boxes at x=col[0])
