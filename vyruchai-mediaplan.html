@@ -435,6 +435,7 @@ canvas{display:block;width:100%;max-width:100%;height:auto;cursor:crosshair}
 .route-diagram-wrap.is-dragging{cursor:grabbing;scroll-behavior:auto}
 .route-diagram-wrap.is-dragging *{pointer-events:none}
 .route-diagram svg{width:100%;min-width:1480px;height:auto;display:block}
+.route-diagram.is-single svg{min-width:1100px}
 /* CJM Smart Safe Router canvas is wider (viewBox 1820) — guarantee space for the
    diamond forks (ПДН / «ЦФ готов одобрить?») and their two output blocks so nodes
    never get squished or clipped. */
@@ -1394,6 +1395,15 @@ body[data-app-version="legacy"] .original-app-hidden{display:block}
 #cjmRouteDiagram .ssr-branch{transition:opacity .25s var(--ease)}
 #cjmRouteDiagram.has-active .ssr-branch:not(.is-active){opacity:.32}
 #cjmRouteDiagram.has-active .ssr-branch.is-active{opacity:1}
+.cjm-seg-desc .card-title h2{margin:0;font-size:clamp(20px,2vw,26px);letter-spacing:-.02em}
+.cjm-seg-desc-body{display:flex;flex-direction:column;gap:10px;margin-top:6px;font-size:15px;line-height:1.55;color:var(--text)}
+.cjm-seg-desc-body p{margin:0}
+.cjm-seg-desc-body b{color:var(--text)}
+.cjm-matrix-segment.is-leader{box-shadow:0 0 0 2px var(--green),var(--shadow-soft);position:relative}
+.cjm-matrix-segment.is-leader::after{content:'🏆 Лидер по выручке';position:absolute;top:-12px;right:14px;background:var(--green);color:#fff;font-size:11px;font-weight:800;letter-spacing:.04em;text-transform:uppercase;padding:3px 10px;border-radius:980px}
+.ue2-scn-table tr.is-leader{background:color-mix(in srgb,var(--green) 10%,transparent)}
+.ue2-scn-table tr.is-leader td:first-child{position:relative}
+.ue2-scn-table tr.is-leader td:first-child::after{content:'🏆';margin-left:6px}
 /* Пример расчёта tab */
 .cjm-calc-flow{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:10px;margin-top:14px}
 @media(max-width:1100px){.cjm-calc-flow{grid-template-columns:repeat(3,minmax(0,1fr))}}
@@ -1469,8 +1479,8 @@ body[data-app-version="legacy"] .original-app-hidden{display:block}
 
     <!-- Cross-segment matrix panel -->
     <section id="cjm-tab-matrix" class="cjm-panel">
-      <div class="cjm-section-head"><div><h2>📊 Сводная матрица всех сегментов</h2><p>Полное сравнение 4 сегментов: воронки на 10 000 пользователей, экономика, каналы привлечения и LTV/CAC.</p></div></div>
-      <div class="card"><div class="card-title"><div><h2>Воронки на 10 000 пользователей · по сегментам</h2><p>Все 4 сегмента рядом — видны абсолютные значения и CR%</p></div></div><div class="cjm-matrix-funnels" id="cjmMatrixFunnels"></div></div>
+      <div class="cjm-section-head"><div><h2>📊 Сводная матрица всех сегментов</h2><p>Полное сравнение 5 сегментов: воронки на 10 000 пользователей, экономика, каналы привлечения и LTV/CAC. Сегмент-лидер по выручке подсвечен зелёным.</p></div></div>
+      <div class="card"><div class="card-title"><div><h2>Воронки на 10 000 пользователей · по сегментам</h2><p>Все 5 сегментов рядом — видны абсолютные значения и CR%. Лидер по выручке отмечен значком 🏆</p></div></div><div class="cjm-matrix-funnels" id="cjmMatrixFunnels"></div></div>
       <div class="card"><div class="card-title"><div><h2>Сводка по всем сегментам</h2><p>Сколько денег принесёт каждый сегмент при базе 10 000 визитов</p></div></div><div class="ue2-table-wrap"><table class="ue2-scn-table" id="cjmCalcTable"></table></div></div>
       <div class="card"><div class="card-title"><div><h2>Сравнительная экономика</h2><p>Лучшие значения подсвечены зелёным, худшие — красным</p></div></div><div class="ue2-table-wrap"><table class="ue2-scn-table" id="cjmSummaryTable"></table></div></div>
       <div class="grid two">
