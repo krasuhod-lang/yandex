@@ -431,10 +431,13 @@ canvas{display:block;width:100%;max-width:100%;height:auto;cursor:crosshair}
 .quiz-cjm-card.s-rejected .qcm-grade,.quiz-cjm-card.s-overdue .qcm-grade{background:color-mix(in srgb,var(--red) 14%,transparent);color:var(--red)}
 .quiz-cjm-card.s-noncore .qcm-grade,.quiz-cjm-card.s-dormant .qcm-grade{background:color-mix(in srgb,var(--orange) 14%,transparent);color:var(--orange)}
 /* ---------- Block-flow diagram (Miro-style) ---------- */
-.route-diagram-wrap{overflow-x:auto;padding:6px 2px 2px;cursor:grab;user-select:none;-webkit-user-select:none}
+.route-diagram-wrap{overflow-x:auto;padding:6px 2px 24px;cursor:grab;user-select:none;-webkit-user-select:none}
 .route-diagram-wrap.is-dragging{cursor:grabbing;scroll-behavior:auto}
 .route-diagram-wrap.is-dragging *{pointer-events:none}
 .route-diagram svg{width:100%;min-width:1480px;height:auto;display:block}
+/* CJM Smart Safe Router holst is wider (viewBox 1760) — guarantee space for the
+   «ДА → Выдача ЦФ» / «НЕТ» blocks so nodes never get squished or clipped. */
+#cjmRouteDiagram svg{min-width:1760px}
 .route-diagram .rd-edge{fill:none;stroke:var(--line-strong);stroke-width:2.5;stroke-linecap:round;stroke-linejoin:round}
 .route-diagram .rd-arrow{fill:var(--line-strong)}
 .route-diagram .rd-elabel{fill:var(--muted);font-family:var(--font);font-size:13px;font-weight:700}
