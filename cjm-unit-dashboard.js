@@ -3,7 +3,6 @@
 
   var STORAGE_KEY='cjm_unit_dashboard_v2';
   var TAB_KEY='cjm_inner_tab_v2';
-  var MODE_KEY='cjm_unit_mode_v1';
   var MANUAL_KEY='cjm_manual_inputs_v3';
   var GLOBAL_KEY='cjm_global_inputs_v1';
   var SHARES_KEY='cjm_segment_shares_v1';
@@ -79,7 +78,7 @@
       why_here:'',
       pains:'Возвращается, чтобы добрать лимит (Top-up), управлять займом или получить удобную банковскую карту.',
       source:'SEO + ретаргет + CRM-касания + соц. сети',
-      router:'Телефон → Авторизация. Роутер узнаёт «Действующего». Предложение добрать денег в другой МФО, либо банковские карты (дебетовая / кредитная).',
+      router:'Телефон → Роутер узнаёт «Действующего». Предложение добрать денег в другой МФО, либо банковские карты (дебетовая / кредитная).',
       showcase:'',
       monetization:'Процентная прибыль ЦФ с Top-up + CPA с оформленных банковских карт. CPA: 1 000–1 500 ₽ (дебетовые), 3 000–5 000 ₽ (кредитные).',
       defaultCr:{visitClick:7.5,clickApp:35,appIssue:30},
@@ -313,7 +312,6 @@
     var crVK=clamp(m.visitClick,0,100);       // Визит → Клик по офферу
     var crKA=clamp(m.clickApp,0,100);         // Клик → Заявка
     var crAI=clamp(m.appIssue,0,100);         // Заявка → Выдача
-    if(opts.mode==='toBe'){crVC*=1.05;crVK*=1.05;crKA*=1.05;crAI*=1.05;}
     crVC=Math.min(crVC,100);crVK=Math.min(crVK,100);crKA=Math.min(crKA,100);crAI=Math.min(crAI,100);
     var contact=Math.round(visit*crVC/100);
     var click=Math.round(visit*crVK/100);
@@ -578,14 +576,17 @@
       '<b>Выручка:</b> '+rub(c.revenue)+' (LTV '+rub(c.m.ltv)+' × '+fmt(c.f.issue)+' выдач) · '+
       '<b>Затраты на контакты:</b> '+rub(c.cost)+' ('+rub(c.m.contactCost)+' × '+fmt(c.f.contact)+' контактов) · '+
       '<b>Прибыль:</b> <span class="'+profitTone+'">'+rub(c.profit)+'</span>';
+    // «Пример расчёта прибыли» скрыт для отказного / спящего / непрофильного сегментов
+    // (значения доступны во вкладке «Юнит-экономика»). Блок «Витрина» убран из описания
+    // всех сегментов по согласованию.
+    var hideProfitExample={rejected:true,sleeping:true,noncore:true}[s.id];
     var blocks=[
       {h:'Описание сегмента',html:s.description?esc(s.description):'',wide:true},
       {h:'Маршрутизация',html:s.router?esc(s.router):''},
-      {h:'Витрина',html:s.showcase?esc(s.showcase):''},
       {h:'Монетизация',html:s.monetization?esc(s.monetization):''},
       {h:'Точки входа',html:esc(poe)},
       {h:'Как попадает',html:esc(s.how_arrives||'—')},
-      {h:'Пример расчёта прибыли',html:profitExampleHtml,wide:true}
+      {h:'Пример расчёта прибыли',html:hideProfitExample?'':profitExampleHtml,wide:true}
     ];
     var bodyHtml=blocks.filter(function(b){return b.html;}).map(function(b){
       return '<section class="cjm-seg-block'+(b.wide?' is-wide':'')+'"><h3>'+esc(b.h)+'</h3><p>'+b.html+'</p></section>';
@@ -624,10 +625,10 @@
                  {t:'Чекер → CPA-витрина 5 МФО',s:'НЕТ · монетизация отказа',label:'НЕТ',color:'var(--orange)'} ] } },
       { key:'repeat', color:'var(--green)', name:'Действующий клиент',
         seg:{t:'Действующий клиент',s:'Зелёный · 1+ займ в ЦФ'},
-        step:{t:'Авторизация СМС → Прескоринг',s:'Top-up / Витрина ЛК'},
-        fork:{ type:'diamond', t:'Одобрено?', s:'Прескоринг ЦФ',
-          outs:[ {t:'Личный кабинет: Top-up ЦФ + карты',s:'ДА · выдача ЦФ + кросс-сейл карт',label:'ДА',color:'var(--green)'},
-                 {t:'Витрина партнёрских кредитов / МФО',s:'НЕТ · «Ну нет и нет, ПК подаём»',label:'НЕТ',color:'var(--orange)'} ] } },
+        step:{t:'Роутер узнаёт «Действующего»',s:'Идентификация по базе ЦФ'},
+        fork:{ type:'split', t:'Кросс-сейл предложение', s:'Партнёрские офферы',
+          outs:[ {t:'Добор в другой МФО',s:'Партнёрская МФО · доп. лимит',label:'МФО',color:'var(--orange)'},
+                 {t:'Банковские карты (дебет / кредит)',s:'CPA 1 000–5 000 ₽',label:'Карты',color:'var(--blue)'} ] } },
       { key:'rejected', color:'var(--red)', name:'Отказной клиент',
         seg:{t:'Отказной клиент',s:'Красный · отказ ЦФ'},
         step:{t:'Пробив чекером по номеру',s:'Фильтрация баз партнёров'},
@@ -832,10 +833,9 @@
   function renderUnitPanel(){
     if(isMatrixView())return;
     var s=currentSegment();
-    var mode=read(MODE_KEY,'asIs');
-    var f=funnelFor(s.id,{mode:mode});
+    var f=funnelFor(s.id);
     var m=manualFor(s.id);
-    var c=calcFor(s.id,{mode:mode});
+    var c=calcFor(s.id);
     var ltvCac=c.cac>0?m.ltv/c.cac:0;
     var tone=ratioTone(ltvCac);
     // Абсолютные конверсии от Visit (строго: значения берутся из той же воронки f).
@@ -869,18 +869,10 @@
       t.innerHTML='<thead><tr><th>Шаг</th><th>Абс.</th><th>CR шага</th><th>CR от Visit</th></tr></thead><tbody>'+
         rows.map(function(r){return '<tr><td class="ue2-t-name">'+esc(r[0])+'</td><td>'+fmt(r[1])+'</td><td>'+esc(r[2])+'</td><td>'+esc(r[3])+'</td></tr>';}).join('')+'</tbody>';
     }
-    document.querySelectorAll('[data-cjm-mode]').forEach(function(btn){btn.classList.toggle('active',btn.getAttribute('data-cjm-mode')===mode);});
   }
 
   // --- SSR panel (per segment) ---------------------------------------------
   // (removed per spec; routing diagram теперь рендерится внутри CJM-вкладки)
-
-  // --- Unit-economics mode toggle ------------------------------------------
-  function initUnitMode(){
-    document.querySelectorAll('[data-cjm-mode]').forEach(function(btn){
-      btn.addEventListener('click',function(){write(MODE_KEY,btn.getAttribute('data-cjm-mode'));renderUnitPanel();requestAnimationFrame(renderCharts);});
-    });
-  }
 
   // --- Matrix view ----------------------------------------------------------
   function renderMatrix(){
@@ -1077,7 +1069,6 @@
     applyStoredShares();
     initVersionSwitcher();
     initInnerTabs();
-    initUnitMode();
     initTheme();
     renderAll();
   }
