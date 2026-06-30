@@ -1049,7 +1049,7 @@
       var delta=winProfit-losProfit;
       var deltaPerVisit=(winner==='a'?a.profitPerVisit:b.profitPerVisit)-(winner==='a'?b.profitPerVisit:a.profitPerVisit);
       verdictHtml='<div class="cjm-scn-verdict"><b>'+esc(winName)+'</b> — лучший выбор для сегмента «'+esc(s.name)+'»: '+
-        'прибыль выше на '+esc(rub(delta))+' (на 10 000 визитов) · +'+esc(rub(deltaPerVisit))+' на 1 человека. '+
+        'прибыль выше на '+esc(rub(delta))+' (на '+esc(fmt(a.f.visit))+' визитов) · +'+esc(rub(deltaPerVisit))+' на 1 человека. '+
         'Воронка одинакова в обоих сценариях — различие только в монетизации выдачи (CPA).</div>';
     }
 
