@@ -139,7 +139,7 @@
       },
       userStory:{
         title:'Как заёмщик, только что получивший отказ',
-        text:'Как заемщик, который только что получил обидный отказ от кредитора, я хочу попасть на витрину лояльных МФО с высоким процентом одобрения, чтобы гарантированно получить деньги и не портить свою кредитную историю чередой новых пустых запросов.',
+        text:'Как заёмщик, который только что получил обидный отказ от кредитора, я хочу попасть на витрину лояльных МФО с высоким процентом одобрения, чтобы гарантированно получить деньги и не портить свою кредитную историю чередой новых пустых запросов.',
         pains:'Находится в стрессе из-за отказа, боится повторных отказов, нуждается в деньгах «еще вчера».'
       }
     },
@@ -279,6 +279,9 @@
       var ls=seg.leadSale;
       out.cpaCf=saved.cpaCf!=null?Number(saved.cpaCf):ls.cpaCf;
       out.cpaThird=saved.cpaThird!=null?Number(saved.cpaThird):ls.cpaThird;
+      // ВАЖНО: сохранённое значение shareCf хранится в процентах (0..100) —
+      // именно так его вводит пользователь через <input min=0 max=100>.
+      // Дефолт ls.shareCf хранится как доля (0..1), поэтому переводим в %.
       var shareCf=saved.shareCf!=null?Number(saved.shareCf):ls.shareCf*100;
       shareCf=clamp(shareCf,0,100);
       out.shareCf=shareCf;
@@ -895,10 +898,11 @@
         svg.push(box(tailX,top(cy),BW,BH,{t:br.tail.t,s:br.tail.s,out:true,borderColor:br.tail.color||br.color}));
         if(fork.type==='split'&&fork.outs&&fork.outs.length===2){
           // Сводим обе ветки кросс-сейла в финальный блок «Продукты ЦФ».
-          var outX2=branchRightX-BW; // x-координата outs из split-блока
+          // outs нарисованы в (outX, upCy/loCy), их правые края — на outX+BW = branchRightX.
+          var outRight=branchRightX;
           var upCy2=cy-(BH/2+16), loCy2=cy+(BH/2+16);
-          svg.push(edge(outX2+BW,upCy2,tailX,cy));
-          svg.push(edge(outX2+BW,loCy2,tailX,cy));
+          svg.push(edge(outRight,upCy2,tailX,cy));
+          svg.push(edge(outRight,loCy2,tailX,cy));
         }else{
           svg.push(edge(branchRightX,tailFromCy,tailX,cy));
         }
