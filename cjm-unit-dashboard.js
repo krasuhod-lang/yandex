@@ -49,20 +49,30 @@
       why_here:'Клиент ещё не знает ни про Центрофинанс, ни про Выручай, возможно имел займы в других МФО. Занимается поиском решения своих финансовых вопросов (ремонт, покупка техники, лечение и т.д.).',
       pains:'Ищет решение финансового вопроса и сравнивает МФО — ещё не знает Центрофинанс.',
       source:'SEO + контекст + ремаркетинг + соц. сети',
-      router:'Клиент не найден в базе ЦФ → проверка скорингом → при одобрении выдача ЦФ',
+      router:'Клиент не найден в базе ЦФ → Квиз-преквалификация → продажа лида: вариант А — в Центрофинанс (CPA 3 000 ₽), вариант Б — в стороннюю МФО (CPA 2 500–3 000 ₽).',
       showcase:'Лид-форма ЦФ; при отказе — Пробив чеккером по номеру телефона и переход в ветку «Непрофильный»',
-      monetization:'Основная: выдача Центрофинанс; при отказе — CPA-витрина непрофильной ветки',
+      monetization:'Два варианта продажи лида: (А) в Центрофинанс — Выручай.ру получает 3 000 ₽ за выдачу; (Б) в стороннюю МФО — 2 500–3 000 ₽ за выдачу. Ставки задаются вручную, чтобы гибко настраивать математику под партнёров.',
       defaultCr:{visitClick:4.5,clickApp:80,appIssue:20},
-      cac:780,cpa:0,ltv:1800,payback:5,share:0.20,
+      cac:780,cpa:2875,ltv:1800,payback:5,share:0.20,
+      // Два варианта продажи лида (см. CJM diagram): A — лид в Центрофинанс, Б — лид
+      // в стороннюю МФО. Доля shareCf задаёт миксование выплат: эффективный CPA =
+      // shareCf*cpaCf + (1-shareCf)*cpaThird. Поля редактируются в блоке
+      // «Параметры сегмента» (manual inputs) и сохраняются вместе с остальными.
+      leadSale:{cpaCf:3000,cpaThird:2750,shareCf:0.5,cpaThirdMin:2500,cpaThirdMax:3000},
       mix:{seo:0.42,paid:0.34,crm:0.04,pr:0.20},
-      cpa_text:'0 ₽ (монетизация через собственную выдачу ЦФ)',
+      cpa_text:'3 000 ₽ за лид в ЦФ · 2 500–3 000 ₽ за лид в стороннюю МФО (микс настраивается)',
       ltv_text:'Высокий — у 20% зашедших 3–5 займов ЦФ за год; остальные 80% уходят на витрины партнёров.',
       justify:{
         visitClick:'4,5% Визит → Клик по офферу — мотивированный «холодный» клиент кликает на анкету ЦФ.',
         clickApp:'80% Клик → Заявка (анкета ЦФ) — конверсия в полностью заполненную анкету.',
-        appIssue:'20% Заявка → Апрув (выдача ЦФ) — типичный апрув-рейт ЦФ для новой аудитории.',
-        cpa:'CPA 0 ₽ — монетизация идёт через собственную выдачу ЦФ, без партнёрских CPA.',
+        appIssue:'20% Заявка → Апрув (выдача) — типичный апрув-рейт для новой аудитории (ЦФ или сторонняя МФО).',
+        cpa:'CPA смешанный: 3 000 ₽ — продажа лида в ЦФ, 2 500–3 000 ₽ — продажа лида в стороннюю МФО. Эффективная ставка зависит от доли распределения.',
         ltv:'LTV (1 год) высокий: у 20% зашедших — 3–5 займов ЦФ, остальные 80% уходят на партнёрские витрины.'
+      },
+      userStory:{
+        title:'Как человек, внезапно столкнувшийся с финансовой потребностью',
+        text:'Как человек, внезапно столкнувшийся с финансовой потребностью (поломка, лечение), я хочу быстро сравнить условия и найти самое выгодное предложение (в идеале под 0% на первый заём), чтобы решить проблему без лишних переплат и долгих проверок.',
+        pains:'Боится скрытых комиссий, навязанных страховок и того, что данные утекут спамерам.'
       }
     },
     {
@@ -92,6 +102,11 @@
         appIssue:'30% Заявка → Апрув — суммарно по Top-up ЦФ и банковским картам партнёров. Карты: ~20% (зависит от типа).',
         cpa:'CPA 1 000 – 5 000 ₽ — дебетовые ~1 000–1 500 ₽, кредитные ~3 000–5 000 ₽. Top-up — внутренняя выдача ЦФ.',
         ltv:'LTV (1 год): до 7 займов ЦФ — самый прибыльный сегмент за счёт повторных выдач и кросс-сейла карт.'
+      },
+      userStory:{
+        title:'Как клиент с опытом и одобренными лимитами',
+        text:'Как клиент, у которого уже есть опыт работы с займами (и, возможно, есть текущие долги), я хочу авторизоваться по номеру телефона и увидеть свои персональные, уже одобренные лимиты, чтобы получить нужную сумму в 1 клик без повторного заполнения 30 полей анкеты.',
+        pains:'Боится отказа из-за высокой кредитной нагрузки, не хочет тратить время на бюрократию, хочет уверенности, что ему точно дадут деньги.'
       }
     },
     {
@@ -121,6 +136,11 @@
         appIssue:'27% Заявка → Апрув (выдача партнёра) — среднерыночный апрув по сложному трафику.',
         cpa:'CPA 2 000 – 2 400 ₽ — средняя выплата CPA-витрины МФО за оформленный заём.',
         ltv:'LTV (1 год): 2–3 займа — растим через CRM (Push/СМС с новыми витринами).'
+      },
+      userStory:{
+        title:'Как заёмщик, только что получивший отказ',
+        text:'Как заёмщик, который только что получил обидный отказ от кредитора, я хочу попасть на витрину лояльных МФО с высоким процентом одобрения, чтобы гарантированно получить деньги и не портить свою кредитную историю чередой новых пустых запросов.',
+        pains:'Находится в стрессе из-за отказа, боится повторных отказов, нуждается в деньгах «еще вчера».'
       }
     },
     {
@@ -150,6 +170,11 @@
         appIssue:'45% Заявка → Апрув (выдача ЦФ) — апрув-рейт ЦФ для спящих ~40–50%.',
         cpa:'CPA 0 ₽ — экономия CAC, возобновление маржи ЦФ через собственную выдачу.',
         ltv:'LTV (1 год): до 3–4 займов ЦФ при возврате в цикл.'
+      },
+      userStory:{
+        title:'Как человек, которому снова срочно нужны деньги',
+        text:'Как человек, которому срочно понадобились деньги, я ищу в интернете выгодный микрозаём (возможно, забыв про свой прошлый опыт в «Центрофинанс» или решив поискать условия получше у конкурентов). Я хочу оставить заявку на сервисе, который подберёт мне 100% одобренный вариант без отказов и долгих проверок.',
+        pains:'Не хочет заново вводить паспортные данные, СНИЛС и место работы. Боится, что везде будут отказывать, поэтому ищет агрегаторы/маркетплейсы («Выручай»), надеясь, что там шансы выше. Возможно, у него уже есть пара займов в других местах, и он боится отказа из-за нагрузки.'
       }
     },
     {
@@ -179,6 +204,11 @@
         appIssue:'15–20% Заявка → Апрув по кредитам, ~20% по дебетовым картам, отдельный апрув у МФО.',
         cpa:'CPA 1 000 – 6 000 ₽ — спред по типам продуктов: дебетовые карты дешевле, кредиты и кредитки дороже.',
         ltv:'LTV (1 год) средний: 2–3 партнёрских продукта на клиента.'
+      },
+      userStory:{
+        title:'Как непрофильный клиент, ищущий «помощь сервиса»',
+        text:'Как человек, которому нужны заёмные средства (до зарплаты, на покупку или рефинансирование), я захожу на Выручай.ру, чтобы быстро найти компанию, которая одобрит мою заявку. Я хочу получить деньги без лишних заморочек, даже если у меня неофициальный доход, неподходящий возраст или я ищу не просто заём, а, например, кредитную карту.',
+        pains:'Часто сталкивается с отказами в банках и крупных МФО из-за формальных требований (19 лет, нет стажа, плохая КИ — или наоборот, чистая КИ, но банки перестраховываются). Не понимает, какие именно компании готовы с ним работать. Устал подавать заявки вручную на десятках разных сайтов и получать отказы, поэтому пришёл на маркетплейс-агрегатор в надежде на «помощь сервиса».'
       }
     }
   ];
@@ -230,7 +260,7 @@
     var seg=segmentById(id);if(!seg)return null;
     var store=manualStore();var saved=store[id]||{};
     var g=globalStore();
-    return {
+    var out={
       // глобальные показатели — общие для всех сегментов
       visitContact:g.visitContact,
       contactCost:g.contactCost,
@@ -241,6 +271,28 @@
       cpa:saved.cpa!=null?Number(saved.cpa):seg.cpa,
       ltv:saved.ltv!=null?Number(saved.ltv):seg.ltv
     };
+    // Доп. поля для «Нового клиента»: два варианта продажи лида
+    // (CPA в ЦФ и CPA в стороннюю МФО) + доля распределения. Эффективный CPA
+    // считается как взвешенное среднее и используется как seg.cpa и как LTV
+    // в воронке (т.к. в lead-sale модели LTV ≈ выплата за выдачу).
+    if(seg.leadSale){
+      var ls=seg.leadSale;
+      out.cpaCf=saved.cpaCf!=null?Number(saved.cpaCf):ls.cpaCf;
+      out.cpaThird=saved.cpaThird!=null?Number(saved.cpaThird):ls.cpaThird;
+      // ВАЖНО: сохранённое значение shareCf хранится в процентах (0..100) —
+      // именно так его вводит пользователь через <input min=0 max=100>.
+      // Дефолт ls.shareCf хранится как доля (0..1), поэтому переводим в %.
+      var shareCf=saved.shareCf!=null?Number(saved.shareCf):ls.shareCf*100;
+      shareCf=clamp(shareCf,0,100);
+      out.shareCf=shareCf;
+      var effective=(out.cpaCf*shareCf+out.cpaThird*(100-shareCf))/100;
+      out.cpaEffective=effective;
+      // Перекрываем cpa эффективным значением, если пользователь не задал явно cpa.
+      if(saved.cpa==null) out.cpa=effective;
+      // Перекрываем LTV эффективным значением, если пользователь не задал явно ltv.
+      if(saved.ltv==null) out.ltv=effective;
+    }
+    return out;
   }
   function isEdited(id,key){var store=manualStore();return store[id]&&store[id][key]!=null;}
   function setManual(id,key,value){
@@ -428,12 +480,22 @@
       }).join('');
     }
     var m=manualFor(s.id);
-    var cacEl=document.querySelector('#cjmManualInputs .cjm-derived-value');
-    var cacFormulaEl=document.querySelector('#cjmManualInputs .cjm-derived-formula');
+    var cacEl=document.querySelector('#cjmManualInputs .cjm-manual-derived .cjm-derived-value');
+    var cacFormulaEl=document.querySelector('#cjmManualInputs .cjm-manual-derived .cjm-derived-formula');
     if(cacEl) cacEl.textContent=rub(cacFor(s.id));
     if(cacFormulaEl){
       cacFormulaEl.textContent='= Стоимость контакта × Контакты сегмента / Выдачи сегмента = '+
         rub(m.contactCost)+' × '+fmt(f.contact)+' / '+fmt(f.issue);
+    }
+    // Обновляем «Эффективный CPA» для lead-sale сегмента, не пересобирая инпуты
+    // (чтобы не терять фокус ввода при наборе значений).
+    var lsValueEl=document.querySelector('#cjmManualInputs .cjm-manual-leadsale .cjm-derived-value');
+    var lsFormulaEl=document.querySelector('#cjmManualInputs .cjm-manual-leadsale .cjm-derived-formula');
+    if(lsValueEl&&m.cpaEffective!=null) lsValueEl.textContent=rub(m.cpaEffective);
+    if(lsFormulaEl&&m.cpaEffective!=null){
+      lsFormulaEl.textContent='= CPA ЦФ × доля ЦФ + CPA сторонней МФО × (1 − доля ЦФ) = '+
+        rub(m.cpaCf||0)+' × '+pct(m.shareCf||0,0)+' + '+
+        rub(m.cpaThird||0)+' × '+pct(100-(m.shareCf||0),0);
     }
   }
 
@@ -469,6 +531,14 @@
       {key:'cpa',label:'CPA / выплата партнёра',suffix:'₽',step:'1',min:0,max:1000000},
       {key:'ltv',label:'LTV (1 год)',suffix:'₽',step:'1',min:0,max:1000000}
     ];
+    // «Новый клиент»: два варианта продажи лида (см. CJM-схему) — CPA-выплата
+    // от Центрофинанс и CPA-выплата от сторонней МФО + доля распределения.
+    // Поля редактируются вручную, чтобы гибко настраивать математику.
+    var leadSaleFields=s.leadSale?[
+      {key:'cpaCf',label:'CPA · продажа лида в ЦФ',suffix:'₽',step:'50',min:0,max:1000000},
+      {key:'cpaThird',label:'CPA · продажа лида в стороннюю МФО',suffix:'₽',step:'50',min:0,max:1000000},
+      {key:'shareCf',label:'Доля продаж в ЦФ (микс)',suffix:'%',step:'1',min:0,max:100}
+    ]:[];
 
     function fieldInputHtml(f,value,edited,inputAttr){
       return '<label>'+
@@ -509,7 +579,29 @@
         return fieldInputHtml(f,m[f.key],edited,'data-key="'+esc(f.key)+'"');
       }).join('');
       segHtml+='</div></div>';
-      inputs.innerHTML=globalHtml+cacBlock+segHtml;
+      // 4) блок lead-sale — только для сегмента с двумя вариантами продажи лида
+      var leadSaleHtml='';
+      if(leadSaleFields.length){
+        var effective=m.cpaEffective!=null?m.cpaEffective:0;
+        leadSaleHtml='<div class="cjm-manual-section cjm-manual-leadsale">'+
+          '<div class="cjm-manual-section-title">Продажа лида · два варианта монетизации</div>'+
+          '<div class="cjm-manual-grid-inner">'+
+            leadSaleFields.map(function(f){
+              var edited=isEdited(s.id,f.key);
+              return fieldInputHtml(f,m[f.key],edited,'data-key="'+esc(f.key)+'"');
+            }).join('')+
+          '</div>'+
+          '<div class="cjm-derived-row">'+
+            '<span class="cjm-derived-label">Эффективный CPA (микс)</span>'+
+            '<span class="cjm-derived-value">'+esc(rub(effective))+'</span>'+
+            '<span class="cjm-derived-formula">= CPA ЦФ × доля ЦФ + CPA сторонней МФО × (1 − доля ЦФ) = '+
+              esc(rub(m.cpaCf||0))+' × '+esc(pct(m.shareCf||0,0))+' + '+
+              esc(rub(m.cpaThird||0))+' × '+esc(pct(100-(m.shareCf||0),0))+
+            '</span>'+
+          '</div>'+
+        '</div>';
+      }
+      inputs.innerHTML=globalHtml+cacBlock+segHtml+leadSaleHtml;
 
       // bindings — segment inputs
       inputs.querySelectorAll('input[data-key]').forEach(function(input){
@@ -582,6 +674,10 @@
     var hideProfitExample={new:true,repeat:true,rejected:true,sleeping:true,noncore:true}[s.id];
     var blocks=[
       {h:'Описание сегмента',html:s.description?esc(s.description):'',wide:true},
+      {h:'User Story · мотив клиента',html:s.userStory?(
+          '<span class="cjm-user-story-text">'+esc(s.userStory.text)+'</span>'+
+          (s.userStory.pains?'<span class="cjm-user-story-pains"><b>Боли и страхи:</b> '+esc(s.userStory.pains)+'</span>':'')
+        ):'',wide:true,storyClass:true},
       {h:'Маршрутизация',html:s.router?esc(s.router):''},
       {h:'Монетизация',html:s.monetization?esc(s.monetization):''},
       {h:'Точки входа',html:esc(poe)},
@@ -589,7 +685,8 @@
       {h:'Пример расчёта прибыли',html:hideProfitExample?'':profitExampleHtml,wide:true}
     ];
     var bodyHtml=blocks.filter(function(b){return b.html;}).map(function(b){
-      return '<section class="cjm-seg-block'+(b.wide?' is-wide':'')+'"><h3>'+esc(b.h)+'</h3><p>'+b.html+'</p></section>';
+      var extraCls=b.storyClass?' cjm-user-story':'';
+      return '<section class="cjm-seg-block'+(b.wide?' is-wide':'')+extraCls+'"><h3>'+esc(b.h)+'</h3><p>'+b.html+'</p></section>';
     }).join('');
 
     host.innerHTML='<article class="card cjm-seg-desc" style="border-top:4px solid '+esc(s.color)+'">'+
@@ -616,19 +713,30 @@
     var BW=240,BH=72;                        // box width/height
     var DW=200,DH=84;                        // diamond width/height
     var entries=['SEO','Контекстная реклама','Ремаркетинг','Соц. сети'];
+    // Получаем настраиваемые ставки продажи лида «Нового клиента»
+    // (для подписи к веткам диаграммы — отражают актуальные значения CPA).
+    var newSeg=segmentById('new');
+    var newLead=(newSeg&&newSeg.leadSale)||{cpaCf:3000,cpaThird:2750,cpaThirdMin:2500,cpaThirdMax:3000};
+    var newCpaCfLabel=rub(newLead.cpaCf);
+    var newCpaThirdLabel=newLead.cpaThirdMin!=null&&newLead.cpaThirdMax!=null
+      ? fmt(newLead.cpaThirdMin)+'–'+rub(newLead.cpaThirdMax)
+      : rub(newLead.cpaThird);
     var allBranches=[
       { key:'new', color:'var(--yellow)', name:'Новый клиент',
         seg:{t:'Новый клиент',s:'Жёлтый · нет в базе ЦФ'},
-        step:{t:'Анкета · Скоринг ЦФ',s:'Первичная проверка'},
-        fork:{ type:'diamond', t:'Одобрено?', s:'Скоринг ЦФ',
-          outs:[ {t:'Выдача ЦФ',s:'ДА · целевой результат',label:'ДА',color:'var(--green)'},
-                 {t:'Чекер → CPA-витрина 5 МФО',s:'НЕТ · монетизация отказа',label:'НЕТ',color:'var(--orange)'} ] } },
+        step:{t:'Анкета · Скоринг',s:'Преквалификация по квизу'},
+        fork:{ type:'diamond', t:'Кому продаём лид?', s:'Маршрутизация лида',
+          outs:[ {t:'Лид в Центрофинанс',s:'CPA '+newCpaCfLabel+' за выдачу',label:'ЦФ',color:'var(--green)'},
+                 {t:'Лид в стороннюю МФО',s:'CPA '+newCpaThirdLabel+' ₽ за выдачу · ставка настраивается',label:'СТОР.',color:'var(--orange)'} ] } },
       { key:'repeat', color:'var(--green)', name:'Действующий клиент',
         seg:{t:'Действующий клиент',s:'Зелёный · 1+ займ в ЦФ'},
         step:{t:'Роутер узнаёт «Действующего»',s:'Идентификация по базе ЦФ'},
         fork:{ type:'split', t:'Кросс-сейл предложение', s:'Партнёрские офферы',
           outs:[ {t:'Добор в другой МФО',s:'Партнёрская МФО · доп. лимит',label:'МФО',color:'var(--orange)'},
-                 {t:'Банковские карты (дебет / кредит)',s:'CPA 1 000–5 000 ₽',label:'Карты',color:'var(--blue)'} ] } },
+                 {t:'Банковские карты (дебет / кредит)',s:'CPA 1 000–5 000 ₽',label:'Карты',color:'var(--blue)'} ] },
+        // Финальный блок ветки «Действующий»: возврат клиента в продукты ЦФ
+        // (Top-up, повторный заём, депозиты/НПФ, программа лояльности).
+        tail:{t:'Продукты ЦФ',s:'Top-up · повторный заём · программа лояльности',color:'var(--green)'} },
       { key:'rejected', color:'var(--red)', name:'Отказной клиент',
         seg:{t:'Отказной клиент',s:'Красный · отказ ЦФ'},
         step:{t:'Пробив чекером по номеру',s:'Фильтрация баз партнёров'},
@@ -650,25 +758,37 @@
     var W,H;
     if(activeBranch){
       // Single-segment view: только ветка активного сегмента, компактная высота.
+      // Высота увеличена, чтобы вертикальная колонка из трёх hub-блоков
+      // (Выручай.ру → Проверка по базе ЦФ → Квиз) уместилась симметрично.
+      H=680;
       renderBranches=allBranches.filter(function(b){return b.key===activeBranch;}).map(function(b){
-        return Object.assign({},b,{cy:320});
+        return Object.assign({},b,{cy:H/2});
       });
-      W=1820; H=620;
+      W=2080;
     }else{
       // Матричный вид — все 5 веток рядом.
       renderBranches=allBranches.map(function(b,i){return Object.assign({},b,{cy:130+i*240});});
-      W=1820; H=1240;
+      W=2080; H=1240;
     }
 
     // Колонки одинаковы в обоих режимах.
+    // col[0]=entries, col[1]=hub-колонка (Выручай.ру / Проверка ЦФ / Квиз),
+    // col[2]=сегмент, col[3]=шаг, col[4]=fork. Дополнительная колонка для
+    // финального tail-блока (например, «Продукты ЦФ» в ветке «Действующий»)
+    // вычисляется уже относительно outs.
     var col=[60,360,660,960,1240];
     // Entry column (4 stacked boxes at x=col[0]) — вертикально центрируем относительно H.
     var entrySpan=BH*4 + 48*3; // 4 блока + 3 промежутка по 48
     var entryStartY=Math.max(60,(H-entrySpan)/2);
     var entryY=[0,1,2,3].map(function(i){return entryStartY+i*(BH+48);});
     var hubX=col[1], hubW=BW;
-    var siteY=Math.max(80,H/2-(BH+50));
-    var routerY=siteY+BH+60;
+    // Три hub-блока выстроены вертикально в col[1]: Выручай.ру → Проверка по базе ЦФ → Квиз.
+    // Стек центрируется по H/2: общий размер = 3*BH + 2*60 = 336.
+    var hubGap=60;
+    var hubStack=BH*3+hubGap*2;
+    var siteY=Math.max(60,(H-hubStack)/2);
+    var routerY=siteY+BH+hubGap;
+    var quizY=routerY+BH+hubGap;
 
     var svg=[];
     svg.push('<svg viewBox="0 0 '+W+' '+H+'" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Блок-схема Smart Safe Router">');
@@ -714,30 +834,42 @@
     svg.push(box(hubX,siteY,hubW,BH,{t:'Выручай.ру',s:'Ввод телефона (контакт)',hub:true}));
     // Hub: Проверка по базе ЦФ
     svg.push(box(hubX,routerY,hubW,BH,{t:'Проверка по базе ЦФ',s:'Smart Safe Router',hub:true}));
+    // Hub: Квиз — интерактивная преквалификация после идентификации в базе ЦФ.
+    // Уточняет сумму/срок/тип займа и поднимает CR Visit→Lead перед маршрутизацией
+    // по сегментам (5 веток снизу).
+    svg.push(box(hubX,quizY,hubW,BH,{t:'Квиз',s:'Преквалификация · уточнение запроса',hub:true}));
     // Entry → Выручай.ру
     entries.forEach(function(_,i){
       svg.push(edge(col[0]+BW,entryY[i]+BH/2,hubX,siteY+BH/2));
     });
-    // Выручай.ру → роутер
+    // Выручай.ру → Проверка по базе ЦФ
     svg.push(edge(hubX+hubW/2,siteY+BH,hubX+hubW/2,routerY));
+    // Проверка по базе ЦФ → Квиз
+    svg.push(edge(hubX+hubW/2,routerY+BH,hubX+hubW/2,quizY));
 
     // Branches
     renderBranches.forEach(function(br){
       svg.push('<g class="ssr-branch ssr-branch-'+br.key+(activeBranch===br.key?' is-active':'')+'">');
       var cy=br.cy, segX=col[2], stepX=col[3], forkX=col[4];
       function top(c){return c-BH/2;}
-      // Segment box + router → segment
+      // Segment box + квиз → segment (теперь маршрутизация идёт после квиза)
       svg.push(box(segX,top(cy),BW,BH,{t:br.seg.t,s:br.seg.s,borderColor:br.color}));
-      svg.push(edge(hubX+hubW,routerY+BH/2,segX,cy));
+      svg.push(edge(hubX+hubW,quizY+BH/2,segX,cy));
       // Step box
       svg.push(box(stepX,top(cy),BW,BH,{t:br.step.t,s:br.step.s,borderColor:br.color}));
       svg.push(edge(segX+BW,cy,stepX,cy));
 
       var fork=br.fork;
+      // Самая правая координата ветки — нужна, чтобы поставить tail-блок
+      // (например, «Продукты ЦФ» для «Действующего») в самом конце схемы.
+      var branchRightX=forkX+BW;
+      var tailFromCy=cy;
       if(fork.type==='terminal'){
         var o=fork.outs[0];
         svg.push(box(forkX,top(cy),BW,BH,{t:o.t,s:o.s,out:true,borderColor:o.color}));
         svg.push(edge(stepX+BW,cy,forkX,cy));
+        branchRightX=forkX+BW;
+        tailFromCy=cy;
       }else{
         var nodeRight;
         if(fork.type==='diamond'){
@@ -756,6 +888,24 @@
           svg.push(box(outX,ocy-BH/2,BW,BH,{t:out.t,s:out.s,out:true,borderColor:out.color}));
           svg.push(edge(nodeRight,cy,outX,ocy,out.label));
         });
+        branchRightX=outX+BW;
+        tailFromCy=cy;
+      }
+      // Tail-блок ветки (например, «Продукты ЦФ» в самом конце для «Действующего»).
+      // Линкуется от центра ветки (или от каждого выхода для split-fork с двумя outs).
+      if(br.tail){
+        var tailX=branchRightX+40;
+        svg.push(box(tailX,top(cy),BW,BH,{t:br.tail.t,s:br.tail.s,out:true,borderColor:br.tail.color||br.color}));
+        if(fork.type==='split'&&fork.outs&&fork.outs.length===2){
+          // Сводим обе ветки кросс-сейла в финальный блок «Продукты ЦФ».
+          // outs нарисованы в (outX, upCy/loCy), их правые края — на outX+BW = branchRightX.
+          var outRight=branchRightX;
+          var upCy2=cy-(BH/2+16), loCy2=cy+(BH/2+16);
+          svg.push(edge(outRight,upCy2,tailX,cy));
+          svg.push(edge(outRight,loCy2,tailX,cy));
+        }else{
+          svg.push(edge(branchRightX,tailFromCy,tailX,cy));
+        }
       }
       svg.push('</g>');
     });
@@ -789,7 +939,8 @@
         {n:'6. Затраты на контакты',v:rub(c.cost),sub:'Стоимость контакта '+rub(c.m.contactCost)+' × '+fmt(c.f.contact)+' контактов'},
         {n:'7. CAC (произв.)',v:rub(c.cac),sub:'= Затраты / выдачи = '+rub(c.cost)+' / '+fmt(c.f.issue)},
         {n:'8. Выручка',v:rub(c.revenue),sub:'LTV '+rub(c.m.ltv)+' × '+fmt(c.f.issue)+' выдач',revenue:true},
-        {n:'9. Прибыль',v:rub(c.profit),sub:'= Выручка − Затраты = '+rub(c.revenue)+' − '+rub(c.cost),profit:true,negative:c.profit<0}
+        {n:'9. Прибыль',v:rub(c.profit),sub:'= Выручка − Затраты = '+rub(c.revenue)+' − '+rub(c.cost),profit:true,negative:c.profit<0},
+        {n:'10. Прибыль на 1 человека',v:rub(c.f.visit>0?c.profit/c.f.visit:0),sub:'= Прибыль / '+fmt(c.f.visit)+' визитов',profit:true,negative:c.profit<0}
       ];
       card.innerHTML='<div class="card-title"><div><span class="eyebrow" style="color:'+esc(s.color)+'">'+esc(s.label)+'</span><h2>Сквозной расчёт по сегменту</h2></div></div>'+
         '<div class="cjm-calc-flow">'+steps.map(function(st){
@@ -809,9 +960,12 @@
     }
     var totalRev=rows.reduce(function(a,r){return a+r.revenue;},0);
     var totalProfit=rows.reduce(function(a,r){return a+r.profit;},0);
-    table.innerHTML='<thead><tr><th>Сегмент</th><th>Визиты</th><th>Контакт</th><th>Клик по офферу</th><th>Заявка</th><th>Выдачи</th><th>Затраты на контакты</th><th>CAC (произв.)</th><th>LTV</th><th>Выручка</th><th>Прибыль</th></tr></thead><tbody>'+
+    var totalVisits=rows.reduce(function(a,r){return a+r.f.visit;},0);
+    var avgProfitPerVisit=totalVisits>0?totalProfit/totalVisits:0;
+    table.innerHTML='<thead><tr><th>Сегмент</th><th>Визиты</th><th>Контакт</th><th>Клик по офферу</th><th>Заявка</th><th>Выдачи</th><th>Затраты на контакты</th><th>CAC (произв.)</th><th>LTV</th><th>Выручка</th><th>Прибыль</th><th>Прибыль / 1 чел.</th></tr></thead><tbody>'+
       rows.map(function(r){
         var leader=leaderId&&r.s.id===leaderId?' class="is-leader"':'';
+        var ppv=r.f.visit>0?r.profit/r.f.visit:0;
         return '<tr'+leader+'><td class="ue2-t-name"><span class="ue2-seg-dot" style="background:'+esc(r.s.color)+'"></span>'+esc(r.s.name)+'</td>'+
           '<td>'+fmt(r.f.visit)+'</td>'+
           '<td>'+fmt(r.f.contact)+'</td>'+
@@ -822,9 +976,10 @@
           '<td>'+rub(r.cac)+'</td>'+
           '<td>'+rub(r.m.ltv)+'</td>'+
           '<td class="tone-green"><b>'+rub(r.revenue)+'</b></td>'+
-          '<td class="'+(r.profit>=0?'tone-green':'tone-red')+'">'+rub(r.profit)+'</td></tr>';
+          '<td class="'+(r.profit>=0?'tone-green':'tone-red')+'">'+rub(r.profit)+'</td>'+
+          '<td class="'+(ppv>=0?'tone-green':'tone-red')+'">'+rub(ppv)+'</td></tr>';
       }).join('')+
-      '<tr><td class="ue2-t-name"><b>Итого по '+rows.length+' сегментам</b></td><td colspan="8"></td><td class="tone-green"><b>'+rub(totalRev)+'</b></td><td class="'+(totalProfit>=0?'tone-green':'tone-red')+'"><b>'+rub(totalProfit)+'</b></td></tr>'+
+      '<tr><td class="ue2-t-name"><b>Итого по '+rows.length+' сегментам</b></td><td colspan="8"></td><td class="tone-green"><b>'+rub(totalRev)+'</b></td><td class="'+(totalProfit>=0?'tone-green':'tone-red')+'"><b>'+rub(totalProfit)+'</b></td><td class="'+(avgProfitPerVisit>=0?'tone-green':'tone-red')+'"><b>'+rub(avgProfitPerVisit)+'</b></td></tr>'+
       '</tbody>';
   }
 
@@ -842,6 +997,9 @@
     // Абсолютные конверсии от Visit (строго: значения берутся из той же воронки f).
     var crVisitToApp=f.visit>0?f.app/f.visit*100:0;
     var crVisitToIssue=f.visit>0?f.issue/f.visit*100:0;
+    // Прибыль на 1 посетителя — ключевой показатель эффективности на одного человека
+    // (на сколько каждый визит приносит/съедает денег).
+    var profitPerVisit=f.visit>0?c.profit/f.visit:0;
     var kpis=[
       ['CAC (произв.)',rub(c.cac),'Стоимость контакта × контакты / выдачи','blue'],
       ['CPA',m.cpa<=0?'внутр.':rub(m.cpa),'Средняя выплата/ценность действия','blue'],
@@ -850,7 +1008,8 @@
       ['CR · Визит → Заявка',pct(crVisitToApp,2),'Абсолютная конверсия от визита до заявки','blue'],
       ['CR · Визит → Выдача',pct(crVisitToIssue,2),'Абсолютная конверсия от визита до выдачи','green'],
       ['Выручка',rub(c.revenue),'LTV × выдачи (на 10 000 визитов)','green'],
-      ['Прибыль',rub(c.profit),'Выручка − затраты на контакты',c.profit>=0?'green':'red']
+      ['Прибыль',rub(c.profit),'Выручка − затраты на контакты',c.profit>=0?'green':'red'],
+      ['Прибыль на 1 человека',rub(profitPerVisit),'Прибыль ÷ '+fmt(f.visit)+' визитов · оценка эффективности на 1 посетителя',profitPerVisit>=0?'green':'red']
     ];
     var kpiHost=$('cjmUnitKpis');
     if(kpiHost){

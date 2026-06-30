@@ -439,7 +439,7 @@ canvas{display:block;width:100%;max-width:100%;height:auto;cursor:crosshair}
 /* CJM Smart Safe Router canvas is wider (viewBox 1820) — guarantee space for the
    diamond forks (ПДН / «ЦФ готов одобрить?») and their two output blocks so nodes
    never get squished or clipped. */
-#cjmRouteDiagram svg{min-width:1820px}
+#cjmRouteDiagram svg{min-width:2080px}
 .route-diagram .rd-edge{fill:none;stroke:var(--line-strong);stroke-width:2.5;stroke-linecap:round;stroke-linejoin:round}
 .route-diagram .rd-arrow{fill:var(--line-strong)}
 .route-diagram .rd-elabel{fill:var(--muted);font-family:var(--font);font-size:13px;font-weight:700}
@@ -1415,6 +1415,11 @@ body[data-app-version="legacy"] .original-app-hidden{display:block}
 .cjm-seg-block h3{margin:0;font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;font-weight:800}
 .cjm-seg-block p{margin:0;font-size:14px;line-height:1.5;color:var(--text)}
 .cjm-seg-block:first-child,.cjm-seg-block.is-wide{grid-column:1 / -1}
+.cjm-seg-block.cjm-user-story{background:linear-gradient(135deg,color-mix(in srgb,var(--violet) 9%,var(--surface)),var(--surface-2));border-left:4px solid var(--violet)}
+.cjm-seg-block.cjm-user-story p{display:flex;flex-direction:column;gap:8px}
+.cjm-seg-block.cjm-user-story .cjm-user-story-text{font-style:italic;color:var(--text);font-size:14.5px;line-height:1.55}
+.cjm-seg-block.cjm-user-story .cjm-user-story-pains{font-size:13.5px;color:var(--muted);line-height:1.5}
+.cjm-seg-block.cjm-user-story .cjm-user-story-pains b{color:var(--red)}
 .cjm-matrix-segment.is-leader{box-shadow:0 0 0 2px var(--green),var(--shadow-soft);position:relative}
 .cjm-matrix-segment.is-leader::after{content:'Лидер по выручке';position:absolute;top:-12px;right:14px;background:var(--green);color:#fff;font-size:11px;font-weight:800;letter-spacing:.04em;text-transform:uppercase;padding:3px 10px;border-radius:980px}
 .ue2-scn-table tr.is-leader{background:color-mix(in srgb,var(--green) 10%,transparent)}
