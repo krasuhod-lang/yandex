@@ -1442,7 +1442,8 @@ body[data-app-version="legacy"] .original-app-hidden{display:block}
 
 /* Сравнение сценариев монетизации трафика (lead-sale сегменты) */
 .cjm-scn-compare{margin-top:18px}
-.cjm-scn-compare-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;margin-top:14px}
+.cjm-scn-compare-grid{display:grid;grid-template-columns:repeat(var(--cjm-scn-cols,2),minmax(0,1fr));gap:14px;margin-top:14px}
+@media(max-width:1100px){.cjm-scn-compare-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:900px){.cjm-scn-compare-grid{grid-template-columns:1fr}}
 .cjm-scn-card{position:relative;border:1px solid var(--line);border-radius:var(--radius-sm);background:var(--surface);box-shadow:var(--shadow-soft);padding:18px;display:flex;flex-direction:column;gap:12px}
 .cjm-scn-card.is-winner{border-color:var(--green);box-shadow:0 0 0 2px var(--green),var(--shadow-soft)}
