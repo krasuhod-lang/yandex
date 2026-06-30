@@ -1440,6 +1440,34 @@ body[data-app-version="legacy"] .original-app-hidden{display:block}
 .cjm-calc-step.cs-loss{border-color:var(--red);background:color-mix(in srgb,var(--red) 12%,var(--surface-2))}
 .cjm-calc-step.cs-loss .cs-val{color:var(--red)}
 
+/* Сравнение сценариев монетизации трафика (lead-sale сегменты) */
+.cjm-scn-compare{margin-top:18px}
+.cjm-scn-compare-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;margin-top:14px}
+@media(max-width:900px){.cjm-scn-compare-grid{grid-template-columns:1fr}}
+.cjm-scn-card{position:relative;border:1px solid var(--line);border-radius:var(--radius-sm);background:var(--surface);box-shadow:var(--shadow-soft);padding:18px;display:flex;flex-direction:column;gap:12px}
+.cjm-scn-card.is-winner{border-color:var(--green);box-shadow:0 0 0 2px var(--green),var(--shadow-soft)}
+.cjm-scn-card.is-winner::after{content:'Лучший сценарий';position:absolute;top:-12px;right:14px;background:var(--green);color:#fff;font-size:11px;font-weight:800;letter-spacing:.04em;text-transform:uppercase;padding:3px 10px;border-radius:980px}
+.cjm-scn-head{display:flex;flex-direction:column;gap:4px;padding-bottom:10px;border-bottom:1px solid var(--line)}
+.cjm-scn-eyebrow{font-size:11px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:var(--muted)}
+.cjm-scn-title{font-size:17px;font-weight:700;letter-spacing:-.01em}
+.cjm-scn-sub{font-size:12.5px;color:var(--muted);line-height:1.5}
+.cjm-scn-rows{display:flex;flex-direction:column;gap:6px}
+.cjm-scn-row{display:grid;grid-template-columns:1fr auto;gap:10px;align-items:baseline;padding:6px 0;border-bottom:1px dashed color-mix(in srgb,var(--line) 80%,transparent)}
+.cjm-scn-row:last-child{border-bottom:none}
+.cjm-scn-row .scn-l{font-size:13px;color:var(--text)}
+.cjm-scn-row .scn-l .scn-sub{display:block;font-size:11.5px;color:var(--muted);margin-top:2px}
+.cjm-scn-row .scn-v{font-size:15px;font-weight:700;font-variant-numeric:tabular-nums;letter-spacing:-.01em;white-space:nowrap}
+.cjm-scn-row.is-key{padding:10px 0;border-top:1px solid var(--line);margin-top:4px}
+.cjm-scn-row.is-key .scn-l{font-weight:700;font-size:13.5px}
+.cjm-scn-row.is-key .scn-v{font-size:20px}
+.cjm-scn-row .scn-v.tone-green{color:var(--green)}
+.cjm-scn-row .scn-v.tone-red{color:var(--red)}
+.cjm-scn-row .scn-v.is-better{position:relative}
+.cjm-scn-row .scn-v.is-better::before{content:'▲';margin-right:6px;color:var(--green);font-size:11px;vertical-align:middle}
+.cjm-scn-verdict{margin-top:14px;padding:12px 14px;border-radius:var(--radius-sm);border:1px solid color-mix(in srgb,var(--green) 40%,var(--line));background:color-mix(in srgb,var(--green) 8%,var(--surface-2));font-size:13.5px;line-height:1.55}
+.cjm-scn-verdict b{font-weight:700}
+.cjm-scn-verdict.is-tie{border-color:color-mix(in srgb,var(--blue) 40%,var(--line));background:color-mix(in srgb,var(--blue) 8%,var(--surface-2))}
+
 /* ---------- Montserrat typography fine-tuning ---------- */
 body{font-weight:500}
 h1,h2,h3,h4,h5{font-weight:700;letter-spacing:-.02em}
@@ -1547,6 +1575,7 @@ button:active:not(:disabled){transform:translateY(0) scale(.97)}
     <section id="cjm-tab-calc" class="cjm-panel">
       <div class="cjm-section-head"><div><h2>Пример расчёта на 10 000 пользователей</h2></div></div>
       <div class="card" id="cjmCalcSegmentCard"></div>
+      <div id="cjmScenarioCompareHost"></div>
     </section>
 
     <!-- Cross-segment matrix panel -->

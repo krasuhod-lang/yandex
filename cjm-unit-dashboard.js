@@ -88,9 +88,9 @@
       why_here:'',
       pains:'Возвращается, чтобы добрать лимит (Top-up), управлять займом или получить удобную банковскую карту.',
       source:'SEO + ретаргет + CRM-касания + соц. сети',
-      router:'Телефон → Роутер узнаёт «Действующего». Предложение добрать денег в другой МФО, либо банковские карты (дебетовая / кредитная).',
+      router:'Телефон → Роутер узнаёт «Действующего». Три альтернативных сценария монетизации на одном уровне (показываем один из трёх): продукты ЦФ (Top-up / повторный заём / программа лояльности) ИЛИ добор в другой МФО ИЛИ банковские карты (дебетовая / кредитная). Конкретный сценарий выбирается под цель сегмента и текущий трафик.',
       showcase:'',
-      monetization:'Процентная прибыль ЦФ с Top-up + CPA с оформленных банковских карт. CPA: 1 000–1 500 ₽ (дебетовые), 3 000–5 000 ₽ (кредитные).',
+      monetization:'Три альтернативных сценария на одном уровне: (А) Продукты ЦФ — процентная прибыль с Top-up / повторного займа; (Б) Добор в другой МФО — CPA партнёрской МФО за дополнительный заём; (В) Банковские карты — CPA 1 000–1 500 ₽ (дебетовые) или 3 000–5 000 ₽ (кредитные). Сценарии не суммируются — на каждого клиента показываем один из трёх в зависимости от цели и сегментации.',
       defaultCr:{visitClick:7.5,clickApp:35,appIssue:30},
       cac:380,cpa:3000,ltv:4500,payback:3,share:0.15,
       mix:{seo:0.28,paid:0.20,crm:0.42,pr:0.10},
@@ -611,7 +611,7 @@
           if(raw===''){unsetManual(s.id,key);}
           else{setManual(s.id,key,Number(raw));}
           input.classList.toggle('is-edited',isEdited(s.id,key));
-          refreshFunnelOutputs();renderUnitPanel();renderCalcPanel();renderJourneyPanel();
+          refreshFunnelOutputs();renderUnitPanel();renderCalcPanel();renderJourneyPanel();renderScenarioComparePanel();
           if(activeInnerTab()==='unit')requestAnimationFrame(renderCharts);
         });
       });
@@ -623,7 +623,7 @@
           if(raw===''){unsetGlobal(key);}
           else{setGlobal(key,Number(raw));}
           input.classList.toggle('is-edited',isGlobalEdited(key));
-          refreshFunnelOutputs();renderUnitPanel();renderCalcPanel();renderJourneyPanel();
+          refreshFunnelOutputs();renderUnitPanel();renderCalcPanel();renderJourneyPanel();renderScenarioComparePanel();
           if(activeInnerTab()==='unit')requestAnimationFrame(renderCharts);
         });
       });
@@ -646,7 +646,7 @@
       resetBtn.__bound=true;
       resetBtn.addEventListener('click',function(){
         resetManual(currentSegment().id);
-        renderFunnelPanel();renderUnitPanel();renderCalcPanel();
+        renderFunnelPanel();renderUnitPanel();renderCalcPanel();renderScenarioComparePanel();
         if(activeInnerTab()==='unit')requestAnimationFrame(renderCharts);
       });
     }
@@ -731,12 +731,12 @@
       { key:'repeat', color:'var(--green)', name:'Действующий клиент',
         seg:{t:'Действующий клиент',s:'Зелёный · 1+ займ в ЦФ'},
         step:{t:'Роутер узнаёт «Действующего»',s:'Идентификация по базе ЦФ'},
-        fork:{ type:'split', t:'Кросс-сейл предложение', s:'Партнёрские офферы',
-          outs:[ {t:'Добор в другой МФО',s:'Партнёрская МФО · доп. лимит',label:'МФО',color:'var(--orange)'},
-                 {t:'Банковские карты (дебет / кредит)',s:'CPA 1 000–5 000 ₽',label:'Карты',color:'var(--blue)'} ] },
-        // Финальный блок ветки «Действующий»: возврат клиента в продукты ЦФ
-        // (Top-up, повторный заём, депозиты/НПФ, программа лояльности).
-        tail:{t:'Продукты ЦФ',s:'Top-up · повторный заём · программа лояльности',color:'var(--green)'} },
+        // Три альтернативных сценария монетизации (либо / либо / либо).
+        // На клиента показываем ОДИН из трёх — не суммируются, разные сценарии.
+        fork:{ type:'split', t:'Альтернативные сценарии монетизации', s:'Показываем один из трёх — либо / либо / либо',
+          outs:[ {t:'Продукты ЦФ',s:'Top-up · повторный заём · программа лояльности',label:'Сценарий А',color:'var(--green)'},
+                 {t:'Добор в другой МФО',s:'Партнёрская МФО · доп. лимит',label:'Сценарий Б',color:'var(--orange)'},
+                 {t:'Банковские карты (дебет / кредит)',s:'CPA 1 000–5 000 ₽',label:'Сценарий В',color:'var(--blue)'} ] } },
       { key:'rejected', color:'var(--red)', name:'Отказной клиент',
         seg:{t:'Отказной клиент',s:'Красный · отказ ЦФ'},
         step:{t:'Пробив чекером по номеру',s:'Фильтрация баз партнёров'},
@@ -880,11 +880,25 @@
           nodeRight=forkX+BW;
         }
         svg.push(edge(stepX+BW,cy,forkX,cy));
-        // Два выхода — верхний и нижний
+        // N выходов — вертикально симметрично относительно cy.
+        // 2 выхода → ±(BH/2+16); 3 выхода → top/mid/bot c шагом (BH+8).
         var outX=nodeRight+40;
-        var upCy=cy-(BH/2+16), loCy=cy+(BH/2+16);
+        var nOuts=fork.outs.length;
+        var outCys;
+        if(nOuts===3){
+          var d3=BH+8; // шаг между центрами выходов (≈80px)
+          outCys=[cy-d3,cy,cy+d3];
+        }else if(nOuts===2){
+          outCys=[cy-(BH/2+16),cy+(BH/2+16)];
+        }else{
+          // fallback: равномерно распределяем по высоте
+          var step=BH+8;
+          var start=cy-step*(nOuts-1)/2;
+          outCys=[];
+          for(var oi=0;oi<nOuts;oi++)outCys.push(start+oi*step);
+        }
         fork.outs.forEach(function(out,i){
-          var ocy=i===0?upCy:loCy;
+          var ocy=outCys[i];
           svg.push(box(outX,ocy-BH/2,BW,BH,{t:out.t,s:out.s,out:true,borderColor:out.color}));
           svg.push(edge(nodeRight,cy,outX,ocy,out.label));
         });
@@ -947,6 +961,124 @@
           return '<div class="cjm-calc-step'+(st.revenue?' cs-revenue':'')+(st.profit?(st.negative?' cs-loss':' cs-profit'):'')+'"><span class="cs-name">'+esc(st.n)+'</span><span class="cs-val">'+esc(st.v)+'</span><span class="cs-sub">'+esc(st.sub)+'</span></div>';
         }).join('')+'</div>';
     }
+  }
+
+  // --- Сравнение сценариев монетизации трафика (lead-sale сегменты) ---------
+  // Для сегментов с `leadSale` (сейчас — «Новый клиент») считаем два сценария:
+  //   Сценарий А: продаём весь трафик в ЦФ              (shareCf=100%, CPA=cpaCf)
+  //   Сценарий Б: продаём весь трафик по CPA в МФО      (shareCf=0%,   CPA=cpaThird)
+  // Показываем рядом одинаковую воронку и сравниваем выручку, затраты,
+  // прибыль и прибыль на 1 человека — чтобы понять, по какому сценарию
+  // лучше запускать сегмент. Подсвечиваем лучший вариант по прибыли.
+  function calcScenario(id, cpaOverride){
+    // Считает экономику сегмента, переопределяя CPA/LTV эффективным значением
+    // сценария (в lead-sale модели LTV ≈ выплата за выдачу). Воронка остаётся
+    // той же — отличается только монетизация выдачи.
+    var s=segmentById(id);if(!s)return null;
+    var f=funnelFor(id);
+    var m=manualFor(id);
+    var cpa=Number(cpaOverride)||0;
+    var revenue=f.issue*cpa;          // LTV ≈ CPA (lead-sale)
+    var cost=m.contactCost*f.contact; // те же затраты на контакты
+    var profit=revenue-cost;
+    var cac=f.issue>0?(m.contactCost*f.contact/f.issue):0;
+    var profitPerVisit=f.visit>0?profit/f.visit:0;
+    return {s:s,f:f,m:m,cpa:cpa,revenue:revenue,cost:cost,profit:profit,cac:cac,profitPerVisit:profitPerVisit};
+  }
+  function renderScenarioComparePanel(){
+    var host=$('cjmScenarioCompareHost');
+    if(!host)return;
+    if(isMatrixView()){host.innerHTML='';return;}
+    var s=currentSegment();
+    if(!s||!s.leadSale){host.innerHTML='';return;}
+    var m=manualFor(s.id);
+    var a=calcScenario(s.id,m.cpaCf);
+    var b=calcScenario(s.id,m.cpaThird);
+    if(!a||!b){host.innerHTML='';return;}
+    // Лучший сценарий — по прибыли. Если разница незначительна (< 0.5%) —
+    // считаем «паритетом» и не подсвечиваем «Лучший сценарий».
+    var diff=a.profit-b.profit;
+    var absMax=Math.max(Math.abs(a.profit),Math.abs(b.profit),1);
+    var isTie=Math.abs(diff)/absMax<0.005;
+    var winner=isTie?null:(diff>0?'a':'b');
+
+    function row(label,sub,vA,vB,keyClass,toneFn){
+      var clsA='scn-v', clsB='scn-v';
+      if(toneFn){clsA+=' '+toneFn(vA.raw);clsB+=' '+toneFn(vB.raw);}
+      // Стрелка «лучше» — только для ключевых строк (Прибыль / Прибыль на 1 чел.)
+      if(keyClass){
+        if(!isTie){
+          if(winner==='a') clsA+=' is-better'; else clsB+=' is-better';
+        }
+      }
+      return '<div class="cjm-scn-row'+(keyClass?' is-key':'')+'">'+
+        '<span class="scn-l">'+esc(label)+(sub?'<span class="scn-sub">'+esc(sub)+'</span>':'')+'</span>'+
+        '<span class="'+clsA+'">'+esc(vA.text)+'</span>'+
+      '</div>';
+    }
+    // Чтобы карточки А и Б были визуально симметричны, строим их одинаково.
+    function rowsHtml(scn,otherProfit){
+      var profitTone=scn.profit>=0?'tone-green':'tone-red';
+      var ppvTone=scn.profitPerVisit>=0?'tone-green':'tone-red';
+      var winnerHere=!isTie&&scn.profit>otherProfit;
+      var betterCls=winnerHere?' is-better':'';
+      return '<div class="cjm-scn-rows">'+
+        '<div class="cjm-scn-row"><span class="scn-l">CPA / выплата за выдачу</span><span class="scn-v">'+esc(rub(scn.cpa))+'</span></div>'+
+        '<div class="cjm-scn-row"><span class="scn-l">Визиты<span class="scn-sub">база симуляции</span></span><span class="scn-v">'+esc(fmt(scn.f.visit))+'</span></div>'+
+        '<div class="cjm-scn-row"><span class="scn-l">Контакты<span class="scn-sub">'+esc(pct(scn.f.crVC,1))+' Визит → Контакт</span></span><span class="scn-v">'+esc(fmt(scn.f.contact))+'</span></div>'+
+        '<div class="cjm-scn-row"><span class="scn-l">Клики по офферу<span class="scn-sub">'+esc(pct(scn.f.crVK,1))+' Визит → Клик</span></span><span class="scn-v">'+esc(fmt(scn.f.click))+'</span></div>'+
+        '<div class="cjm-scn-row"><span class="scn-l">Заявки<span class="scn-sub">'+esc(pct(scn.f.crKA,1))+' Клик → Заявка</span></span><span class="scn-v">'+esc(fmt(scn.f.app))+'</span></div>'+
+        '<div class="cjm-scn-row"><span class="scn-l">Выдачи<span class="scn-sub">'+esc(pct(scn.f.crAI,1))+' Заявка → Выдача</span></span><span class="scn-v">'+esc(fmt(scn.f.issue))+'</span></div>'+
+        '<div class="cjm-scn-row"><span class="scn-l">CAC (произв.)<span class="scn-sub">затраты на контакты ÷ выдачи</span></span><span class="scn-v">'+esc(rub(scn.cac))+'</span></div>'+
+        '<div class="cjm-scn-row"><span class="scn-l">Выручка<span class="scn-sub">CPA × выдачи</span></span><span class="scn-v tone-green">'+esc(rub(scn.revenue))+'</span></div>'+
+        '<div class="cjm-scn-row"><span class="scn-l">Затраты на контакты<span class="scn-sub">стоимость контакта × контакты</span></span><span class="scn-v">'+esc(rub(scn.cost))+'</span></div>'+
+        '<div class="cjm-scn-row is-key"><span class="scn-l">Прибыль<span class="scn-sub">Выручка − Затраты</span></span><span class="scn-v '+profitTone+betterCls+'">'+esc(rub(scn.profit))+'</span></div>'+
+        '<div class="cjm-scn-row is-key"><span class="scn-l">Прибыль на 1 человека<span class="scn-sub">Прибыль ÷ '+esc(fmt(scn.f.visit))+' визитов</span></span><span class="scn-v '+ppvTone+betterCls+'">'+esc(rub(scn.profitPerVisit))+'</span></div>'+
+      '</div>';
+    }
+
+    var aClass='cjm-scn-card'+(winner==='a'?' is-winner':'');
+    var bClass='cjm-scn-card'+(winner==='b'?' is-winner':'');
+    var verdictHtml;
+    if(isTie){
+      verdictHtml='<div class="cjm-scn-verdict is-tie"><b>Сценарии равнозначны по прибыли</b> — разница &lt; 0,5%. Можно выбирать по операционным критериям (стабильность партнёра, риски выплаты, удобство интеграции).</div>';
+    }else{
+      var winName=winner==='a'?'Сценарий А — продажа лида в ЦФ':'Сценарий Б — продажа по CPA в стороннюю МФО';
+      var winProfit=winner==='a'?a.profit:b.profit;
+      var losProfit=winner==='a'?b.profit:a.profit;
+      var delta=winProfit-losProfit;
+      var deltaPerVisit=(winner==='a'?a.profitPerVisit:b.profitPerVisit)-(winner==='a'?b.profitPerVisit:a.profitPerVisit);
+      verdictHtml='<div class="cjm-scn-verdict"><b>'+esc(winName)+'</b> — лучший выбор для сегмента «'+esc(s.name)+'»: '+
+        'прибыль выше на '+esc(rub(delta))+' (на '+esc(fmt(a.f.visit))+' визитов) · +'+esc(rub(deltaPerVisit))+' на 1 человека. '+
+        'Воронка одинакова в обоих сценариях — различие только в монетизации выдачи (CPA).</div>';
+    }
+
+    host.innerHTML='<div class="card cjm-scn-compare">'+
+      '<div class="card-title"><div>'+
+        '<span class="eyebrow" style="color:'+esc(s.color)+'">'+esc(s.label)+'</span>'+
+        '<h2>Сравнение сценариев монетизации трафика</h2>'+
+        '<p>Считаем экономику сегмента в двух крайних сценариях: продаём весь трафик в ЦФ vs продаём по CPA в стороннюю МФО. Воронка одинакова, отличается только выплата за выдачу — это даёт прямой ответ, по какому сценарию выгоднее запускать сегмент.</p>'+
+      '</div></div>'+
+      '<div class="cjm-scn-compare-grid">'+
+        '<article class="'+aClass+'">'+
+          '<header class="cjm-scn-head">'+
+            '<span class="cjm-scn-eyebrow">Сценарий А</span>'+
+            '<span class="cjm-scn-title">Продажа лида в Центрофинанс</span>'+
+            '<span class="cjm-scn-sub">Весь трафик уходит в ЦФ (доля 100%) · CPA '+esc(rub(m.cpaCf||0))+' за выдачу.</span>'+
+          '</header>'+
+          rowsHtml(a,b.profit)+
+        '</article>'+
+        '<article class="'+bClass+'">'+
+          '<header class="cjm-scn-head">'+
+            '<span class="cjm-scn-eyebrow">Сценарий Б</span>'+
+            '<span class="cjm-scn-title">Продажа по CPA в стороннюю МФО</span>'+
+            '<span class="cjm-scn-sub">Весь трафик уходит в партнёрскую МФО (доля 0% ЦФ) · CPA '+esc(rub(m.cpaThird||0))+' за выдачу.</span>'+
+          '</header>'+
+          rowsHtml(b,a.profit)+
+        '</article>'+
+      '</div>'+
+      verdictHtml+
+    '</div>';
   }
 
   // Сводная таблица «Сводка по всем сегментам» — теперь рендерится только в матрице.
@@ -1193,6 +1325,7 @@
       renderJourneyPanel();
       renderCalcPanel();
       renderUnitPanel();
+      renderScenarioComparePanel();
     }
     requestAnimationFrame(renderCharts);
   }
