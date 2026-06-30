@@ -6,6 +6,7 @@
   var MANUAL_KEY='cjm_manual_inputs_v3';
   var GLOBAL_KEY='cjm_global_inputs_v1';
   var SHARES_KEY='cjm_segment_shares_v1';
+  var DESC_KEY='cjm_segment_descriptions_v1';
   var VERSION_KEY='vyruchai_app_version_v1';
   var BASE_VISITS=10000;
   // Глобальные параметры, общие для всех сегментов:
@@ -270,9 +271,53 @@
   function ratioTone(v){return v>2?'green':v>=1?'yellow':'red';}
   function clamp(v,min,max){v=Number(v);if(!isFinite(v))v=min;return Math.max(min,Math.min(max,v));}
 
+  // --- Segment descriptions (editable text blocks) --------------------------
+  // Хранение пользовательских правок описаний сегментов CJM:
+  //   { [segmentId]: { description, userStoryText, userStoryPains,
+  //                    router, monetization, points_of_entry, how_arrives } }
+  // Пустая строка = «очистить поле» (отображаем пустой блок). Если поля нет в
+  // объекте — берём дефолтное значение из массива segments.
+  var DESC_FIELDS=['description','userStoryText','userStoryPains','router','monetization','points_of_entry','how_arrives'];
+  function descStore(){return read(DESC_KEY,{})||{};}
+  function descForRaw(id){return descStore()[id]||{};}
+  function setDescFields(id,fields){
+    var store=descStore();var cur=store[id]||{};
+    Object.keys(fields).forEach(function(k){cur[k]=fields[k];});
+    store[id]=cur;write(DESC_KEY,store);
+  }
+  function resetDesc(id){var store=descStore();delete store[id];write(DESC_KEY,store);}
+  // Возвращает «вью-копию» сегмента с применёнными правками описаний.
+  function segmentWithDescOverrides(seg){
+    if(!seg)return seg;
+    var raw=descForRaw(seg.id);
+    var view={};Object.keys(seg).forEach(function(k){view[k]=seg[k];});
+    if(raw.description!=null)view.description=String(raw.description);
+    if(raw.router!=null)view.router=String(raw.router);
+    if(raw.monetization!=null)view.monetization=String(raw.monetization);
+    if(raw.how_arrives!=null)view.how_arrives=String(raw.how_arrives);
+    if(raw.points_of_entry!=null){
+      var poe=String(raw.points_of_entry).split(',').map(function(x){return x.trim();}).filter(function(x){return x.length>0;});
+      view.points_of_entry=poe;
+    }
+    if(raw.userStoryText!=null||raw.userStoryPains!=null){
+      var us=seg.userStory||{text:'',pains:''};
+      view.userStory={
+        title:us.title||'',
+        text:raw.userStoryText!=null?String(raw.userStoryText):(us.text||''),
+        pains:raw.userStoryPains!=null?String(raw.userStoryPains):(us.pains||'')
+      };
+    }
+    return view;
+  }
+  function isDescEdited(id){
+    var raw=descForRaw(id);
+    for(var i=0;i<DESC_FIELDS.length;i++){if(raw[DESC_FIELDS[i]]!=null)return true;}
+    return false;
+  }
+
+  function setSelected(id){write(STORAGE_KEY,{segment:id});}
   function segmentById(id){return segments.find(function(s){return s.id===id;})||null;}
   function selectedId(){return read(STORAGE_KEY,{segment:segments[0].id}).segment||segments[0].id;}
-  function setSelected(id){write(STORAGE_KEY,{segment:id});}
   function isMatrixView(){return selectedId()==='matrix';}
   function currentSegment(){return segmentById(selectedId())||segments[0];}
 
@@ -752,11 +797,16 @@
   }
 
   // --- CJM journey panel (per segment) -- блочная карточка «Описание сегмента»
+  // Поддерживает inline-редактирование текстовых блоков: «Описание сегмента»,
+  // «User Story · мотив клиента» (текст + боли), «Маршрутизация», «Монетизация»,
+  // «Точки входа», «Как попадает». Правки сохраняются в localStorage по сегменту
+  // (см. DESC_KEY) и применяются при следующей загрузке страницы.
   function renderJourneyPanel(){
     if(isMatrixView()){renderRoutingDiagram();return;}
     var host=$('cjmJourneyHost');if(!host)return;
-    var s=currentSegment();
-    var poe=(s.points_of_entry&&s.points_of_entry.length)?s.points_of_entry.join(', '):'не утверждены';
+    var base=currentSegment();
+    var s=segmentWithDescOverrides(base);
+    var poe=(s.points_of_entry&&s.points_of_entry.length)?s.points_of_entry.join(', '):'';
 
     // Блок «Показатели» убран — те же значения доступны в «Юнит-экономике».
     // Пропускаем пустые секции (например, у «Действующего» нет showcase).
@@ -771,31 +821,96 @@
     // во вкладке «Юнит-экономика» и в блоке «Пример расчёта на 10 000 пользователей».
     // Блок «Витрина» убран из описания всех сегментов по согласованию.
     var hideProfitExample={new:true,repeat:true,rejected:true,sleeping:true,noncore:true}[s.id];
+
+    // Редактируемый блок: contenteditable с data-edit-field для последующего сбора значений.
+    function editable(field,value,placeholder,extraCls){
+      var cls='cjm-editable'+(extraCls?' '+extraCls:'');
+      return '<span class="'+cls+'" contenteditable="true" spellcheck="true" '+
+        'data-edit-field="'+esc(field)+'" '+
+        'data-placeholder="'+esc(placeholder||'')+'" '+
+        'role="textbox" aria-multiline="true" aria-label="'+esc(placeholder||field)+'">'+
+        esc(value||'')+'</span>';
+    }
+    var userStoryHtml=
+      '<span class="cjm-user-story-text">'+editable('userStoryText',(s.userStory&&s.userStory.text)||'','Описание мотивации клиента')+'</span>'+
+      '<span class="cjm-user-story-pains"><b>Боли и страхи:</b> '+editable('userStoryPains',(s.userStory&&s.userStory.pains)||'','Боли и страхи клиента')+'</span>';
+
     var blocks=[
-      {h:'Описание сегмента',html:s.description?esc(s.description):'',wide:true},
-      {h:'User Story · мотив клиента',html:s.userStory?(
-          '<span class="cjm-user-story-text">'+esc(s.userStory.text)+'</span>'+
-          (s.userStory.pains?'<span class="cjm-user-story-pains"><b>Боли и страхи:</b> '+esc(s.userStory.pains)+'</span>':'')
-        ):'',wide:true,storyClass:true},
-      {h:'Маршрутизация',html:s.router?esc(s.router):''},
-      {h:'Монетизация',html:s.monetization?esc(s.monetization):''},
-      {h:'Точки входа',html:esc(poe)},
-      {h:'Как попадает',html:esc(s.how_arrives||'—')},
+      {h:'Описание сегмента',html:editable('description',s.description||'','Опишите сегмент'),wide:true,always:true},
+      {h:'User Story · мотив клиента',html:userStoryHtml,wide:true,storyClass:true,always:true},
+      {h:'Маршрутизация',html:editable('router',s.router||'','Опишите маршрутизацию'),always:true},
+      {h:'Монетизация',html:editable('monetization',s.monetization||'','Опишите схему монетизации'),always:true},
+      {h:'Точки входа',html:editable('points_of_entry',poe,'Перечислите через запятую'),always:true},
+      {h:'Как попадает',html:editable('how_arrives',s.how_arrives||'','Опишите, как клиент попадает в сегмент'),always:true},
       {h:'Пример расчёта прибыли',html:hideProfitExample?'':profitExampleHtml,wide:true}
     ];
-    var bodyHtml=blocks.filter(function(b){return b.html;}).map(function(b){
+    var bodyHtml=blocks.filter(function(b){return b.always||b.html;}).map(function(b){
       var extraCls=b.storyClass?' cjm-user-story':'';
       return '<section class="cjm-seg-block'+(b.wide?' is-wide':'')+extraCls+'"><h3>'+esc(b.h)+'</h3><p>'+b.html+'</p></section>';
     }).join('');
 
+    var editedBadge=isDescEdited(s.id)?'<span class="cjm-desc-badge" title="Описание изменено вручную">изменено</span>':'';
+    var controlsHtml='<div class="cjm-desc-controls">'+
+      '<button type="button" class="ghost-btn cjm-desc-save" data-desc-save>Сохранить описания</button>'+
+      '<button type="button" class="cjm-reset-btn" data-desc-reset'+(isDescEdited(s.id)?'':' disabled')+'>Сбросить к исходному</button>'+
+      '<span class="cjm-desc-status" data-desc-status aria-live="polite"></span>'+
+      '</div>';
+
     host.innerHTML='<article class="card cjm-seg-desc" style="border-top:4px solid '+esc(s.color)+'">'+
       '<div class="card-title"><div>'+
-        '<h2>'+esc(s.label)+'</h2>'+
+        '<h2>'+esc(s.label)+'</h2>'+editedBadge+
       '</div></div>'+
       '<div class="cjm-seg-desc-body cjm-seg-desc-blocks">'+bodyHtml+'</div>'+
+      controlsHtml+
     '</article>';
+
+    // --- Bindings: save / reset ---------------------------------------------
+    var saveBtn=host.querySelector('[data-desc-save]');
+    var resetBtn=host.querySelector('[data-desc-reset]');
+    var statusEl=host.querySelector('[data-desc-status]');
+    function flash(text,tone){
+      if(!statusEl)return;
+      statusEl.textContent=text;
+      statusEl.classList.remove('is-ok','is-warn');
+      if(tone)statusEl.classList.add('is-'+tone);
+      clearTimeout(flash._t);
+      flash._t=setTimeout(function(){if(statusEl)statusEl.textContent='';},2500);
+    }
+    if(saveBtn){
+      saveBtn.addEventListener('click',function(){
+        var fields={};
+        host.querySelectorAll('[data-edit-field]').forEach(function(el){
+          var key=el.getAttribute('data-edit-field');
+          // Берём именно текст (исключаем случайный HTML, который мог попасть при paste).
+          var val=(el.innerText||el.textContent||'').replace(/\u00a0/g,' ').trim();
+          fields[key]=val;
+        });
+        setDescFields(s.id,fields);
+        flash('Сохранено','ok');
+        // Полный ререндер карточки + связанной диаграммы, чтобы значения подхватились.
+        renderJourneyPanel();
+      });
+    }
+    if(resetBtn&&!resetBtn.disabled){
+      resetBtn.addEventListener('click',function(){
+        if(typeof window!=='undefined'&&window.confirm){
+          if(!window.confirm('Сбросить описания сегмента к исходным значениям?'))return;
+        }
+        resetDesc(s.id);
+        flash('Сброшено к исходному','warn');
+        renderJourneyPanel();
+      });
+    }
+    // Ctrl/Cmd+Enter в любом редактируемом поле — быстрый сейв.
+    host.querySelectorAll('[data-edit-field]').forEach(function(el){
+      el.addEventListener('keydown',function(ev){
+        if((ev.ctrlKey||ev.metaKey)&&ev.key==='Enter'){ev.preventDefault();if(saveBtn)saveBtn.click();}
+      });
+    });
+
     renderRoutingDiagram();
   }
+
 
   // --- Smart Safe Router block-flow diagram (Miro-style, inline SVG) --------
   // В CJM выбранного сегмента отображается ТОЛЬКО ветка этого сегмента
