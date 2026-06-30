@@ -54,11 +54,26 @@
       monetization:'Два варианта продажи лида: (А) в Центрофинанс — Выручай.ру получает 3 000 ₽ за выдачу; (Б) в стороннюю МФО — 2 500–3 000 ₽ за выдачу. Ставки задаются вручную, чтобы гибко настраивать математику под партнёров.',
       defaultCr:{visitClick:4.5,clickApp:80,appIssue:20},
       cac:780,cpa:2875,ltv:1800,payback:5,share:0.20,
-      // Два варианта продажи лида (см. CJM diagram): A — лид в Центрофинанс, Б — лид
-      // в стороннюю МФО. Доля shareCf задаёт миксование выплат: эффективный CPA =
-      // shareCf*cpaCf + (1-shareCf)*cpaThird. Поля редактируются в блоке
+      // Альтернативные сценарии монетизации лида (см. CJM diagram). На каждого клиента
+      // показываем ОДИН из вариантов — сценарии не суммируются. Поле `share` —
+      // доля распределения трафика по сценарию (последний считается как остаток до 100%).
+      // Эффективный CPA = Σ cpa_i × share_i / 100 и используется как seg.cpa / LTV в воронке
+      // (в lead-sale модели LTV ≈ выплата за выдачу). Поля редактируются в блоке
       // «Параметры сегмента» (manual inputs) и сохраняются вместе с остальными.
-      leadSale:{cpaCf:3000,cpaThird:2750,shareCf:0.5,cpaThirdMin:2500,cpaThirdMax:3000},
+      // storageKey: cpa* / share* — ключи в localStorage (для совместимости со старыми сохранениями).
+      leadSale:{
+        inputsTitle:'Продажа лида · два варианта монетизации',
+        compareDescription:'Считаем экономику сегмента в двух крайних сценариях: продаём весь трафик в ЦФ vs продаём по CPA в стороннюю МФО. Воронка одинакова, отличается только выплата за выдачу — это даёт прямой ответ, по какому сценарию выгоднее запускать сегмент.',
+        verdictTie:'Сценарии равнозначны по прибыли — разница &lt; 0,5%. Можно выбирать по операционным критериям (стабильность партнёра, риски выплаты, удобство интеграции).',
+        options:[
+          {key:'cf',label:'Продажа лида в Центрофинанс',shortLabel:'ЦФ',cpaStorageKey:'cpaCf',shareStorageKey:'shareCf',defaultCpa:3000,defaultShare:50,cpaMin:0,cpaMax:1000000,
+            cardEyebrow:'Сценарий А',cardTitle:'Продажа лида в Центрофинанс',cardSub:'Весь трафик уходит в ЦФ (доля 100%) · CPA {cpa} за выдачу.',
+            verdictName:'Сценарий А — продажа лида в ЦФ'},
+          {key:'third',label:'Продажа лида в стороннюю МФО',shortLabel:'МФО',cpaStorageKey:'cpaThird',shareStorageKey:null,defaultCpa:2750,defaultShare:50,cpaMin:0,cpaMax:1000000,cpaHintMin:2500,cpaHintMax:3000,
+            cardEyebrow:'Сценарий Б',cardTitle:'Продажа по CPA в стороннюю МФО',cardSub:'Весь трафик уходит в партнёрскую МФО (доля 0% ЦФ) · CPA {cpa} за выдачу.',
+            verdictName:'Сценарий Б — продажа по CPA в стороннюю МФО'}
+        ]
+      },
       mix:{seo:0.42,paid:0.34,crm:0.04,pr:0.20},
       cpa_text:'3 000 ₽ за лид в ЦФ · 2 500–3 000 ₽ за лид в стороннюю МФО (микс настраивается)',
       ltv_text:'Высокий — у 20% зашедших 3–5 займов ЦФ за год; остальные 80% уходят на витрины партнёров.',
@@ -93,6 +108,27 @@
       monetization:'Три альтернативных сценария на одном уровне: (А) Продукты ЦФ — процентная прибыль с Top-up / повторного займа; (Б) Добор в другой МФО — CPA партнёрской МФО за дополнительный заём; (В) Банковские карты — CPA 1 000–1 500 ₽ (дебетовые) или 3 000–5 000 ₽ (кредитные). Сценарии не суммируются — на каждого клиента показываем один из трёх в зависимости от цели и сегментации.',
       defaultCr:{visitClick:7.5,clickApp:35,appIssue:30},
       cac:380,cpa:3000,ltv:4500,payback:3,share:0.15,
+      // Три альтернативных сценария монетизации (либо/либо/либо) — см. CJM «Действующий».
+      // На каждого клиента показываем ОДИН из трёх; сценарии не суммируются. Доли
+      // распределения задают, какую часть трафика обслуживает каждый сценарий
+      // (последний считается как остаток до 100%). Эффективный CPA = Σ cpa_i × share_i / 100
+      // и используется как seg.cpa / LTV в воронке (в lead-sale модели LTV ≈ выплата за выдачу).
+      leadSale:{
+        inputsTitle:'Продажа лида · три альтернативных сценария монетизации',
+        compareDescription:'Считаем экономику сегмента в трёх крайних сценариях: весь трафик уходит либо в продукты ЦФ (Top-up / повторный заём), либо в добор стороннего МФО, либо на витрину банковских карт. Воронка одинакова, отличается только выплата за выдачу — это даёт прямой ответ, по какому сценарию выгоднее запускать сегмент.',
+        verdictTie:'Сценарии равнозначны по прибыли — разница &lt; 0,5%. Выбор делаем по операционным критериям (доступность Top-up, договорённости с МФО-партнёром, выплаты банков-эмитентов).',
+        options:[
+          {key:'topup',label:'CPA · Продукты ЦФ (Top-up / повторный заём)',shortLabel:'ЦФ Top-up',cpaStorageKey:'cpaRepeatTopup',shareStorageKey:'shareRepeatTopup',defaultCpa:3000,defaultShare:40,cpaMin:0,cpaMax:1000000,
+            cardEyebrow:'Сценарий А',cardTitle:'Продукты ЦФ — Top-up / повторный заём',cardSub:'Весь трафик уходит на продукты ЦФ (доля 100%) · процентная прибыль с Top-up, эквивалент CPA {cpa} за выдачу.',
+            verdictName:'Сценарий А — продукты ЦФ (Top-up / повторный заём)'},
+          {key:'mfo',label:'CPA · Добор в стороннюю МФО',shortLabel:'МФО',cpaStorageKey:'cpaRepeatMfo',shareStorageKey:'shareRepeatMfo',defaultCpa:2500,defaultShare:30,cpaMin:0,cpaMax:1000000,
+            cardEyebrow:'Сценарий Б',cardTitle:'Добор в стороннюю МФО',cardSub:'Весь трафик уходит в партнёрскую МФО за дополнительный заём (доля 100%) · CPA {cpa} за выдачу.',
+            verdictName:'Сценарий Б — добор в стороннюю МФО'},
+          {key:'cards',label:'CPA · Банковские карты (дебет / кредит)',shortLabel:'Карты',cpaStorageKey:'cpaRepeatCards',shareStorageKey:null,defaultCpa:3000,defaultShare:30,cpaMin:0,cpaMax:1000000,cpaHintMin:1000,cpaHintMax:5000,
+            cardEyebrow:'Сценарий В',cardTitle:'Банковские карты (дебет / кредит)',cardSub:'Весь трафик уходит на витрину банковских карт (доля 100%) · CPA {cpa} за оформление: 1 000–1 500 ₽ дебетовые, 3 000–5 000 ₽ кредитные.',
+            verdictName:'Сценарий В — банковские карты'}
+        ]
+      },
       mix:{seo:0.28,paid:0.20,crm:0.42,pr:0.10},
       cpa_text:'1 000 – 5 000 ₽ (зависит от типа: дебет / кредитка)',
       ltv_text:'До 7 займов ЦФ за год + кросс-сейл банковских карт у ~20% (зависит от типа карты).',
@@ -271,22 +307,57 @@
       cpa:saved.cpa!=null?Number(saved.cpa):seg.cpa,
       ltv:saved.ltv!=null?Number(saved.ltv):seg.ltv
     };
-    // Доп. поля для «Нового клиента»: два варианта продажи лида
-    // (CPA в ЦФ и CPA в стороннюю МФО) + доля распределения. Эффективный CPA
-    // считается как взвешенное среднее и используется как seg.cpa и как LTV
-    // в воронке (т.к. в lead-sale модели LTV ≈ выплата за выдачу).
-    if(seg.leadSale){
-      var ls=seg.leadSale;
-      out.cpaCf=saved.cpaCf!=null?Number(saved.cpaCf):ls.cpaCf;
-      out.cpaThird=saved.cpaThird!=null?Number(saved.cpaThird):ls.cpaThird;
-      // ВАЖНО: сохранённое значение shareCf хранится в процентах (0..100) —
-      // именно так его вводит пользователь через <input min=0 max=100>.
-      // Дефолт ls.shareCf хранится как доля (0..1), поэтому переводим в %.
-      var shareCf=saved.shareCf!=null?Number(saved.shareCf):ls.shareCf*100;
-      shareCf=clamp(shareCf,0,100);
-      out.shareCf=shareCf;
-      var effective=(out.cpaCf*shareCf+out.cpaThird*(100-shareCf))/100;
+    // Доп. поля для сегментов с альтернативными сценариями монетизации (lead-sale).
+    // Каждый сценарий имеет свой CPA и долю распределения трафика. Последний сценарий
+    // получает остаток до 100% (так интуитивно работает мини-микс). Эффективный CPA —
+    // взвешенное среднее по долям — используется как seg.cpa и как LTV в воронке
+    // (т.к. в lead-sale модели LTV ≈ выплата за выдачу).
+    if(seg.leadSale&&Array.isArray(seg.leadSale.options)){
+      var opts=seg.leadSale.options;
+      var leadOpts=[];
+      var sumStoredShares=0;
+      // 1) читаем сохранённые/дефолтные значения CPA и долей (кроме последней).
+      for(var oi=0;oi<opts.length;oi++){
+        var opt=opts[oi];
+        var cpaKey=opt.cpaStorageKey;
+        var cpaVal=saved[cpaKey]!=null?Number(saved[cpaKey]):opt.defaultCpa;
+        cpaVal=clamp(cpaVal,opt.cpaMin!=null?opt.cpaMin:0,opt.cpaMax!=null?opt.cpaMax:1000000);
+        out[cpaKey]=cpaVal;
+        var shareVal;
+        if(opt.shareStorageKey){
+          shareVal=saved[opt.shareStorageKey]!=null?Number(saved[opt.shareStorageKey]):opt.defaultShare;
+          shareVal=clamp(shareVal,0,100);
+          out[opt.shareStorageKey]=shareVal;
+          sumStoredShares+=shareVal;
+        }else{
+          shareVal=null; // последний — остаток
+        }
+        leadOpts.push({opt:opt,cpa:cpaVal,share:shareVal});
+      }
+      // 2) Подгоняем доли: суммарно сохранённые не должны превышать 100%,
+      //    последний сценарий получает остаток (>= 0). Если переполнение —
+      //    нормализуем все «сохранённые» доли пропорционально, остаток = 0.
+      if(sumStoredShares>100){
+        var scale=100/sumStoredShares;
+        for(var li=0;li<leadOpts.length;li++){
+          if(leadOpts[li].share!=null){
+            leadOpts[li].share=Math.round(leadOpts[li].share*scale*10)/10;
+            out[leadOpts[li].opt.shareStorageKey]=leadOpts[li].share;
+          }
+        }
+        sumStoredShares=100;
+      }
+      var remainder=Math.max(0,100-sumStoredShares);
+      for(var ri=0;ri<leadOpts.length;ri++){
+        if(leadOpts[ri].share==null) leadOpts[ri].share=remainder;
+      }
+      // 3) Эффективный CPA — взвешенное среднее.
+      var effective=0;
+      for(var ei=0;ei<leadOpts.length;ei++){
+        effective+=leadOpts[ei].cpa*leadOpts[ei].share/100;
+      }
       out.cpaEffective=effective;
+      out._leadOpts=leadOpts; // используется UI/расчётами; не сохраняется в storage
       // Перекрываем cpa эффективным значением, если пользователь не задал явно cpa.
       if(saved.cpa==null) out.cpa=effective;
       // Перекрываем LTV эффективным значением, если пользователь не задал явно ltv.
@@ -493,10 +564,34 @@
     var lsFormulaEl=document.querySelector('#cjmManualInputs .cjm-manual-leadsale .cjm-derived-formula');
     if(lsValueEl&&m.cpaEffective!=null) lsValueEl.textContent=rub(m.cpaEffective);
     if(lsFormulaEl&&m.cpaEffective!=null){
-      lsFormulaEl.textContent='= CPA ЦФ × доля ЦФ + CPA сторонней МФО × (1 − доля ЦФ) = '+
-        rub(m.cpaCf||0)+' × '+pct(m.shareCf||0,0)+' + '+
-        rub(m.cpaThird||0)+' × '+pct(100-(m.shareCf||0),0);
+      lsFormulaEl.textContent=effectiveCpaFormula(s,m);
     }
+  }
+
+  // Формула эффективного CPA для сегмента с альтернативными сценариями монетизации.
+  // Пример (2 опции): «= CPA(ЦФ) × доля(ЦФ) + CPA(МФО) × доля(МФО) = 3 000 ₽ × 50% + 2 750 ₽ × 50%».
+  // Используется в renderFunnelPanel при первичной отрисовке и в refreshFunnelOutputs
+  // при онлайн-обновлении (чтобы не пересобирать DOM инпутов и не терять фокус).
+  function effectiveCpaFormula(seg,m){
+    if(!seg||!seg.leadSale||!Array.isArray(seg.leadSale.options))return '';
+    var opts=seg.leadSale.options;
+    var sumStored=0;
+    var leftParts=[];
+    var rightParts=[];
+    for(var i=0;i<opts.length;i++){
+      var opt=opts[i];
+      var share;
+      if(opt.shareStorageKey){
+        share=Number(m[opt.shareStorageKey])||0;
+        sumStored+=share;
+      }else{
+        share=Math.max(0,100-sumStored);
+      }
+      var cpa=Number(m[opt.cpaStorageKey])||0;
+      leftParts.push('CPA('+opt.shortLabel+') × доля('+opt.shortLabel+')');
+      rightParts.push(rub(cpa)+' × '+pct(share,0));
+    }
+    return '= '+leftParts.join(' + ')+' = '+rightParts.join(' + ');
   }
 
   function renderFunnelPanel(){
@@ -531,14 +626,19 @@
       {key:'cpa',label:'CPA / выплата партнёра',suffix:'₽',step:'1',min:0,max:1000000},
       {key:'ltv',label:'LTV (1 год)',suffix:'₽',step:'1',min:0,max:1000000}
     ];
-    // «Новый клиент»: два варианта продажи лида (см. CJM-схему) — CPA-выплата
-    // от Центрофинанс и CPA-выплата от сторонней МФО + доля распределения.
-    // Поля редактируются вручную, чтобы гибко настраивать математику.
-    var leadSaleFields=s.leadSale?[
-      {key:'cpaCf',label:'CPA · продажа лида в ЦФ',suffix:'₽',step:'50',min:0,max:1000000},
-      {key:'cpaThird',label:'CPA · продажа лида в стороннюю МФО',suffix:'₽',step:'50',min:0,max:1000000},
-      {key:'shareCf',label:'Доля продаж в ЦФ (микс)',suffix:'%',step:'1',min:0,max:100}
-    ]:[];
+    // «Новый клиент» (2 опции) / «Действующий» (3 опции): альтернативные сценарии
+    // монетизации лида (см. CJM-схему) — список CPA + долей распределения,
+    // эффективный CPA = взвешенное среднее. Поля редактируются вручную, чтобы гибко
+    // настраивать математику. Последний сценарий получает остаток до 100% автоматически.
+    var leadSaleFields=[];
+    if(s.leadSale&&Array.isArray(s.leadSale.options)){
+      s.leadSale.options.forEach(function(opt){
+        leadSaleFields.push({key:opt.cpaStorageKey,label:opt.label,suffix:'₽',step:'50',min:opt.cpaMin!=null?opt.cpaMin:0,max:opt.cpaMax!=null?opt.cpaMax:1000000});
+        if(opt.shareStorageKey){
+          leadSaleFields.push({key:opt.shareStorageKey,label:'Доля сценария «'+opt.shortLabel+'» (микс)',suffix:'%',step:'1',min:0,max:100});
+        }
+      });
+    }
 
     function fieldInputHtml(f,value,edited,inputAttr){
       return '<label>'+
@@ -579,12 +679,14 @@
         return fieldInputHtml(f,m[f.key],edited,'data-key="'+esc(f.key)+'"');
       }).join('');
       segHtml+='</div></div>';
-      // 4) блок lead-sale — только для сегмента с двумя вариантами продажи лида
+      // 4) блок lead-sale — для сегментов с альтернативными сценариями монетизации лида
       var leadSaleHtml='';
       if(leadSaleFields.length){
         var effective=m.cpaEffective!=null?m.cpaEffective:0;
+        var optsCount=(s.leadSale.options||[]).length;
+        var sectionTitle=s.leadSale.inputsTitle||(optsCount===2?'Продажа лида · два варианта монетизации':'Продажа лида · '+optsCount+' альтернативных сценария монетизации');
         leadSaleHtml='<div class="cjm-manual-section cjm-manual-leadsale">'+
-          '<div class="cjm-manual-section-title">Продажа лида · два варианта монетизации</div>'+
+          '<div class="cjm-manual-section-title">'+esc(sectionTitle)+'</div>'+
           '<div class="cjm-manual-grid-inner">'+
             leadSaleFields.map(function(f){
               var edited=isEdited(s.id,f.key);
@@ -594,10 +696,7 @@
           '<div class="cjm-derived-row">'+
             '<span class="cjm-derived-label">Эффективный CPA (микс)</span>'+
             '<span class="cjm-derived-value">'+esc(rub(effective))+'</span>'+
-            '<span class="cjm-derived-formula">= CPA ЦФ × доля ЦФ + CPA сторонней МФО × (1 − доля ЦФ) = '+
-              esc(rub(m.cpaCf||0))+' × '+esc(pct(m.shareCf||0,0))+' + '+
-              esc(rub(m.cpaThird||0))+' × '+esc(pct(100-(m.shareCf||0),0))+
-            '</span>'+
+            '<span class="cjm-derived-formula">'+esc(effectiveCpaFormula(s,m))+'</span>'+
           '</div>'+
         '</div>';
       }
@@ -964,12 +1063,12 @@
   }
 
   // --- Сравнение сценариев монетизации трафика (lead-sale сегменты) ---------
-  // Для сегментов с `leadSale` (сейчас — «Новый клиент») считаем два сценария:
-  //   Сценарий А: продаём весь трафик в ЦФ              (shareCf=100%, CPA=cpaCf)
-  //   Сценарий Б: продаём весь трафик по CPA в МФО      (shareCf=0%,   CPA=cpaThird)
-  // Показываем рядом одинаковую воронку и сравниваем выручку, затраты,
-  // прибыль и прибыль на 1 человека — чтобы понять, по какому сценарию
-  // лучше запускать сегмент. Подсвечиваем лучший вариант по прибыли.
+  // Для сегментов с `leadSale.options` считаем по одному сценарию на каждую опцию:
+  // в каждом сценарии 100% трафика идёт через конкретный канал, остальные = 0%.
+  // Показываем карточки рядом и сравниваем выручку, затраты, прибыль и прибыль
+  // на 1 человека — чтобы понять, по какому сценарию лучше запускать сегмент.
+  // Подсвечиваем лучший вариант по прибыли. «Новый» — 2 сценария (А/Б),
+  // «Действующий» — 3 (А/Б/В): Top-up ЦФ / Добор МФО / Банковские карты.
   function calcScenario(id, cpaOverride){
     // Считает экономику сегмента, переопределяя CPA/LTV эффективным значением
     // сценария (в lead-sale модели LTV ≈ выплата за выдачу). Воронка остаётся
@@ -990,38 +1089,31 @@
     if(!host)return;
     if(isMatrixView()){host.innerHTML='';return;}
     var s=currentSegment();
-    if(!s||!s.leadSale){host.innerHTML='';return;}
+    if(!s||!s.leadSale||!Array.isArray(s.leadSale.options)||s.leadSale.options.length<2){host.innerHTML='';return;}
     var m=manualFor(s.id);
-    var a=calcScenario(s.id,m.cpaCf);
-    var b=calcScenario(s.id,m.cpaThird);
-    if(!a||!b){host.innerHTML='';return;}
-    // Лучший сценарий — по прибыли. Если разница незначительна (< 0.5%) —
+    var opts=s.leadSale.options;
+    // Считаем по сценарию на каждую опцию (100% трафика → этот канал).
+    var scenarios=opts.map(function(opt){
+      var sc=calcScenario(s.id,m[opt.cpaStorageKey]);
+      if(sc) sc.opt=opt;
+      return sc;
+    }).filter(function(x){return !!x;});
+    if(scenarios.length<2){host.innerHTML='';return;}
+    // Лучший сценарий — по прибыли. Если разница незначительна (< 0.5% от max|profit|) —
     // считаем «паритетом» и не подсвечиваем «Лучший сценарий».
-    var diff=a.profit-b.profit;
-    var absMax=Math.max(Math.abs(a.profit),Math.abs(b.profit),1);
-    var isTie=Math.abs(diff)/absMax<0.005;
-    var winner=isTie?null:(diff>0?'a':'b');
+    var maxProfit=-Infinity, secondProfit=-Infinity, winnerIdx=-1;
+    scenarios.forEach(function(sc,i){
+      if(sc.profit>maxProfit){secondProfit=maxProfit;maxProfit=sc.profit;winnerIdx=i;}
+      else if(sc.profit>secondProfit){secondProfit=sc.profit;}
+    });
+    var absMax=Math.max(Math.abs(maxProfit),Math.abs(secondProfit),1);
+    var isTie=Math.abs(maxProfit-secondProfit)/absMax<0.005;
 
-    function row(label,sub,vA,vB,keyClass,toneFn){
-      var clsA='scn-v', clsB='scn-v';
-      if(toneFn){clsA+=' '+toneFn(vA.raw);clsB+=' '+toneFn(vB.raw);}
-      // Стрелка «лучше» — только для ключевых строк (Прибыль / Прибыль на 1 чел.)
-      if(keyClass){
-        if(!isTie){
-          if(winner==='a') clsA+=' is-better'; else clsB+=' is-better';
-        }
-      }
-      return '<div class="cjm-scn-row'+(keyClass?' is-key':'')+'">'+
-        '<span class="scn-l">'+esc(label)+(sub?'<span class="scn-sub">'+esc(sub)+'</span>':'')+'</span>'+
-        '<span class="'+clsA+'">'+esc(vA.text)+'</span>'+
-      '</div>';
-    }
-    // Чтобы карточки А и Б были визуально симметричны, строим их одинаково.
-    function rowsHtml(scn,otherProfit){
+    // Чтобы карточки сценариев были визуально симметричны, строим их одинаково.
+    function rowsHtml(scn,isWinner){
       var profitTone=scn.profit>=0?'tone-green':'tone-red';
       var ppvTone=scn.profitPerVisit>=0?'tone-green':'tone-red';
-      var winnerHere=!isTie&&scn.profit>otherProfit;
-      var betterCls=winnerHere?' is-better':'';
+      var betterCls=(!isTie&&isWinner)?' is-better':'';
       return '<div class="cjm-scn-rows">'+
         '<div class="cjm-scn-row"><span class="scn-l">CPA / выплата за выдачу</span><span class="scn-v">'+esc(rub(scn.cpa))+'</span></div>'+
         '<div class="cjm-scn-row"><span class="scn-l">Визиты<span class="scn-sub">база симуляции</span></span><span class="scn-v">'+esc(fmt(scn.f.visit))+'</span></div>'+
@@ -1037,45 +1129,53 @@
       '</div>';
     }
 
-    var aClass='cjm-scn-card'+(winner==='a'?' is-winner':'');
-    var bClass='cjm-scn-card'+(winner==='b'?' is-winner':'');
+    var cardsHtml=scenarios.map(function(scn,i){
+      var isWinner=!isTie&&i===winnerIdx;
+      var cardClass='cjm-scn-card'+(isWinner?' is-winner':'');
+      var opt=scn.opt;
+      var subText=String(opt.cardSub||'').replace(/\{cpa\}/g,rub(scn.cpa));
+      return '<article class="'+cardClass+'">'+
+        '<header class="cjm-scn-head">'+
+          '<span class="cjm-scn-eyebrow">'+esc(opt.cardEyebrow||('Сценарий '+(i+1)))+'</span>'+
+          '<span class="cjm-scn-title">'+esc(opt.cardTitle||opt.label)+'</span>'+
+          '<span class="cjm-scn-sub">'+esc(subText)+'</span>'+
+        '</header>'+
+        rowsHtml(scn,isWinner)+
+      '</article>';
+    }).join('');
+
     var verdictHtml;
     if(isTie){
-      verdictHtml='<div class="cjm-scn-verdict is-tie"><b>Сценарии равнозначны по прибыли</b> — разница &lt; 0,5%. Можно выбирать по операционным критериям (стабильность партнёра, риски выплаты, удобство интеграции).</div>';
+      var tieText=s.leadSale.verdictTie||'Сценарии равнозначны по прибыли — разница &lt; 0,5%. Выбор делаем по операционным критериям.';
+      verdictHtml='<div class="cjm-scn-verdict is-tie"><b>Сценарии равнозначны по прибыли</b> — '+tieText+'</div>';
     }else{
-      var winName=winner==='a'?'Сценарий А — продажа лида в ЦФ':'Сценарий Б — продажа по CPA в стороннюю МФО';
-      var winProfit=winner==='a'?a.profit:b.profit;
-      var losProfit=winner==='a'?b.profit:a.profit;
-      var delta=winProfit-losProfit;
-      var deltaPerVisit=(winner==='a'?a.profitPerVisit:b.profitPerVisit)-(winner==='a'?b.profitPerVisit:a.profitPerVisit);
+      var winner=scenarios[winnerIdx];
+      var winName=winner.opt.verdictName||winner.opt.cardTitle||('Сценарий '+(winnerIdx+1));
+      var delta=winner.profit-secondProfit;
+      // дельта на 1 человека — относительно второго по прибыли сценария
+      var secondScn=scenarios.reduce(function(acc,sc,i){
+        if(i===winnerIdx)return acc;
+        if(!acc||sc.profit>acc.profit)return sc;
+        return acc;
+      },null);
+      var deltaPerVisit=winner.profitPerVisit-(secondScn?secondScn.profitPerVisit:0);
       verdictHtml='<div class="cjm-scn-verdict"><b>'+esc(winName)+'</b> — лучший выбор для сегмента «'+esc(s.name)+'»: '+
-        'прибыль выше на '+esc(rub(delta))+' (на '+esc(fmt(a.f.visit))+' визитов) · +'+esc(rub(deltaPerVisit))+' на 1 человека. '+
-        'Воронка одинакова в обоих сценариях — различие только в монетизации выдачи (CPA).</div>';
+        'прибыль выше на '+esc(rub(delta))+' (на '+esc(fmt(winner.f.visit))+' визитов) · +'+esc(rub(deltaPerVisit))+' на 1 человека. '+
+        'Воронка одинакова во всех сценариях — различие только в монетизации выдачи (CPA).</div>';
     }
+
+    var gridStyle=' style="--cjm-scn-cols:'+scenarios.length+'"';
+    var introText=s.leadSale.compareDescription
+      ||'Считаем экономику сегмента в '+scenarios.length+' крайних сценариях монетизации трафика. Воронка одинакова, отличается только выплата за выдачу — это даёт прямой ответ, по какому сценарию выгоднее запускать сегмент.';
 
     host.innerHTML='<div class="card cjm-scn-compare">'+
       '<div class="card-title"><div>'+
         '<span class="eyebrow" style="color:'+esc(s.color)+'">'+esc(s.label)+'</span>'+
         '<h2>Сравнение сценариев монетизации трафика</h2>'+
-        '<p>Считаем экономику сегмента в двух крайних сценариях: продаём весь трафик в ЦФ vs продаём по CPA в стороннюю МФО. Воронка одинакова, отличается только выплата за выдачу — это даёт прямой ответ, по какому сценарию выгоднее запускать сегмент.</p>'+
+        '<p>'+esc(introText)+'</p>'+
       '</div></div>'+
-      '<div class="cjm-scn-compare-grid">'+
-        '<article class="'+aClass+'">'+
-          '<header class="cjm-scn-head">'+
-            '<span class="cjm-scn-eyebrow">Сценарий А</span>'+
-            '<span class="cjm-scn-title">Продажа лида в Центрофинанс</span>'+
-            '<span class="cjm-scn-sub">Весь трафик уходит в ЦФ (доля 100%) · CPA '+esc(rub(m.cpaCf||0))+' за выдачу.</span>'+
-          '</header>'+
-          rowsHtml(a,b.profit)+
-        '</article>'+
-        '<article class="'+bClass+'">'+
-          '<header class="cjm-scn-head">'+
-            '<span class="cjm-scn-eyebrow">Сценарий Б</span>'+
-            '<span class="cjm-scn-title">Продажа по CPA в стороннюю МФО</span>'+
-            '<span class="cjm-scn-sub">Весь трафик уходит в партнёрскую МФО (доля 0% ЦФ) · CPA '+esc(rub(m.cpaThird||0))+' за выдачу.</span>'+
-          '</header>'+
-          rowsHtml(b,a.profit)+
-        '</article>'+
+      '<div class="cjm-scn-compare-grid"'+gridStyle+'>'+
+        cardsHtml+
       '</div>'+
       verdictHtml+
     '</div>';
