@@ -96,12 +96,11 @@
   //  3. rejected   — Отказной клиент         (red, ветка ПДН → МФО / БФЛ)
   //  4. sleeping   — Спящий клиент           (blue, ромб «ЦФ готов одобрить?»)
   //  5. noncore    — Новый (непрофильный)    (violet)
-  // Воронка (упрощённая, согласована с бизнесом):
-  //   Visit → Контакт (общая CR на все сегменты)
-  //   Visit → Клик по офферу → Заявка → Выдача (CR — по сегментам)
+  // Воронка (упрощённая, согласована с бизнесом) — последовательная:
+  //   Visit → Контакт → Клик по офферу → Заявка → Выдача
   // CR-показатели:
   //   visitContact — Визит → Контакт (общий, в GLOBAL_DEFAULTS)
-  //   visitClick   — Визит → Клик по офферу (по сегменту)
+  //   visitClick   — Контакт → Клик по офферу (по сегменту)
   //   clickApp     — Клик по офферу → Заявка
   //   appIssue     — Заявка → Выдача (мы зарабатываем на этом шаге)
   //  - cac/cpa/ltv: правимая экономика
@@ -152,7 +151,7 @@
       cpa_text:'3 000 ₽ за лид в ЦФ · 2 500–3 000 ₽ за лид в стороннюю МФО (микс настраивается)',
       ltv_text:'Высокий — у 20% зашедших 3–5 займов ЦФ за год; остальные 80% уходят на витрины партнёров.',
       justify:{
-        visitClick:'4,5% Визит → Клик по офферу — мотивированный «холодный» клиент кликает на анкету ЦФ.',
+        visitClick:'4,5% Контакт → Клик по офферу — мотивированный «холодный» клиент кликает на анкету ЦФ.',
         clickApp:'80% Клик → Заявка (анкета ЦФ) — конверсия в полностью заполненную анкету.',
         appIssue:'20% Заявка → Апрув (выдача) — типичный апрув-рейт для новой аудитории (ЦФ или сторонняя МФО).',
         cpa:'CPA смешанный: 3 000 ₽ — продажа лида в ЦФ, 2 500–3 000 ₽ — продажа лида в стороннюю МФО. Эффективная ставка зависит от доли распределения.',
@@ -207,7 +206,7 @@
       cpa_text:'1 000 – 5 000 ₽ (зависит от типа: дебет / кредитка)',
       ltv_text:'До 7 займов ЦФ за год + кросс-сейл банковских карт у ~20% (зависит от типа карты).',
       justify:{
-        visitClick:'7,5% Визит → Клик по офферу — клиент уже знаком с брендом, охотнее идёт в Top-up / витрину ЛК.',
+        visitClick:'7,5% Контакт → Клик по офферу — клиент уже знаком с брендом, охотнее идёт в Top-up / витрину ЛК.',
         clickApp:'35% Клик → Заявка — в среднем по Top-up и кросс-сейлу карт.',
         appIssue:'30% Заявка → Апрув — суммарно по Top-up ЦФ и банковским картам партнёров. Карты: ~20% (зависит от типа).',
         cpa:'CPA 1 000 – 5 000 ₽ — дебетовые ~1 000–1 500 ₽, кредитные ~3 000–5 000 ₽. Top-up — внутренняя выдача ЦФ.',
@@ -241,7 +240,7 @@
       cpa_text:'2 000 – 2 400 ₽ (среднее по рынку CPA-витрины МФО)',
       ltv_text:'2–3 займа в год через партнёрские МФО (LTV ≈ накопленная CPA-выручка).',
       justify:{
-        visitClick:'2,1% Визит → Клик по офферу — клиент кликает по партнёрскому офферу из топ-5 МФО.',
+        visitClick:'2,1% Контакт → Клик по офферу — клиент кликает по партнёрскому офферу из топ-5 МФО.',
         clickApp:'18% Клик → Заявка (анкета партнёра) — типичный CR заполнения анкеты у партнёров.',
         appIssue:'27% Заявка → Апрув (выдача партнёра) — среднерыночный апрув по сложному трафику.',
         cpa:'CPA 2 000 – 2 400 ₽ — средняя выплата CPA-витрины МФО за оформленный заём.',
@@ -275,7 +274,7 @@
       cpa_text:'0 ₽ — экономия CAC + возобновление маржи ЦФ',
       ltv_text:'До 3–4 займов ЦФ в год после реактивации.',
       justify:{
-        visitClick:'3,3% Визит → Клик по офферу — клиент видит реактивационное предложение Welcome-back и кликает.',
+        visitClick:'3,3% Контакт → Клик по офферу — клиент видит реактивационное предложение Welcome-back и кликает.',
         clickApp:'45% Клик → Заявка — анкета уже заполнена, проходит быстро.',
         appIssue:'45% Заявка → Апрув (выдача ЦФ) — апрув-рейт ЦФ для спящих ~40–50%.',
         cpa:'CPA 0 ₽ — экономия CAC, возобновление маржи ЦФ через собственную выдачу.',
@@ -309,7 +308,7 @@
       cpa_text:'1 000 – 6 000 ₽ (банки + МФО)',
       ltv_text:'Средний — 2–3 партнёрских продукта (кредиты / дебетовые карты / займы МФО) за год.',
       justify:{
-        visitClick:'1,4% Визит → Клик по офферу — кликают на витрину банковских продуктов или МФО.',
+        visitClick:'1,4% Контакт → Клик по офферу — кликают на витрину банковских продуктов или МФО.',
         clickApp:'25% Клик → Заявка (анкета банка / МФО) — типичный CR заполнения анкеты.',
         appIssue:'15–20% Заявка → Апрув по кредитам, ~20% по дебетовым картам, отдельный апрув у МФО.',
         cpa:'CPA 1 000 – 6 000 ₽ — спред по типам продуктов: дебетовые карты дешевле, кредиты и кредитки дороже.',
@@ -751,21 +750,21 @@
   function millions(v){var a=Math.abs(Number(v)||0);if(a<1000000)return fmt(v)+' ₽';var m=(Number(v)||0)/1000000;return m.toLocaleString('ru-RU',{maximumFractionDigits:m>=10?1:2})+' млн ₽';}
 
   // --- Funnel computation ---------------------------------------------------
-  // Шаги воронки: Visit → Контакт (общая CR) — параллельный замер контактов.
-  //               Visit → Клик по офферу → Заявка → Выдача — путь монетизации.
-  // Контакт и Клик считаются обе от Visit (parallel branches); цепочка
-  // Клик → Заявка → Выдача — последовательная (как и раньше).
+  // Воронка последовательная: Visit → Контакт → Клик по офферу → Заявка → Выдача.
+  // Каждый следующий шаг считается от предыдущего (Контакт — от Visit, Клик — от
+  // Контакта, Заявка — от Клика, Выдача — от Заявки). Так посегментная воронка
+  // совпадает с Финмоделью 2027 (crCc_* = Контакт → Клик по офферу).
   function funnelFor(id,opts){
     opts=opts||{};
     var m=manualFor(id);
     var visit=BASE_VISITS;
     var crVC=clamp(m.visitContact,0,100);     // Визит → Контакт (общая)
-    var crVK=clamp(m.visitClick,0,100);       // Визит → Клик по офферу
+    var crVK=clamp(m.visitClick,0,100);       // Контакт → Клик по офферу (по сегменту)
     var crKA=clamp(m.clickApp,0,100);         // Клик → Заявка
     var crAI=clamp(m.appIssue,0,100);         // Заявка → Выдача
     crVC=Math.min(crVC,100);crVK=Math.min(crVK,100);crKA=Math.min(crKA,100);crAI=Math.min(crAI,100);
     var contact=Math.round(visit*crVC/100);
-    var click=Math.round(visit*crVK/100);
+    var click=Math.round(contact*crVK/100);
     var app=Math.round(click*crKA/100);
     var issue=Math.round(app*crAI/100);
     return {
@@ -881,7 +880,7 @@
       var steps=[
         ['Visit',f.visit,'100% базы симуляции'],
         ['Контакт',f.contact,pct(f.crVC,1)+' Визит → Контакт · общая на все сегменты'],
-        ['Клик по офферу',f.click,pct(f.crVK,1)+' Визит → Клик по офферу'],
+        ['Клик по офферу',f.click,pct(f.crVK,1)+' Контакт → Клик по офферу'],
         ['Заявка',f.app,pct(f.crKA,1)+' Клик → Заявка'],
         ['Выдача',f.issue,pct(f.crAI,1)+' Заявка → Выдача · мы зарабатываем']
       ];
@@ -940,7 +939,7 @@
     var steps=[
       ['Visit',f.visit,'100% базы симуляции'],
       ['Контакт',f.contact,pct(f.crVC,1)+' Визит → Контакт · общая на все сегменты'],
-      ['Клик по офферу',f.click,pct(f.crVK,1)+' Визит → Клик по офферу'],
+      ['Клик по офферу',f.click,pct(f.crVK,1)+' Контакт → Клик по офферу'],
       ['Заявка',f.app,pct(f.crKA,1)+' Клик → Заявка'],
       ['Выдача',f.issue,pct(f.crAI,1)+' Заявка → Выдача · мы зарабатываем']
     ];
@@ -959,7 +958,7 @@
       {key:'contactCost',label:'Стоимость привлечения контакта (общая)',suffix:'₽',step:'1',min:0,max:1000000}
     ];
     var segFields=[
-      {key:'visitClick',label:'CR · Визит → Клик по офферу',suffix:'%',step:'0.1',min:0,max:100},
+      {key:'visitClick',label:'CR · Контакт → Клик по офферу',suffix:'%',step:'0.1',min:0,max:100},
       {key:'clickApp',label:'CR · Клик по офферу → Заявка',suffix:'%',step:'0.1',min:0,max:100},
       {key:'appIssue',label:'CR · Заявка → Выдача',suffix:'%',step:'0.1',min:0,max:100},
       {key:'cpa',label:'CPA / выплата партнёра',suffix:'₽',step:'1',min:0,max:1000000},
@@ -1070,7 +1069,7 @@
     var just=$('cjmJustifications');
     if(just){
       var rows=[
-        ['CR · Визит → Клик по офферу',s.justify.visitClick],
+        ['CR · Контакт → Клик по офферу',s.justify.visitClick],
         ['CR · Клик по офферу → Заявка',s.justify.clickApp],
         ['CR · Заявка → Выдача',s.justify.appIssue],
         ['CPA',s.justify.cpa],
@@ -1455,7 +1454,7 @@
       var steps=[
         {n:'1. Визиты',v:fmt(c.f.visit),sub:'База расчёта · 10 000'},
         {n:'2. Контакт',v:fmt(c.f.contact),sub:pct(c.f.crVC,1)+' Визит → Контакт · общая на все сегменты'},
-        {n:'3. Клик по офферу',v:fmt(c.f.click),sub:pct(c.f.crVK,1)+' Визит → Клик по офферу'},
+        {n:'3. Клик по офферу',v:fmt(c.f.click),sub:pct(c.f.crVK,1)+' Контакт → Клик по офферу'},
         {n:'4. Заявка',v:fmt(c.f.app),sub:pct(c.f.crKA,1)+' Клик → Заявка'},
         {n:'5. Выдача',v:fmt(c.f.issue),sub:pct(c.f.crAI,1)+' Заявка → Выдача'},
         {n:'6. Затраты на контакты',v:rub(c.cost),sub:'Стоимость контакта '+rub(c.m.contactCost)+' × '+fmt(c.f.contact)+' контактов'},
@@ -1527,7 +1526,7 @@
         '<div class="cjm-scn-row"><span class="scn-l">CPA / выплата за выдачу</span><span class="scn-v">'+esc(rub(scn.cpa))+'</span></div>'+
         '<div class="cjm-scn-row"><span class="scn-l">Визиты<span class="scn-sub">база симуляции</span></span><span class="scn-v">'+esc(fmt(scn.f.visit))+'</span></div>'+
         '<div class="cjm-scn-row"><span class="scn-l">Контакты<span class="scn-sub">'+esc(pct(scn.f.crVC,1))+' Визит → Контакт</span></span><span class="scn-v">'+esc(fmt(scn.f.contact))+'</span></div>'+
-        '<div class="cjm-scn-row"><span class="scn-l">Клики по офферу<span class="scn-sub">'+esc(pct(scn.f.crVK,1))+' Визит → Клик</span></span><span class="scn-v">'+esc(fmt(scn.f.click))+'</span></div>'+
+        '<div class="cjm-scn-row"><span class="scn-l">Клики по офферу<span class="scn-sub">'+esc(pct(scn.f.crVK,1))+' Контакт → Клик</span></span><span class="scn-v">'+esc(fmt(scn.f.click))+'</span></div>'+
         '<div class="cjm-scn-row"><span class="scn-l">Заявки<span class="scn-sub">'+esc(pct(scn.f.crKA,1))+' Клик → Заявка</span></span><span class="scn-v">'+esc(fmt(scn.f.app))+'</span></div>'+
         '<div class="cjm-scn-row"><span class="scn-l">Выдачи<span class="scn-sub">'+esc(pct(scn.f.crAI,1))+' Заявка → Выдача</span></span><span class="scn-v">'+esc(fmt(scn.f.issue))+'</span></div>'+
         '<div class="cjm-scn-row"><span class="scn-l">CAC (произв.)<span class="scn-sub">затраты на контакты ÷ выдачи</span></span><span class="scn-v">'+esc(rub(scn.cac))+'</span></div>'+
@@ -1661,7 +1660,7 @@
     var rows=[
       ['Visit',f.visit,'—','100%'],
       ['Контакт',f.contact,pct(f.crVC)+' от Visit · общая',pct(f.contact/f.visit*100)],
-      ['Клик по офферу',f.click,pct(f.crVK)+' от Visit',pct(f.click/f.visit*100)],
+      ['Клик по офферу',f.click,pct(f.crVK)+' от контакта',pct(f.click/f.visit*100)],
       ['Заявка',f.app,pct(f.crKA)+' от клика',pct(f.app/f.visit*100)],
       ['Выдача',f.issue,pct(f.crAI)+' от заявки',pct(f.issue/f.visit*100)]
     ];
