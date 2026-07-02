@@ -637,6 +637,9 @@
     return {items:items,totalBudget:totalBudget,totalContacts:totalContacts,avgCpl:avgCpl};
   }
 
+  // Возвращает множитель контактов для источника: SEO получает полный
+  // накопительный response-scale, а paid/PR/other — только paidShare от
+  // прироста, чтобы расходы не превращались в прямую экспоненту выручки.
   function finSourceResponseScale(item,revenueScale,paidShare){
     if(item&&item.meta&&item.meta.key==='Seo')return revenueScale;
     return 1+(revenueScale-1)*paidShare;
@@ -730,7 +733,7 @@
       var costScale=1+costGrowth*t;
       scales.push(revenueScale);
       costScales.push(costScale);
-      var ct=sources.items.reduce(function(sum,it){
+      var totalScaledContacts=sources.items.reduce(function(sum,it){
         return sum+it.contacts*finSourceResponseScale(it,revenueScale,paidShare);
       },0);
       var mediaTotal=trafficCost0*costScale;
@@ -739,7 +742,7 @@
       var totalApps=0,totalIss=0,totalRev=0,totalVis=0;
       var segCache=[];
       for(var i=0;i<FIN_SEG_META.length;i++){
-        var segC=ct*shares[i];
+        var segC=totalScaledContacts*shares[i];
         var segClick=segC*crCc[i];
         var segApp=segClick*crCa[i];
         var segIss=segApp*crAi[i];
@@ -779,7 +782,7 @@
       runProfit+=p;runInvest+=c;
       if(runProfit<0)peakNeed=Math.max(peakNeed,-runProfit);
       if(paybackIdx<0&&runProfit>=0&&t>0)paybackIdx=t;
-      contacts.push(ct);visits.push(totalVis);apps.push(totalApps);issues.push(totalIss);
+      contacts.push(totalScaledContacts);visits.push(totalVis);apps.push(totalApps);issues.push(totalIss);
       revenue.push(rev);cost.push(c);profit.push(p);
       cumProfit.push(runProfit);cumInvest.push(runInvest);cfClients.push(cfCl);cfRevenue.push(cfRev);
       ppc.push(totalIss>0?p/totalIss:0);
@@ -795,8 +798,10 @@
           if(it.meta.key==='Seo')seoBase+=it.contacts;
           else paidBase+=it.contacts;
         });
-        var lo=-0.5,hi=2;
-        for(var bi=0;bi<48;bi++){
+        // Ищем нужный месячный темп в диапазоне −50%…+200%; 48 итераций
+        // дают точность сильно выше одного базисного пункта для UI-подсказки.
+        var lo=-0.5,hi=2,maxBisectionIterations=48;
+        for(var bi=0;bi<maxBisectionIterations;bi++){
           var mid=(lo+hi)/2;
           var sEnd=Math.pow(1+mid,horizon);
           var endContacts=seoBase*sEnd+paidBase*(1+(sEnd-1)*paidShare);
