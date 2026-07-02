@@ -1698,6 +1698,11 @@ button:active:not(:disabled){transform:translateY(0) scale(.97)}
         <div id="finSourcesRow"></div>
       </div>
 
+      <div class="card fin-cf-card">
+        <div class="card-title"><div><h2>Визиты на маркетплейс</h2><p>Объём визитов считается от контактов через средневзвешенную конверсию «Визит → Контакт», взятую из посегментных значений (см. блок «Конверсии по сегментам»). Экспонента с настраиваемой степенью распространяется на визиты, выручку, расходы и прибыль.</p></div></div>
+        <div class="fin-cf-row" id="finVisitsRow"></div>
+      </div>
+
       <div class="card fin-seg-card">
         <div class="card-title"><div><h2>Разбивка заработка по 5 сегментам</h2><p>Доли и ставки CPA задаём мы сами — экономика уже заложена в сегментах, мы играем объёмом. Ставки за выдачу выставляются партнёрским механизмом.</p></div></div>
         <div class="fin-seg-row" id="finSegRow"></div>
@@ -1706,9 +1711,10 @@ button:active:not(:disabled){transform:translateY(0) scale(.97)}
       <div class="cjm-section-head"><div><h2>Параметры на входе</h2><p>Проставьте свои значения — модель и графики пересчитаются мгновенно</p></div></div>
       <div class="fin-inputs-grid">
         <div class="card"><div class="card-title"><div><h2>Источники трафика · бюджет и CPL</h2></div></div><div class="cjm-manual-grid" id="finInputsSources"></div></div>
-        <div class="card"><div class="card-title"><div><h2>Воронка и рост</h2></div></div><div class="cjm-manual-grid" id="finInputsFunnel"></div></div>
+        <div class="card"><div class="card-title"><div><h2>Рост · экспонента и её степень</h2><p>Выручка, расходы и прибыль привязаны к экспоненте scale(t) = (1 + monthlyGrowth)^(t<sup>p</sup>). Степень p&nbsp;&gt;&nbsp;1 ускоряет рост, p&nbsp;&lt;&nbsp;1 — насыщает.</p></div></div><div class="cjm-manual-grid" id="finInputsFunnel"></div></div>
         <div class="card"><div class="card-title"><div><h2>Доли по 5 сегментам</h2></div></div><div class="cjm-manual-grid" id="finInputsShares"></div><div class="fin-norm" id="finSharesNorm"></div></div>
         <div class="card"><div class="card-title"><div><h2>Ставки CPA по 5 сегментам</h2></div></div><div class="cjm-manual-grid" id="finInputsPayout"></div></div>
+        <div class="card"><div class="card-title"><div><h2>Конверсии по сегментам · воронка</h2><p>Значения тянем из сегментов CJM и берём средневзвешенные по долям. Меняете здесь — пересчитываются посегментная выручка, объём визитов и итоговая математика.</p></div></div><div class="cjm-manual-grid" id="finInputsSegCr"></div></div>
         <div class="card"><div class="card-title"><div><h2>Фиксированные расходы, Центрофинанс и цель</h2></div></div><div class="cjm-manual-grid" id="finInputsBudget"></div></div>
       </div>
 
@@ -1721,8 +1727,6 @@ button:active:not(:disabled){transform:translateY(0) scale(.97)}
         <div class="card-title"><div><h2>Помесячный план</h2><p>Бюджет, прогноз продаж, ожидаемая прибыль и прибыль на 1 клиента по каждому месяцу горизонта</p></div></div>
         <div class="ue2-table-wrap"><table class="ue2-scn-table fin-table" id="finTable"></table></div>
       </div>
-
-      <div class="card fin-summary-card"><div class="fin-summary" id="finSummary"></div></div>
     </section>
   </main>
 </div>
