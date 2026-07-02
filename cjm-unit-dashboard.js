@@ -25,6 +25,7 @@
   // по каждому сегменту. Все входные параметры редактируются пользователем и
   // сохраняются в localStorage.
   var FINANCE_KEY='cjm_finance_inputs_v2';
+  var FINANCE_LEGACY_KEYS=['cjm_finance_inputs_v1'];
   // Горизонт совпадает с baseline PNL: июль 2026 → декабрь 2027 (18 месяцев).
   var FIN_MONTHS=['Июль 2026','Август 2026','Сентябрь 2026','Октябрь 2026','Ноябрь 2026','Декабрь 2026','Январь 2027','Февраль 2027','Март 2027','Апрель 2027','Май 2027','Июнь 2027','Июль 2027','Август 2027','Сентябрь 2027','Октябрь 2027','Ноябрь 2027','Декабрь 2027'];
   var FIN_MONTHS_SHORT=['Июл26','Авг26','Сен26','Окт26','Ноя26','Дек26','Янв27','Фев27','Мар27','Апр27','Май27','Июн27','Июл27','Авг27','Сен27','Окт27','Ноя27','Дек27'];
@@ -519,7 +520,18 @@
 
   // --- Finance model: state + computation -----------------------------------
   function isFinanceView(){return selectedId()==='finance';}
-  function finRaw(){return read(FINANCE_KEY,{})||{};}
+  function finRaw(){
+    var raw=read(FINANCE_KEY,null);
+    if(raw&&typeof raw==='object')return raw;
+    for(var i=0;i<FINANCE_LEGACY_KEYS.length;i++){
+      var legacy=read(FINANCE_LEGACY_KEYS[i],null);
+      if(legacy&&typeof legacy==='object'){
+        write(FINANCE_KEY,legacy);
+        return legacy;
+      }
+    }
+    return {};
+  }
   function finInputs(){
     var raw=finRaw();var out={};
     Object.keys(FIN_DEFAULTS).forEach(function(k){
