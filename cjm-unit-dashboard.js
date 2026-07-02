@@ -7,7 +7,6 @@
   var GLOBAL_KEY='cjm_global_inputs_v1';
   var SHARES_KEY='cjm_segment_shares_v1';
   var DESC_KEY='cjm_segment_descriptions_v1';
-  var VERSION_KEY='vyruchai_app_version_v1';
   var BASE_VISITS=10000;
   // Глобальные параметры, общие для всех сегментов:
   //  - visitContact — CR · Визит → Контакт (одна для всех сегментов)
@@ -438,6 +437,97 @@
     catch(e){/* in-memory copy already kept */}
     scheduleSharedStateWrite(key,value);
   }
+
+  // ---- Share-by-link (URL hash) --------------------------------------------
+  // Позволяет скопировать текущее состояние дашборда в ссылку: все правки,
+  // которые редактор внёс в сегменты/финмодель, кодируются в location.hash,
+  // и любой, кто откроет ссылку, увидит те же цифры. Работает даже без
+  // серверного /api/cjm-state — это делает дашборд полноценно «шаринговым».
+  function utf8ToB64(str){
+    try{
+      return btoa(unescape(encodeURIComponent(str)))
+        .replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
+    }catch(e){return '';}
+  }
+  function b64ToUtf8(str){
+    try{
+      var s=String(str||'').replace(/-/g,'+').replace(/_/g,'/');
+      while(s.length%4)s+='=';
+      return decodeURIComponent(escape(atob(s)));
+    }catch(e){return '';}
+  }
+  function collectShareState(){
+    var out={};
+    SHARED_STATE_KEYS.forEach(function(k){
+      var v=read(k,null);
+      if(v!=null)out[k]=v;
+    });
+    return out;
+  }
+  function buildShareUrl(){
+    var payload=collectShareState();
+    var encoded=utf8ToB64(JSON.stringify(payload));
+    var base=location.origin+location.pathname+location.search;
+    return encoded?base+'#s='+encoded:base;
+  }
+  function applyStateFromUrl(){
+    var hash=String(location.hash||'');
+    var m=hash.match(/[#&]s=([^&]+)/);
+    if(!m)return false;
+    var json=b64ToUtf8(m[1]);
+    if(!json)return false;
+    var data;try{data=JSON.parse(json);}catch(e){return false;}
+    if(!data||typeof data!=='object')return false;
+    var applied=false;
+    SHARED_STATE_KEYS.forEach(function(k){
+      if(data[k]!=null){
+        memStore[k]=data[k];
+        try{localStorage.setItem(k,JSON.stringify(data[k]));}catch(e){}
+        applied=true;
+      }
+    });
+    return applied;
+  }
+  function showToast(text){
+    var t=document.createElement('div');
+    t.className='cjm-toast';t.textContent=text;
+    document.body.appendChild(t);
+    requestAnimationFrame(function(){t.classList.add('show');});
+    setTimeout(function(){t.classList.remove('show');setTimeout(function(){t.remove();},250);},1800);
+  }
+  function copyToClipboard(text){
+    if(navigator&&navigator.clipboard&&navigator.clipboard.writeText){
+      return navigator.clipboard.writeText(text);
+    }
+    return new Promise(function(resolve,reject){
+      try{
+        var ta=document.createElement('textarea');ta.value=text;ta.style.position='fixed';ta.style.opacity='0';
+        document.body.appendChild(ta);ta.select();
+        var ok=document.execCommand('copy');ta.remove();
+        ok?resolve():reject(new Error('copy failed'));
+      }catch(e){reject(e);}
+    });
+  }
+  function initShareLink(){
+    var btn=$('cjmShareLink');if(!btn)return;
+    btn.addEventListener('click',function(){
+      var url=buildShareUrl();
+      try{history.replaceState(null,'',url);}catch(e){}
+      copyToClipboard(url).then(function(){
+        btn.classList.add('copied');
+        var prev=btn.textContent;btn.textContent='Ссылка скопирована';
+        showToast('Ссылка скопирована — отправьте её любому пользователю');
+        setTimeout(function(){btn.classList.remove('copied');btn.textContent=prev;},1800);
+      }).catch(function(){
+        showToast('Скопируйте ссылку из адресной строки');
+      });
+    });
+  }
+
+  // Импортируем состояние из #s=... до первого рендера, чтобы сторонний
+  // пользователь, открывший ссылку, увидел ровно те же данные.
+  applyStateFromUrl();
+
   function fmt(v){return Math.round(Number(v)||0).toLocaleString('ru-RU');}
   function rub(v){return fmt(v)+' ₽';}
   function pct(v,digits){return (Number(v)||0).toLocaleString('ru-RU',{maximumFractionDigits:digits==null?1:digits})+'%';}
@@ -998,7 +1088,7 @@
 
   // --- Charts wrapper -------------------------------------------------------
   function clearChart(id){if(charts[id]){charts[id].destroy();delete charts[id];}}
-  function drawChart(id,config){var canvas=$(id);if(!canvas)return;if(typeof Chart==='undefined'){console.warn('CJM dashboard: custom Chart renderer is unavailable; ensure dashboard-app.js is loaded before cjm-unit-dashboard.js');return;}clearChart(id);charts[id]=new Chart(canvas,config);}
+  function drawChart(id,config){var canvas=$(id);if(!canvas)return;if(typeof Chart==='undefined'){console.warn('CJM dashboard: custom Chart renderer is unavailable; ensure chart-lib.js is loaded before cjm-unit-dashboard.js');return;}clearChart(id);charts[id]=new Chart(canvas,config);}
 
   // --- Top segment tabs (level 1) -------------------------------------------
   function renderSegmentTabs(){
@@ -2439,29 +2529,13 @@
     });
   }
 
-  // Version switcher: переключает видимость #cjmDashboard ↔ .original-app-hidden
-  // через атрибут body[data-app-version] (CSS-правила определены в HTML).
-  function applyAppVersion(ver){
-    var v=ver==='legacy'?'legacy':'new';
-    document.body.setAttribute('data-app-version',v);
-    document.querySelectorAll('.version-switch button').forEach(function(b){
-      b.classList.toggle('active',b.getAttribute('data-app-version')===v);
-    });
-    write(VERSION_KEY,v);
-  }
-  function initVersionSwitcher(){
-    var saved=read(VERSION_KEY,'new');
-    applyAppVersion(saved);
-    document.querySelectorAll('.version-switch button[data-app-version]').forEach(function(b){
-      b.addEventListener('click',function(){applyAppVersion(b.getAttribute('data-app-version'));});
-    });
-  }
+  // Version switcher removed: dashboard now ships only in the new (CJM) layout.
 
   function init(){
     applyStoredShares();
-    initVersionSwitcher();
     initInnerTabs();
     initTheme();
+    initShareLink();
     renderAll();
     loadSharedState(function(changed){
       if(changed){applyStoredShares();renderAll();}
