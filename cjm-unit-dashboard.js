@@ -629,9 +629,12 @@
     // «Визиты на маркетплейс на один контакт», усреднённые по долям:
     //   visits_per_contact = Σ share_i / crVc_i   (агрегируем визиты, не CR)
     var visitsPerContact=0;
-    for(var vi=0;vi<shares.length;vi++){
-      if(crVc[vi]>0)visitsPerContact+=shares[vi]/crVc[vi];
+    for(var si2=0;si2<shares.length;si2++){
+      if(crVc[si2]>0)visitsPerContact+=shares[si2]/crVc[si2];
     }
+    // Blended payout (взвешенное среднее CPA) — используется для legacy-совместимости.
+    var blendedPayout=0;
+    for(var si3=0;si3<shares.length;si3++)blendedPayout+=shares[si3]*payouts[si3];
     var sources=finSourcesBreakdown(inp);
     var contacts0=sources.totalContacts;
     var trafficCost0=sources.totalBudget;
@@ -693,7 +696,7 @@
       inp:inp,months:FIN_MONTHS,shares:shares,payouts:payouts,
       crVc:crVc,crCc:crCc,crCa:crCa,crAi:crAi,segConv:segConv,segRevPerContact:segRevPerContact,
       avgVc:avgVc,avgCc:avgCc,avgCa:avgCa,avgAi:avgAi,avgConv:avgConv,
-      blendedPayout:(function(){var b=0;for(var k=0;k<shares.length;k++)b+=shares[k]*payouts[k];return b;})(),
+      blendedPayout:blendedPayout,
       blendedRevPerContact:blendedRevPerContact,visitsPerContact:visitsPerContact,
       revPerContact:revPerContact,sources:sources,scales:scales,growthPower:power,
       contacts:contacts,visits:visits,apps:apps,issues:issues,revenue:revenue,cost:cost,profit:profit,
