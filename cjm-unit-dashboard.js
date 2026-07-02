@@ -34,13 +34,15 @@
   // «стоимостью оставленного номера» (CPL): бюджет_i / CPL_i = контакты_i.
   // Контакты → Заявки → Выдачи. Доли и CPA — по 5 сегментам, редактируются вручную.
   // Дефолты откалиброваны по baseline PNL: стартовые вложения ≈1,7 млн ₽/мес,
-  // выручка стартует около 200–250 тыс. ₽/мес и выходит к декабрю 2027 на
-  // порядок 12–13 млн ₽/мес. Важно: выручка растёт сильнее расходов за счёт
-  // накопительного SEO/бренд-эффекта, а расходы растут только линейным планом.
+  // выручка стартует около 200–250 тыс. ₽/мес, а дальше растёт по более
+  // реалистичной back-loaded траектории без скачков по 30%+ на большом обороте.
+  // Важно: выручка растёт сильнее расходов за счёт накопительного SEO/бренд-эффекта,
+  // а расходы растут только линейным планом.
   var FIN_DEFAULTS={
-    // 30% — это не рост расходов, а response-scale выручки: при стартовой
-    // выручке PNL около 220 тыс. ₽ он даёт декабрь 2027 порядка 12,5 млн ₽.
-    monthlyGrowth:30,
+    // 12% — реалистичный response-scale спроса: первые месяцы дают слабый рост,
+    // затем эффект накопленных вложений ускоряется, но без скачков по 30%+ при
+    // уже набранном обороте в несколько миллионов.
+    monthlyGrowth:12,
     // «Степень» роста управляет ФОРМОЙ траектории, а не её масштабом.
     // Модель роста (нормирована на горизонт, без «двойной экспоненты»):
     //   exp(t)  = horizon · (t / horizon)^growthPower
@@ -56,11 +58,11 @@
     // через costGrowthMonthly. SEO берёт 100% накопительного эффекта, платные
     // источники — только paidDemandShare% от него (иначе модель превращается в
     // прямую зависимость «вложили ×2 → заработали ×2»).
-    // p=1.2 слегка сдвигает отдачу к поздним месяцам: это отражает PNL-сценарий,
+    // p=1.7 заметно сдвигает отдачу к поздним месяцам: это отражает PNL-сценарий,
     // где SEO-страницы и бренд накапливают эффект не мгновенно, а после разгона.
-    growthPower:1.2,
-    costGrowthMonthly:9,
-    paidDemandShare:25,
+    growthPower:1.7,
+    costGrowthMonthly:6,
+    paidDemandShare:15,
     // 4 источника трафика: стартовая структура близка к PNL июля 2026:
     // 300 тыс. ₽ Яндекс.Директ + 450 тыс. ₽ SEO + 100 тыс. ₽ PR/бренд.
     // CPL здесь — не цена клика, а эффективная стоимость оставленного номера.
@@ -608,20 +610,51 @@
     FIN_SEG_META.forEach(function(m){set[m.crVcKey]=1;set[m.crCcKey]=1;set[m.crCaKey]=1;set[m.crAiKey]=1;});
     return set;
   })();
+  function finSegCrBinding(key){
+    for(var i=0;i<FIN_SEG_META.length;i++){
+      var m=FIN_SEG_META[i],id=m.key.toLowerCase();
+      if(key===m.crVcKey)return {globalKey:'visitContact'};
+      if(key===m.crCcKey)return {segId:id,manualKey:'visitClick'};
+      if(key===m.crCaKey)return {segId:id,manualKey:'clickApp'};
+      if(key===m.crAiKey)return {segId:id,manualKey:'appIssue'};
+    }
+    return null;
+  }
+  function finSegCrIsSourceEdited(key){
+    var b=finSegCrBinding(key);
+    if(!b)return false;
+    if(b.globalKey)return isGlobalEdited(b.globalKey);
+    return isEdited(b.segId,b.manualKey);
+  }
+  function setFinSegCr(key,value){
+    var b=finSegCrBinding(key);
+    if(!b)return false;
+    if(b.globalKey)setGlobal(b.globalKey,value);
+    else setManual(b.segId,b.manualKey,value);
+    return true;
+  }
+  function unsetFinSegCr(key){
+    var b=finSegCrBinding(key);
+    if(!b)return false;
+    if(b.globalKey)unsetGlobal(b.globalKey);
+    else unsetManual(b.segId,b.manualKey);
+    return true;
+  }
   function finInputs(){
     var raw=finRaw();var out={};
     var segCr=finSegSourcedCr();
     Object.keys(FIN_DEFAULTS).forEach(function(k){
-      // Явное переопределение в финмодели имеет приоритет; иначе для CR-полей источник —
-      // сегменты («всегда заполнены из сегментов»), для остального — дефолты финмодели.
+      // CR-поля всегда берём из сегментов/общего блока, без отдельного слоя
+      // переопределений финмодели. Так правка в любом месте меняет одну и ту же
+      // величину. Для остальных финансовых полей остаётся FINANCE_KEY.
       var fallback=(FIN_SEG_CR_KEYS[k]&&segCr[k]!=null&&isFinite(Number(segCr[k])))?Number(segCr[k]):FIN_DEFAULTS[k];
-      out[k]=raw[k]!=null&&isFinite(Number(raw[k]))?Number(raw[k]):fallback;
+      out[k]=FIN_SEG_CR_KEYS[k]?fallback:(raw[k]!=null&&isFinite(Number(raw[k]))?Number(raw[k]):fallback);
     });
     return out;
   }
-  function finIsEdited(key){var raw=finRaw();return raw[key]!=null;}
-  function setFin(key,value){var raw=finRaw();raw[key]=value;write(FINANCE_KEY,raw);}
-  function unsetFin(key){var raw=finRaw();if(raw[key]!=null){delete raw[key];write(FINANCE_KEY,raw);}}
+  function finIsEdited(key){if(FIN_SEG_CR_KEYS[key])return finSegCrIsSourceEdited(key);var raw=finRaw();return raw[key]!=null;}
+  function setFin(key,value){if(FIN_SEG_CR_KEYS[key]){setFinSegCr(key,value);return;}var raw=finRaw();raw[key]=value;write(FINANCE_KEY,raw);}
+  function unsetFin(key){if(FIN_SEG_CR_KEYS[key]){unsetFinSegCr(key);return;}var raw=finRaw();if(raw[key]!=null){delete raw[key];write(FINANCE_KEY,raw);}}
   function resetFin(){write(FINANCE_KEY,{});}
 
   // Нормированные доли сегментов (0..1). Порядок соответствует FIN_SEG_META.
@@ -1937,7 +1970,7 @@
       // 5 сегментов × 4 стадии воронки — генерируется по FIN_SEG_META, СЕГМЕНТ-МАЖОРНО
       // (4 стадии одного сегмента идут подряд), чтобы рендерить их табами по сегментам.
       // Значения этих полей по умолчанию подтягиваются из блока «Ручной ввод показателей»
-      // (см. finSegSourcedCr) — здесь возможно только явное переопределение для финмодели.
+      // (см. finSegSourcedCr) — правка любого поля меняет тот же источник, что и вкладка сегмента.
       var out=[];
       var stages=[
         {label:'Визит → Контакт',keyGetter:function(m){return m.crVcKey;}},
@@ -1985,8 +2018,8 @@
     opts=opts||{};
     var label=opts.label!=null?opts.label:f.label;
     var hint=edited
-      ?' <span class="cjm-manual-suffix" title="Переопределено в финмодели">· изменено</span>'
-      :(opts.sourceHint?' <span class="cjm-manual-suffix" title="Подтянуто из блока «Ручной ввод показателей»">· из сегментов</span>':'');
+      ?' <span class="cjm-manual-suffix" title="Изменено в едином источнике сегментов">· изменено</span>'
+      :(opts.sourceHint?' <span class="cjm-manual-suffix" title="Единый источник: блок «Ручной ввод показателей» сегмента">· из сегментов</span>':'');
     return '<label>'+
       '<span class="cjm-manual-label">'+esc(label)+' <span class="cjm-manual-suffix">'+esc(f.suffix)+'</span>'+hint+
       '</span>'+
@@ -1998,8 +2031,8 @@
   // Активный таб конверсий (по ключу сегмента FIN_SEG_META). По умолчанию — первый.
   var finSegCrActiveTab=FIN_SEG_META[0].key;
   // Рендерит настройку посегментных конверсий табами по сегментам. Значения по умолчанию
-  // «всегда заполнены из сегментов» (finSegSourcedCr); здесь их можно переопределить только
-  // для финмодели, что помечается «· изменено».
+  // «всегда заполнены из сегментов» (finSegSourcedCr); правка здесь меняет тот же
+  // источник, что и вкладка конкретного сегмента.
   function renderFinSegCrTabs(host,inp){
     var fields=FIN_FIELD_GROUPS.finInputsSegCr;
     if(!FIN_SEG_META.some(function(m){return m.key===finSegCrActiveTab;}))finSegCrActiveTab=FIN_SEG_META[0].key;
@@ -2008,7 +2041,7 @@
       var edited=fields.some(function(f){return f.seg===m.key&&finIsEdited(f.key);});
       return '<button type="button" class="cjm-seg-tab'+active+'" data-fin-crtab="'+esc(m.key)+'">'+
         '<span class="cjm-seg-dot" style="background:'+esc(m.color)+'"></span>'+esc(m.name)+
-        (edited?'<span class="cjm-seg-share" title="Есть переопределения в финмодели">изм.</span>':'')+
+        (edited?'<span class="cjm-seg-share" title="Есть ручные правки в едином источнике">изм.</span>':'')+
       '</button>';
     }).join('');
     var panelsHtml=FIN_SEG_META.map(function(m){
@@ -2021,7 +2054,7 @@
     }).join('');
     host.innerHTML=
       '<div class="cjm-seg-tabs fin-crtabs" role="tablist">'+tabsHtml+'</div>'+
-      '<p class="fin-crtab-note">Значения по умолчанию подтягиваются из блока «Ручной ввод показателей» по каждому сегменту (единый источник). Правка здесь переопределяет CR только в финмодели — очистите поле, чтобы вернуть значение из сегментов.</p>'+
+      '<p class="fin-crtab-note">Это те же значения, что и в блоке «Ручной ввод показателей» по каждому сегменту. Правка здесь сразу меняет вкладку сегмента, а правка во вкладке сегмента сразу меняет финмодель. Очистите поле, чтобы вернуться к дефолту сегмента.</p>'+
       panelsHtml;
     host.querySelectorAll('[data-fin-crtab]').forEach(function(btn){
       btn.addEventListener('click',function(){
@@ -2058,6 +2091,15 @@
         else{
           var val=clamp(raw,meta?meta.min:0,meta?meta.max:1000000000);
           setFin(key,val);el.classList.add('is-edited');
+        }
+        if(FIN_SEG_CR_KEYS[key]){
+          var fresh=finInputs();
+          panel.querySelectorAll('input[data-fin]').forEach(function(input){
+            var k=input.getAttribute('data-fin');
+            if(!FIN_SEG_CR_KEYS[k]||input===el)return;
+            input.value=fresh[k];
+            input.classList.toggle('is-edited',finIsEdited(k));
+          });
         }
         var res=computeFinance();
         renderFinanceOutputs(res);
@@ -2104,7 +2146,7 @@
         '<div class="fin-target-item"><span class="fin-target-num">'+esc(millions(res.lastRevenue))+'</span><span class="fin-target-cap">Выручка на конец</span></div>'+
         '<div class="fin-target-item"><span class="fin-target-num">'+esc(millions(res.target))+'</span><span class="fin-target-cap">Цель · декабрь 2027</span></div>'+
         statusItem+
-        '<div class="fin-target-item"><span class="fin-target-num">'+esc(pct(inp.monthlyGrowth,1))+'</span><span class="fin-target-cap">Экспонента выручки / SEO-спроса</span></div>'+
+        '<div class="fin-target-item"><span class="fin-target-num">'+esc(pct(inp.monthlyGrowth,1))+'</span><span class="fin-target-cap">Темп response-scale / SEO-спроса</span></div>'+
         '<div class="fin-target-item"><span class="fin-target-num">'+esc(pct(inp.costGrowthMonthly,1))+'</span><span class="fin-target-cap">Расходы: линейный прирост в месяц</span></div>'+
         '<div class="fin-target-item"><span class="fin-target-num">'+esc((res.growthPower).toLocaleString('ru-RU',{maximumFractionDigits:2}))+'</span><span class="fin-target-cap">Форма роста выручки (p&gt;1 разгон к концу)</span></div>'+
         growthItem+
@@ -2177,11 +2219,11 @@
     }
     // Monthly table — с раскрывающимися строками по сегментам.
     // Каждая строка месяца имеет data-fin-month. Клик по стрелке раскрывает 5 суб-строк
-    // (по сегментам): контакты, заявки, выдачи, выручка, CAC, прибыль — считаются
+    // (по сегментам): трафик/визиты, контакты, заявки, выдачи, выручка, CAC, прибыль — считаются
     // из массивов res.segMonthly[i], т.е. работают ДЛЯ ЛЮБОГО МЕСЯЦА (не только последнего).
     var tbl=$('finTable');
     if(tbl){
-      var head='<thead><tr><th style="width:28px"></th><th>Месяц</th><th>Контакты</th><th>Заявки</th><th>Выдачи</th><th>Выручка</th><th>Расходы</th><th>CAC</th><th>Прибыль</th><th>Прибыль / 1 чел</th><th>Накопл. прибыль</th></tr></thead>';
+      var head='<thead><tr><th style="width:28px"></th><th>Месяц</th><th>Трафик, визиты</th><th>Контакты</th><th>Заявки</th><th>Выдачи</th><th>Выручка</th><th>Расходы</th><th>CAC</th><th>Прибыль</th><th>Прибыль / 1 чел</th><th>Накопл. прибыль</th></tr></thead>';
       var rows='';
       for(var t=0;t<n;t++){
         var pc=res.profit[t]>=0?'fin-pos':'fin-neg';
@@ -2192,6 +2234,7 @@
         rows+='<tr class="fin-row-month'+(t===last?' is-target':'')+'" data-fin-month="'+t+'">'+
           '<td><button type="button" class="fin-expand-btn" data-fin-toggle="'+t+'" aria-expanded="false" aria-label="Раскрыть сегменты">▸</button></td>'+
           '<td>'+esc(res.months[t])+'</td>'+
+          '<td>'+esc(fmt(res.visits[t]))+'</td>'+
           '<td>'+esc(fmt(res.contacts[t]))+'</td>'+
           '<td>'+esc(fmt(res.apps[t]))+'</td>'+
           '<td>'+esc(fmt(res.issues[t]))+'</td>'+
@@ -2212,6 +2255,7 @@
           rows+='<tr class="fin-row-seg" data-fin-seg-of="'+t+'" style="display:none;background:var(--surface-2,rgba(127,127,127,.06));">'+
             '<td></td>'+
             '<td style="padding-left:28px;color:var(--muted);"><span class="fin-seg-dot" style="display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:6px;background:'+esc(FIN_SEG_META[si].color)+'"></span>'+esc(FIN_SEG_META[si].name)+'</td>'+
+            '<td>'+esc(fmt(sm.visits[t]))+'</td>'+
             '<td>'+esc(fmt(sm.contacts[t]))+'</td>'+
             '<td>'+esc(fmt(sm.apps[t]))+'</td>'+
             '<td>'+esc(fmt(sm.issues[t]))+'</td>'+
