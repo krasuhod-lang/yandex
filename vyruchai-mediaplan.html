@@ -1598,6 +1598,11 @@ button:active:not(:disabled){transform:translateY(0) scale(.97)}
 .fin-norm{margin-top:12px;font-size:12.5px;color:var(--muted);font-weight:700;display:flex;justify-content:space-between;gap:10px;border-top:1px dashed var(--line);padding-top:10px}
 .fin-norm b{color:var(--text);font-variant-numeric:tabular-nums}
 .fin-norm.is-warn b{color:var(--orange)}
+/* Табы посегментных конверсий в финмодели (единый источник — блок «Ручной ввод показателей») */
+.fin-crtabs{max-width:none;margin:0 0 4px;padding:0 0 8px}
+.fin-crtabs .cjm-seg-tab{padding:8px 13px;font-size:12.5px}
+.fin-crtab-note{margin:0 0 14px;font-size:11.5px;line-height:1.45;color:var(--muted)}
+.fin-crtab-panel[hidden]{display:none}
 .fin-cf-row{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}
 @media(max-width:760px){.fin-cf-row{grid-template-columns:1fr}}
 .fin-cf-cell{border:1px solid var(--line);border-radius:var(--radius-xs);padding:14px 16px;background:var(--surface-2);display:flex;flex-direction:column;gap:5px;border-top:3px solid var(--violet)}
@@ -1717,10 +1722,10 @@ button:active:not(:disabled){transform:translateY(0) scale(.97)}
       <div class="cjm-section-head"><div><h2>Параметры на входе</h2><p>Проставьте свои значения — модель и графики пересчитаются мгновенно</p></div></div>
       <div class="fin-inputs-grid">
         <div class="card"><div class="card-title"><div><h2>Источники трафика · бюджет и CPL</h2></div></div><div class="cjm-manual-grid" id="finInputsSources"></div></div>
-        <div class="card"><div class="card-title"><div><h2>Рост · экспонента и её степень</h2><p>Выручка, расходы и прибыль привязаны к экспоненте scale(t) = (1 + monthlyGrowth)^(t<sup>p</sup>). Степень p&nbsp;&gt;&nbsp;1 ускоряет рост, p&nbsp;&lt;&nbsp;1 — насыщает.</p></div></div><div class="cjm-manual-grid" id="finInputsFunnel"></div></div>
+        <div class="card"><div class="card-title"><div><h2>Рост · темп и форма траектории</h2><p>Выручка, расходы и прибыль привязаны к росту scale(t) = (1 + monthlyGrowth)<sup>exp(t)</sup>, где exp(t) = H·(t/H)<sup>p</sup> нормирован на горизонт H. Конечная точка (1 + monthlyGrowth)<sup>H</sup> не зависит от p — степень p задаёт только <b>форму</b>: p&nbsp;&gt;&nbsp;1 — медленный старт и разгон к концу, p&nbsp;&lt;&nbsp;1 — быстрый старт и насыщение.</p></div></div><div class="cjm-manual-grid" id="finInputsFunnel"></div></div>
         <div class="card"><div class="card-title"><div><h2>Доли по 5 сегментам</h2></div></div><div class="cjm-manual-grid" id="finInputsShares"></div><div class="fin-norm" id="finSharesNorm"></div></div>
         <div class="card"><div class="card-title"><div><h2>Ставки CPA по 5 сегментам</h2></div></div><div class="cjm-manual-grid" id="finInputsPayout"></div></div>
-        <div class="card"><div class="card-title"><div><h2>Конверсии по сегментам · воронка</h2><p>Четыре стадии на сегмент: <b>Визит → Контакт → Клик по офферу → Заявка → Выдача (Апрув)</b>. Меняете здесь — пересчитывается посегментная выручка, объём визитов, помесячный план и <b>CAC</b> каждого сегмента: чем ниже произведение конверсий, тем выше стоимость привлечённого клиента.</p></div></div><div class="cjm-manual-grid" id="finInputsSegCr"></div></div>
+        <div class="card"><div class="card-title"><div><h2>Конверсии по сегментам · воронка</h2><p>Четыре стадии на сегмент: <b>Визит → Контакт → Клик по офферу → Заявка → Выдача (Апрув)</b>. Значения <b>единым источником</b> подтягиваются из блока «Ручной ввод показателей» по каждому сегменту — правьте их там, чтобы финмодель и CJM-воронка не расходились. Здесь можно только переопределить CR для финмодели (очистите поле — вернётся значение из сегментов). Чем ниже произведение конверсий, тем выше <b>CAC</b> сегмента.</p></div></div><div id="finInputsSegCr"></div></div>
         <div class="card"><div class="card-title"><div><h2>Фиксированные расходы, Центрофинанс и цель</h2></div></div><div class="cjm-manual-grid" id="finInputsBudget"></div></div>
       </div>
 
