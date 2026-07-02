@@ -107,6 +107,9 @@
     {key:'Pr',name:'PR / соцсети',color:'var(--violet)',budgetKey:'srcPrBudget',cplKey:'srcPrCpl'},
     {key:'Other',name:'Прочие источники',color:'var(--blue)',budgetKey:'srcOtherBudget',cplKey:'srcOtherCpl'}
   ];
+  // 48 шагов бинарного поиска дают точность значительно выше 0,01 п.п. для
+  // подсказки «нужный рост», но остаются незаметными по CPU в браузере.
+  var MAX_GROWTH_BISECTION_ITERATIONS=48;
 
   // 5 segments per CJM/JTBD spec (Miro):
   //  1. new        — Новый клиент            (yellow)
@@ -798,10 +801,9 @@
           if(it.meta.key==='Seo')seoBase+=it.contacts;
           else paidBase+=it.contacts;
         });
-        // Ищем нужный месячный темп в диапазоне −50%…+200%; 48 итераций
-        // дают точность сильно выше одного базисного пункта для UI-подсказки.
-        var lo=-0.5,hi=2,maxBisectionIterations=48;
-        for(var bi=0;bi<maxBisectionIterations;bi++){
+        // Ищем нужный месячный темп в диапазоне −50%…+200%.
+        var lo=-0.5,hi=2;
+        for(var bi=0;bi<MAX_GROWTH_BISECTION_ITERATIONS;bi++){
           var mid=(lo+hi)/2;
           var sEnd=Math.pow(1+mid,horizon);
           var endContacts=seoBase*sEnd+paidBase*(1+(sEnd-1)*paidShare);
