@@ -37,12 +37,19 @@
   // выручки и 10+ млн ₽ прибыли в месяц.
   var FIN_DEFAULTS={
     monthlyGrowth:40, // агрессивный темп нужен, чтобы из 60–70 тыс. ₽ выйти на 20 млн ₽ за 18 месяцев
-    // «Степень» экспоненты роста: scale_t = (1+g)^(t^growthPower).
-    //   growthPower=1  → классическая экспонента (текущее поведение)
-    //   growthPower>1  → супер-экспонента (рост ускоряется — активные вложения дают отдачу)
-    //   growthPower<1  → рост замедляется (кривая насыщается)
-    // Выручка, расходы и прибыль привязаны к этому scale_t (расходы через traffic-бюджет,
-    // выручка через контакты). Управление вложениями = управление growthPower и monthlyGrowth.
+    // «Степень» роста управляет ФОРМОЙ траектории, а не её масштабом.
+    // Модель роста (нормирована на горизонт, без «двойной экспоненты»):
+    //   exp(t)  = horizon · (t / horizon)^growthPower
+    //   scale_t = (1 + monthlyGrowth)^exp(t)
+    //   growthPower=1  → чистая экспонента (1+g)^t (поведение по умолчанию)
+    //   growthPower>1  → рост back-loaded: медленный старт, разгон к концу (вложения дают
+    //                    отложенную отдачу — «раскачка» инвестиций и монетизации)
+    //   growthPower<1  → рост front-loaded: быстрый старт и насыщение
+    // Конечная точка scale_end=(1+g)^horizon фиксирована при любом growthPower, поэтому
+    // степень НЕ приводит к взрыву показателя (раньше t^p давало млрд при p=2).
+    // Выручка, расходы и прибыль привязаны к одному scale_t (расходы через traffic-бюджет,
+    // выручка через контакты): рост вложений (бюджеты) поднимает и расходы, и объём контактов,
+    // а монетизация (CPA/конверсии) превращает объём в выручку — всё взаимосвязано через scale_t.
     growthPower:1,
     // 4 источника трафика: стартуем от малого июльского бюджета, дальше масштабируем эффект.
     srcYdBudget:15000, srcYdCpl:180,
@@ -553,10 +560,41 @@
     }
     return {};
   }
+  // Единый источник посегментных CR для финмодели: значения ВСЕГДА берутся из блока
+  // «Ручной ввод показателей» (per-segment) и глобального «Визит → Контакт».
+  //   crVc_* (Визит → Контакт)   ← глобальный visitContact (одна конверсия на все сегменты)
+  //   crCc_* (Контакт → Клик)     ← manualFor(seg).visitClick
+  //   crCa_* (Клик → Заявка)      ← manualFor(seg).clickApp
+  //   crAi_* (Заявка → Апрув)     ← manualFor(seg).appIssue
+  // Так финмодель и CJM-воронка не расходятся: правка в сегментах сразу отражается в финмодели.
+  // Возвращает { crVc_New:.., crCc_New:.., ... } для всех 5 сегментов.
+  function finSegSourcedCr(){
+    var g=globalStore();
+    var out={};
+    FIN_SEG_META.forEach(function(m){
+      var id=m.key.toLowerCase();
+      var man=manualFor(id)||{};
+      out[m.crVcKey]=g.visitContact;
+      out[m.crCcKey]=man.visitClick;
+      out[m.crCaKey]=man.clickApp;
+      out[m.crAiKey]=man.appIssue;
+    });
+    return out;
+  }
+  // Набор ключей посегментных CR (для быстрой проверки «это CR-поле?»).
+  var FIN_SEG_CR_KEYS=(function(){
+    var set={};
+    FIN_SEG_META.forEach(function(m){set[m.crVcKey]=1;set[m.crCcKey]=1;set[m.crCaKey]=1;set[m.crAiKey]=1;});
+    return set;
+  })();
   function finInputs(){
     var raw=finRaw();var out={};
+    var segCr=finSegSourcedCr();
     Object.keys(FIN_DEFAULTS).forEach(function(k){
-      out[k]=raw[k]!=null&&isFinite(Number(raw[k]))?Number(raw[k]):FIN_DEFAULTS[k];
+      // Явное переопределение в финмодели имеет приоритет; иначе для CR-полей источник —
+      // сегменты («всегда заполнены из сегментов»), для остального — дефолты финмодели.
+      var fallback=(FIN_SEG_CR_KEYS[k]&&segCr[k]!=null&&isFinite(Number(segCr[k])))?Number(segCr[k]):FIN_DEFAULTS[k];
+      out[k]=raw[k]!=null&&isFinite(Number(raw[k]))?Number(raw[k]):fallback;
     });
     return out;
   }
@@ -589,7 +627,8 @@
   }
 
   // Основной расчёт: возвращает помесячные ряды и агрегаты.
-  //   scale_t = (1+g)^(t^growthPower)  — экспонента роста с управляемой степенью
+  //   exp(t)         = horizon × (t/horizon)^growthPower   — показатель, нормированный на горизонт
+  //   scale_t        = (1+g)^exp(t)   — монотонный рост без взрыва (endpoint = (1+g)^horizon)
   //   contacts_t     = contacts_0     × scale_t
   //   trafficCost_t  = totalBudget    × scale_t
   //   Для каждого сегмента i (доля share_i, посегментные CR):
@@ -639,6 +678,7 @@
     var trafficCost0=sources.totalBudget;
     var cfShare=clamp(inp.cfApprovalShare,0,100)/100;
     var n=FIN_MONTHS.length;
+    var horizon=n-1; // длина горизонта в шагах (t = 0..horizon)
     var contacts=[],visits=[],apps=[],issues=[],revenue=[],cost=[],profit=[],cumProfit=[],cumInvest=[],cfClients=[],cfRevenue=[],ppc=[],scales=[];
     // Помесячные ряды по сегментам (для раскрывающейся таблицы «Помесячный план»).
     // segMonthly[i] хранит месяц-за-месяцем контакты/заявки/выдачи/выручку/маркет-расход/CAC/прибыль сегмента.
@@ -655,8 +695,19 @@
     var runProfit=0,runInvest=0,peakNeed=0,paybackIdx=-1;
     var fixedMonthly=inp.fotMonthly+inp.devMonthly;
     for(var t=0;t<n;t++){
-      // scale_t = (1+g)^(t^power) — экспонента со степенью
-      var scale=Math.pow(1+g,Math.pow(t,power));
+      // Рост, нормированный на горизонт (устраняет «двойную экспоненту» и взрыв до млрд):
+      //   exp(t)   = horizon · (t / horizon)^power   — показатель степени
+      //   scale_t  = (1 + g)^exp(t)
+      // Свойства:
+      //   • строго монотонно растёт по t (t/horizon ∈ [0..1], x^power возрастает при power>0),
+      //     поэтому бизнес «всегда приростает» из месяца в месяц;
+      //   • конечная точка фиксирована: exp(horizon)=horizon ⇒ scale_end=(1+g)^horizon
+      //     при ЛЮБОМ power — степень задаёт только ФОРМУ траектории, а не масштаб взрыва;
+      //   • power=1 → чистая экспонента (1+g)^t (прежнее поведение по умолчанию);
+      //   • power>1 → рост back-loaded (медленный старт, разгон к концу — эффект накопленных
+      //     вложений); power<1 → front-loaded (быстрый старт, насыщение).
+      var expT=horizon>0?horizon*Math.pow(t/horizon,power):0;
+      var scale=Math.pow(1+g,expT);
       scales.push(scale);
       var ct=contacts0*scale;
       var mediaTotal=trafficCost0*scale;
@@ -715,11 +766,11 @@
     var neededGrowth=null;
     if(revPerContact>0&&contacts0>0&&n>1){
       var neededEndContacts=target/revPerContact;
-      // Обратная задача: (1+g)^((n-1)^power) = neededEndContacts/contacts0
-      //   → 1+g = (ratio)^(1/(n-1)^power)
-      var denom=Math.pow(n-1,power);
-      if(denom>0){
-        neededGrowth=(Math.pow(neededEndContacts/contacts0,1/denom)-1)*100;
+      // Обратная задача: конечная точка scale_end=(1+g)^horizon не зависит от power
+      // (показатель нормирован на горизонт), поэтому нужный темп ищется как чистая экспонента:
+      //   (1+g)^horizon = neededEndContacts/contacts0  →  1+g = ratio^(1/horizon)
+      if(horizon>0){
+        neededGrowth=(Math.pow(neededEndContacts/contacts0,1/horizon)-1)*100;
       }
     }
     // Blended CAC = общий медиа-бюджет / общие выдачи (сводный по всему горизонту).
@@ -1826,23 +1877,24 @@
     ],
     finInputsFunnel:[
       {key:'monthlyGrowth',label:'Темп роста в месяц (база экспоненты)',suffix:'%',step:'0.5',min:-50,max:200},
-      {key:'growthPower',label:'Степень экспоненты роста (t^p)',suffix:'p',step:'0.05',min:0.1,max:5}
+      {key:'growthPower',label:'Степень роста — форма траектории (p)',suffix:'p',step:'0.05',min:0.1,max:5}
     ],
     finInputsSegCr:(function(){
-      // 5 сегментов × 4 стадии воронки — генерируется по FIN_SEG_META.
-      // Порядок карточек: сначала «Визит → Контакт» по всем сегментам, затем
-      // «Контакт → Клик», «Клик → Заявка», «Заявка → Апрув» — так пользователю
-      // проще сравнивать одну стадию между сегментами.
+      // 5 сегментов × 4 стадии воронки — генерируется по FIN_SEG_META, СЕГМЕНТ-МАЖОРНО
+      // (4 стадии одного сегмента идут подряд), чтобы рендерить их табами по сегментам.
+      // Значения этих полей по умолчанию подтягиваются из блока «Ручной ввод показателей»
+      // (см. finSegSourcedCr) — здесь возможно только явное переопределение для финмодели.
       var out=[];
       var stages=[
-        {suffix:'Визит → Контакт',keyGetter:function(m){return m.crVcKey;}},
-        {suffix:'Контакт → Клик оффера',keyGetter:function(m){return m.crCcKey;}},
-        {suffix:'Клик → Заявка',keyGetter:function(m){return m.crCaKey;}},
-        {suffix:'Заявка → Апрув',keyGetter:function(m){return m.crAiKey;}}
+        {label:'Визит → Контакт',keyGetter:function(m){return m.crVcKey;}},
+        {label:'Контакт → Клик оффера',keyGetter:function(m){return m.crCcKey;}},
+        {label:'Клик → Заявка',keyGetter:function(m){return m.crCaKey;}},
+        {label:'Заявка → Апрув',keyGetter:function(m){return m.crAiKey;}}
       ];
-      stages.forEach(function(st){
-        FIN_SEG_META.forEach(function(m){
-          out.push({key:st.keyGetter(m),label:m.name+' · '+st.suffix,suffix:'%',step:'0.1',min:0,max:100});
+      FIN_SEG_META.forEach(function(m){
+        stages.forEach(function(st){
+          out.push({key:st.keyGetter(m),label:m.name+' · '+st.label,stage:st.label,
+            seg:m.key,segName:m.name,segColor:m.color,suffix:'%',step:'0.1',min:0,max:100});
         });
       });
       return out;
@@ -1875,20 +1927,64 @@
     return (v||'').trim()||'#0071e3';
   }
 
-  function finFieldHtml(f,value,edited){
+  function finFieldHtml(f,value,edited,opts){
+    opts=opts||{};
+    var label=opts.label!=null?opts.label:f.label;
+    var hint=edited
+      ?' <span class="cjm-manual-suffix" title="Переопределено в финмодели">· изменено</span>'
+      :(opts.sourceHint?' <span class="cjm-manual-suffix" title="Подтянуто из блока «Ручной ввод показателей»">· из сегментов</span>':'');
     return '<label>'+
-      '<span class="cjm-manual-label">'+esc(f.label)+' <span class="cjm-manual-suffix">'+esc(f.suffix)+'</span>'+
-        (edited?' <span class="cjm-manual-suffix" title="Значение изменено вручную">· изменено</span>':'')+
+      '<span class="cjm-manual-label">'+esc(label)+' <span class="cjm-manual-suffix">'+esc(f.suffix)+'</span>'+hint+
       '</span>'+
       '<input type="number" inputmode="decimal" min="'+f.min+'" max="'+f.max+'" step="'+f.step+'" '+
         'value="'+esc(value)+'" data-fin="'+esc(f.key)+'"'+(edited?' class="is-edited"':'')+'>'+
     '</label>';
   }
 
+  // Активный таб конверсий (по ключу сегмента FIN_SEG_META). По умолчанию — первый.
+  var finSegCrActiveTab=FIN_SEG_META[0].key;
+  // Рендерит настройку посегментных конверсий табами по сегментам. Значения по умолчанию
+  // «всегда заполнены из сегментов» (finSegSourcedCr); здесь их можно переопределить только
+  // для финмодели, что помечается «· изменено».
+  function renderFinSegCrTabs(host,inp){
+    var fields=FIN_FIELD_GROUPS.finInputsSegCr;
+    if(!FIN_SEG_META.some(function(m){return m.key===finSegCrActiveTab;}))finSegCrActiveTab=FIN_SEG_META[0].key;
+    var tabsHtml=FIN_SEG_META.map(function(m){
+      var active=m.key===finSegCrActiveTab?' active':'';
+      var edited=fields.some(function(f){return f.seg===m.key&&finIsEdited(f.key);});
+      return '<button type="button" class="cjm-seg-tab'+active+'" data-fin-crtab="'+esc(m.key)+'">'+
+        '<span class="cjm-seg-dot" style="background:'+esc(m.color)+'"></span>'+esc(m.name)+
+        (edited?'<span class="cjm-seg-share" title="Есть переопределения в финмодели">изм.</span>':'')+
+      '</button>';
+    }).join('');
+    var panelsHtml=FIN_SEG_META.map(function(m){
+      var hidden=m.key===finSegCrActiveTab?'':' hidden';
+      var body=fields.filter(function(f){return f.seg===m.key;}).map(function(f){
+        return finFieldHtml(f,inp[f.key],finIsEdited(f.key),{label:f.stage,sourceHint:true});
+      }).join('');
+      return '<div class="fin-crtab-panel"'+hidden+' data-fin-crpanel="'+esc(m.key)+'">'+
+        '<div class="cjm-manual-grid">'+body+'</div></div>';
+    }).join('');
+    host.innerHTML=
+      '<div class="cjm-seg-tabs fin-crtabs" role="tablist">'+tabsHtml+'</div>'+
+      '<p class="fin-crtab-note">Значения по умолчанию подтягиваются из блока «Ручной ввод показателей» по каждому сегменту (единый источник). Правка здесь переопределяет CR только в финмодели — очистите поле, чтобы вернуть значение из сегментов.</p>'+
+      panelsHtml;
+    host.querySelectorAll('[data-fin-crtab]').forEach(function(btn){
+      btn.addEventListener('click',function(){
+        finSegCrActiveTab=btn.getAttribute('data-fin-crtab');
+        host.querySelectorAll('[data-fin-crtab]').forEach(function(b){b.classList.toggle('active',b===btn);});
+        host.querySelectorAll('[data-fin-crpanel]').forEach(function(p){
+          p.hidden=p.getAttribute('data-fin-crpanel')!==finSegCrActiveTab;
+        });
+      });
+    });
+  }
+
   function renderFinanceInputs(){
     var inp=finInputs();
     Object.keys(FIN_FIELD_GROUPS).forEach(function(hostId){
       var host=$(hostId);if(!host)return;
+      if(hostId==='finInputsSegCr'){renderFinSegCrTabs(host,inp);return;}
       host.innerHTML=FIN_FIELD_GROUPS[hostId].map(function(f){
         return finFieldHtml(f,inp[f.key],finIsEdited(f.key));
       }).join('');
@@ -1955,7 +2051,7 @@
         '<div class="fin-target-item"><span class="fin-target-num">'+esc(millions(res.target))+'</span><span class="fin-target-cap">Цель · декабрь 2027</span></div>'+
         statusItem+
         '<div class="fin-target-item"><span class="fin-target-num">'+esc(pct(inp.monthlyGrowth,1))+'</span><span class="fin-target-cap">База экспоненты роста в месяц</span></div>'+
-        '<div class="fin-target-item"><span class="fin-target-num">'+esc((res.growthPower).toLocaleString('ru-RU',{maximumFractionDigits:2}))+'</span><span class="fin-target-cap">Степень экспоненты (t^p)</span></div>'+
+        '<div class="fin-target-item"><span class="fin-target-num">'+esc((res.growthPower).toLocaleString('ru-RU',{maximumFractionDigits:2}))+'</span><span class="fin-target-cap">Степень роста · форма (p&gt;1 разгон к концу)</span></div>'+
         growthItem+
         '<div class="fin-progress"><span style="width:'+progress.toFixed(1)+'%"></span></div>';
     }
@@ -1965,7 +2061,7 @@
       var vStart=res.visits[0]||0,vEnd=res.visits[last]||0;
       visitsEl.innerHTML=
         '<div class="fin-cf-cell"><span class="fin-cf-cap">Визиты на маркетплейс · старт</span><span class="fin-cf-val">'+esc(fmt(vStart))+'</span><span class="fin-cf-note">Июль 2026 · при средневзвешенной CR визит→контакт <b>'+esc(pct(res.avgVc*100,2))+'</b></span></div>'+
-        '<div class="fin-cf-cell"><span class="fin-cf-cap">Визиты на маркетплейс · декабрь 2027</span><span class="fin-cf-val">'+esc(fmt(vEnd))+'</span><span class="fin-cf-note">Экспонента (1+'+esc(pct(inp.monthlyGrowth,1))+')^(t^'+esc((res.growthPower).toLocaleString('ru-RU',{maximumFractionDigits:2}))+')</span></div>'+
+        '<div class="fin-cf-cell"><span class="fin-cf-cap">Визиты на маркетплейс · декабрь 2027</span><span class="fin-cf-val">'+esc(fmt(vEnd))+'</span><span class="fin-cf-note">Рост (1+'+esc(pct(inp.monthlyGrowth,1))+')^exp(t), exp(t)=H·(t/H)^'+esc((res.growthPower).toLocaleString('ru-RU',{maximumFractionDigits:2}))+'</span></div>'+
         '<div class="fin-cf-cell"><span class="fin-cf-cap">Средние конверсии по сегментам</span><span class="fin-cf-val">'+esc(pct(res.avgCc*100,1))+' · '+esc(pct(res.avgCa*100,1))+' · '+esc(pct(res.avgAi*100,1))+'</span><span class="fin-cf-note">Контакт→Клик · Клик→Заявка · Заявка→Апрув (взвешено по долям)</span></div>';
     }
     // Источники трафика — сводка (контакты, доли, средний CPL)
