@@ -1398,7 +1398,7 @@
     return '<div class="ue2-card ue2-waterfall-card">' +
       '<div class="ue2-card-head ue2-row-between">' +
         '<div><h2>Структура доходов и расходов на 1 лид</h2>' +
-          '<p>(EPL + Cross-sell) × CR лида→выдача − RevShare − CAC − OPEX = ожидаемая маржа на лида. Положительные бары — доходы, отрицательные — расходы.</p></div>' +
+          '<p>((EPL + Cross-sell) × CR лида→выдача) − RevShare − CAC − OPEX = ожидаемая маржа на лида. Положительные бары — доходы, отрицательные — расходы.</p></div>' +
         '<label class="ue2-seg-select">Сегмент' +
           '<select id="ueWaterSeg">' +
             SEGMENTS.map(function (s) { return '<option value="' + s.id + '"' + (s.id === activeFunnelSeg ? ' selected' : '') + '>' + esc(s.name) + '</option>'; }).join('') +
