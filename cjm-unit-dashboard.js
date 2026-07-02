@@ -18,32 +18,35 @@
   var charts={};
 
   // ===== Финмодель (вкладка «Финмодель до декабря 2027») ======================
-  // Самодостаточный слой: воронка считается ОТ реального трафика (визитов), база
-  // Центрофинанс выступает трекером лида и не является источником объёма. Продажа
-  // лида обратно в ЦФ по 3000 ₽ убрана из выручки (по требованию бизнеса) — вместо
-  // неё используются партнёрские ставки за выдачу по каждому сегменту. Все входные
-  // параметры редактируются пользователем и сохраняются в localStorage.
-  var FINANCE_KEY='cjm_finance_inputs_v1';
+  // Самодостаточный слой: воронка считается от контактов, полученных из бюджетов
+  // по источникам трафика и CPL. Центрофинанс выступает трекером лида и не является
+  // источником объёма. Продажа лида обратно в ЦФ по 3000 ₽ убрана из выручки
+  // (по требованию бизнеса) — вместо неё используются партнёрские ставки за выдачу
+  // по каждому сегменту. Все входные параметры редактируются пользователем и
+  // сохраняются в localStorage.
+  var FINANCE_KEY='cjm_finance_inputs_v2';
+  var FINANCE_LEGACY_KEYS=['cjm_finance_inputs_v1'];
   // Горизонт совпадает с baseline PNL: июль 2026 → декабрь 2027 (18 месяцев).
   var FIN_MONTHS=['Июль 2026','Август 2026','Сентябрь 2026','Октябрь 2026','Ноябрь 2026','Декабрь 2026','Январь 2027','Февраль 2027','Март 2027','Апрель 2027','Май 2027','Июнь 2027','Июль 2027','Август 2027','Сентябрь 2027','Октябрь 2027','Ноябрь 2027','Декабрь 2027'];
   var FIN_MONTHS_SHORT=['Июл26','Авг26','Сен26','Окт26','Ноя26','Дек26','Янв27','Фев27','Мар27','Апр27','Май27','Июн27','Июл27','Авг27','Сен27','Окт27','Ноя27','Дек27'];
   // Модель драйвится не визитами/CPC, а бюджетами по источникам трафика и
   // «стоимостью оставленного номера» (CPL): бюджет_i / CPL_i = контакты_i.
   // Контакты → Заявки → Выдачи. Доли и CPA — по 5 сегментам, редактируются вручную.
-  // Дефолты подобраны так, чтобы экономика уверенно выходила в плюс к концу горизонта
-  // и накопленная прибыль пересекала ноль в пределах 18 месяцев.
+  // Дефолты отражают стартовую выручку около 60–70 тыс. ₽/мес и нарастающий эффект
+  // вложений с июля: первые месяцы проект убыточен, к декабрю 2027 — 20+ млн ₽
+  // выручки и 10+ млн ₽ прибыли в месяц.
   var FIN_DEFAULTS={
-    monthlyGrowth:15,
-    // 4 источника трафика: бюджет (₽/мес) + CPL (₽ за оставленный телефон)
-    srcYdBudget:300000, srcYdCpl:250,
-    srcSeoBudget:80000, srcSeoCpl:60,
-    srcPrBudget:60000,  srcPrCpl:200,
-    srcOtherBudget:100000, srcOtherCpl:180,
+    monthlyGrowth:40, // агрессивный темп нужен, чтобы из 60–70 тыс. ₽ выйти на 20 млн ₽ за 18 месяцев
+    // 4 источника трафика: стартуем от малого июльского бюджета, дальше масштабируем эффект.
+    srcYdBudget:15000, srcYdCpl:180,
+    srcSeoBudget:3000, srcSeoCpl:45,
+    srcPrBudget:2000,  srcPrCpl:120,
+    srcOtherBudget:5000, srcOtherCpl:150,
     // Воронка от контакта
-    crContactApp:35, crAppIssue:32,
+    crContactApp:40, crAppIssue:32,
     // 5 сегментов — доли (%) и ставка CPA (₽ за выдачу партнёру)
     shareNew:30, shareRejected:20, shareRepeat:20, shareSleeping:15, shareNoncore:15,
-    payoutNew:2900, payoutRejected:2400, payoutRepeat:2700, payoutSleeping:2100, payoutNoncore:1500,
+    payoutNew:3200, payoutRejected:2700, payoutRepeat:3000, payoutSleeping:2300, payoutNoncore:1800,
     // Фикс. расходы
     fotMonthly:325000, devMonthly:200000,
     // Центрофинанс как трекер лида (не источник объёма)
@@ -517,7 +520,18 @@
 
   // --- Finance model: state + computation -----------------------------------
   function isFinanceView(){return selectedId()==='finance';}
-  function finRaw(){return read(FINANCE_KEY,{})||{};}
+  function finRaw(){
+    var raw=read(FINANCE_KEY,null);
+    if(raw&&typeof raw==='object')return raw;
+    for(var i=0;i<FINANCE_LEGACY_KEYS.length;i++){
+      var legacy=read(FINANCE_LEGACY_KEYS[i],null);
+      if(legacy&&typeof legacy==='object'){
+        write(FINANCE_KEY,legacy);
+        return legacy;
+      }
+    }
+    return {};
+  }
   function finInputs(){
     var raw=finRaw();var out={};
     Object.keys(FIN_DEFAULTS).forEach(function(k){
@@ -1688,7 +1702,7 @@
       {key:'srcOtherCpl',label:'Прочие источники · CPL (цена номера)',suffix:'₽',step:'10',min:0,max:1000000}
     ],
     finInputsFunnel:[
-      {key:'monthlyGrowth',label:'Рост трафика в месяц',suffix:'%',step:'0.5',min:-50,max:200},
+      {key:'monthlyGrowth',label:'Темп роста в месяц',suffix:'%',step:'0.5',min:-50,max:200},
       {key:'crContactApp',label:'CR · Контакт → Заявка',suffix:'%',step:'0.5',min:0,max:100},
       {key:'crAppIssue',label:'CR · Заявка → Выдача',suffix:'%',step:'0.5',min:0,max:100}
     ],
@@ -1881,13 +1895,31 @@
     var sum=$('finSummary');
     if(sum){
       var paybackTxt=res.paybackIdx>=0?('окупаемость наступает в '+res.months[res.paybackIdx]):'на горизонте до декабря 2027 накопленная прибыль остаётся отрицательной';
-      var goalTxt=res.targetHit?('план выходит на цель '+millions(res.target)+' в месяц'):('до цели '+millions(res.target)+' в месяц не хватает '+millions(gap)+', для её достижения нужен рост контактов около '+pct(res.neededGrowth,1)+' в месяц вместо текущих '+pct(inp.monthlyGrowth,1));
-      sum.innerHTML='<span class="fin-summary-lead">Резюме для презентации</span>'+
-        'Модель раскручивается от бюджетов на 4 источника трафика (Яндекс.Директ, SEO, PR, прочие) через средний CPL — на старте это <b>'+esc(fmt(res.sources.totalContacts))+'</b> контактов в месяц при среднем CPL <b>'+esc(rub(res.sources.avgCpl))+'</b> и общем бюджете <b>'+esc(rub(res.sources.totalBudget))+'</b>. '+
-        'Чтобы выйти на выручку <b>'+esc(millions(res.lastRevenue))+'</b> в месяц к декабрю 2027, в проект нужно вложить до <b>'+esc(millions(res.peakNeed))+'</b> (пиковый кассовый разрыв). '+
-        'При заданных параметрах '+esc(paybackTxt)+', прибыль на конец горизонта составляет <b>'+esc(millions(res.lastProfit))+'</b> в месяц, а прибыль на одну выдачу — <b>'+esc(rub(res.lastPpc))+'</b>. '+
-        'По цели: '+esc(goalTxt)+'. '+
-        'Выручка построена на партнёрских ставках CPA по 5 сегментам, продажа лида обратно в Центрофинанс по 3000 ₽ из расчёта исключена, а сам Центрофинанс учитывается как трекер лида: '+esc(fmt(res.cfClients[last]))+' клиентов в месяц на конец горизонта.';
+      var firstPositiveIdx=-1;
+      for(var pi=0;pi<res.profit.length;pi++){
+        if(res.profit[pi]>=0){firstPositiveIdx=pi;break;}
+      }
+      var monthlyProfitStatusTxt=firstPositiveIdx>=0
+        ?('месячная прибыль становится положительной в '+res.months[firstPositiveIdx])
+        :'месячная прибыль остаётся отрицательной до конца горизонта';
+      var goalTxt=res.targetHit
+        ?('план выходит на цель '+millions(res.target)+' в месяц')
+        :('до цели '+millions(res.target)+' в месяц не хватает '+millions(gap)+', для её достижения нужен рост контактов около '+pct(res.neededGrowth,1)+' в месяц вместо текущих '+pct(inp.monthlyGrowth,1));
+      var summaryParts=[
+        '<span class="fin-summary-lead">Резюме для презентации</span>',
+        'Текущая база почти нулевая: ориентир <b>60–70 тыс. ₽/мес</b> без вложений.',
+        'С июля включаем нарастающее финансирование 4 источников (Яндекс.Директ, SEO, PR, прочие) через средний CPL — на старте это <b>'+esc(fmt(res.sources.totalContacts))+'</b> контактов в месяц.',
+        'Средний CPL <b>'+esc(rub(res.sources.avgCpl))+'</b>, общий бюджет <b>'+esc(rub(res.sources.totalBudget))+'</b>.',
+        'Чтобы выйти на выручку <b>'+esc(millions(res.lastRevenue))+'</b> в месяц к декабрю 2027, в проект нужно вложить до <b>'+esc(millions(res.peakNeed))+'</b> (пиковый кассовый разрыв).',
+        'Быстрой окупаемости в первый год не закладываем: '+esc(monthlyProfitStatusTxt)+', '+esc(paybackTxt)+'.',
+        'При заданных параметрах прибыль на конец горизонта составляет <b>'+esc(millions(res.lastProfit))+'</b> в месяц, то есть целевой уровень 10+ млн ₽/мес.',
+        'Прибыль на одну выдачу — <b>'+esc(rub(res.lastPpc))+'</b>.',
+        'По цели: '+esc(goalTxt)+'.',
+        'Выручка построена на партнёрских ставках CPA по 5 сегментам.',
+        'Продажа лида обратно в Центрофинанс по 3000 ₽ из расчёта исключена.',
+        'Центрофинанс учитывается как трекер лида: '+esc(fmt(res.cfClients[last]))+' клиентов в месяц на конец горизонта.'
+      ];
+      sum.innerHTML=summaryParts.join(' ');
     }
   }
 
