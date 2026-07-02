@@ -1371,6 +1371,10 @@ body[data-app-version="legacy"] .original-app-hidden{display:block}
 .cjm-derived-formula{font-size:11.5px;color:var(--muted);font-weight:600;flex:1 1 100%}
 .cjm-reset-btn{border:1px dashed var(--line-strong);background:transparent;color:var(--muted);padding:8px 14px;border-radius:980px;font-size:12px;font-weight:700;cursor:pointer;letter-spacing:.02em}
 .cjm-reset-btn:hover{color:var(--text);border-color:var(--text)}
+.cjm-head-actions{display:flex;align-items:center;gap:10px;flex-wrap:wrap;justify-content:flex-end}
+.cjm-shared-state{border:1px solid var(--line);background:var(--surface);color:var(--muted);padding:8px 12px;border-radius:980px;font-size:12px;font-weight:800;letter-spacing:.02em}
+.cjm-shared-state.ok{border-color:rgba(52,199,89,.35);color:var(--green)}
+.cjm-shared-state.warn{border-color:rgba(255,149,0,.35);color:var(--orange)}
 /* Matrix funnels grid */
 .cjm-matrix-funnels{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;padding:14px 16px 4px}
 @media(max-width:1100px){.cjm-matrix-funnels{grid-template-columns:repeat(2,1fr)}}
@@ -1689,12 +1693,12 @@ button:active:not(:disabled){transform:translateY(0) scale(.97)}
 
     <!-- Finance model panel: Бюджет → Прогноз продаж → Ожидаемая прибыль -->
     <section id="cjm-tab-finance" class="cjm-panel">
-      <div class="cjm-section-head"><div><h2>Финмодель до декабря 2027</h2></div><button type="button" class="cjm-reset-btn" id="finReset" title="Сбросить все параметры к значениям по умолчанию">Сбросить к дефолтам</button></div>
+      <div class="cjm-section-head"><div><h2>Финмодель до декабря 2027</h2><p>После мая 2027 рост сглажен; правки показателей отправляются в общую базу при доступном backend API.</p></div><div class="cjm-head-actions"><span class="cjm-shared-state" id="cjmSharedStateStatus">Локально</span><button type="button" class="cjm-reset-btn" id="finReset" title="Сбросить все параметры к значениям по умолчанию">Сбросить к дефолтам</button></div></div>
 
       <div class="fin-kpis" id="finKpis"></div>
 
       <div class="card fin-target-card">
-        <div class="card-title"><div><h2>Прогноз продаж и цель</h2><p>Реалистичная S-образная траектория: первые месяцы рост слабый, затем эффект накопленных вложений ускоряется, а при большем обороте месячный темп становится умеренным; расходы растут линейно</p></div></div>
+        <div class="card-title"><div><h2>Прогноз продаж и цель</h2><p>Реалистичная S-образная траектория: первые месяцы рост слабый, после мая 2027 дальнейший прирост сглаживается, а при большем обороте месячный темп становится умеренным; расходы растут линейно</p></div></div>
         <div class="fin-target-strip" id="finTargetStrip"></div>
         <div class="fin-chart-wrap"><canvas id="finChartTrajectory"></canvas></div>
       </div>
@@ -1722,7 +1726,7 @@ button:active:not(:disabled){transform:translateY(0) scale(.97)}
       <div class="cjm-section-head"><div><h2>Параметры на входе</h2><p>Проставьте свои значения — модель и графики пересчитаются мгновенно</p></div></div>
       <div class="fin-inputs-grid">
         <div class="card"><div class="card-title"><div><h2>Источники трафика · бюджет и CPL</h2></div></div><div class="cjm-manual-grid" id="finInputsSources"></div></div>
-        <div class="card"><div class="card-title"><div><h2>Рост · темп и форма траектории</h2><p>Выручка считается через response-scale: SEO получает накопительный эффект scale(t) = (1 + monthlyGrowth)<sup>exp(t)</sup>, где exp(t) = H·(t/H)<sup>p</sup>. Дефолтный темп снижен до реалистичного уровня: слабый старт, разгон после накопления вложений и без скачков по 30%+ в месяц на большом обороте. Расходы не экспоненциальные: медиабюджет растёт линейно.</p></div></div><div class="cjm-manual-grid" id="finInputsFunnel"></div></div>
+        <div class="card"><div class="card-title"><div><h2>Рост · темп и форма траектории</h2><p>Выручка считается через response-scale: SEO получает накопительный эффект scale(t) = (1 + monthlyGrowth)<sup>exp(t)</sup>, где exp(t) = H·(t/H)<sup>p</sup>, а после мая 2027 оставляется только заданная доля дальнейшего прироста. Дефолтный темп сглажен: слабый старт, разгон после накопления вложений и без скачков по 30%+ в месяц на большом обороте. Расходы не экспоненциальные: медиабюджет растёт линейно.</p></div></div><div class="cjm-manual-grid" id="finInputsFunnel"></div></div>
         <div class="card"><div class="card-title"><div><h2>Доли по 5 сегментам</h2></div></div><div class="cjm-manual-grid" id="finInputsShares"></div><div class="fin-norm" id="finSharesNorm"></div></div>
         <div class="card"><div class="card-title"><div><h2>Ставки CPA по 5 сегментам</h2></div></div><div class="cjm-manual-grid" id="finInputsPayout"></div></div>
         <div class="card"><div class="card-title"><div><h2>Конверсии по сегментам · воронка</h2><p>Четыре стадии на сегмент: <b>Визит → Контакт → Клик по офферу → Заявка → Выдача (Апрув)</b>. Значения связаны с блоком «Ручной ввод показателей» по каждому сегменту: если поменять здесь, поменяется вкладка сегмента; если поменять во вкладке сегмента, поменяется финмодель. Чем ниже произведение конверсий, тем выше <b>CAC</b> сегмента.</p></div></div><div id="finInputsSegCr"></div></div>

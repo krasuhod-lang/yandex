@@ -17,15 +17,17 @@
   var GLOBAL_DEFAULTS={visitContact:9.6,contactCost:140,n_visitContact:50000,n_contactCost:50000};
   var HTML_ESCAPE_MAP={'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;','/':'&#x2F;','`':'&#96;'};
   var charts={};
+  var sharedState={endpoint:null,loaded:false,available:false,saving:false,error:false,pending:{},timer:null};
 
   // ===== Финмодель (вкладка «Финмодель до декабря 2027») ======================
   // Самодостаточный слой: воронка считается от контактов, полученных из бюджетов
   // по источникам трафика и CPL. Центрофинанс выступает трекером лида и не является
   // источником объёма. Продажа лида обратно в ЦФ по 3000 ₽ убрана из выручки
   // (по требованию бизнеса) — вместо неё используются партнёрские ставки за выдачу
-  // по каждому сегменту. Все входные параметры редактируются пользователем и
-  // сохраняются в localStorage.
+  // по каждому сегменту. Все входные параметры редактируются пользователем,
+  // сохраняются локально и синхронизируются с same-origin API /api/cjm-state при наличии.
   var FINANCE_KEY='cjm_finance_inputs_v2';
+  var SHARED_STATE_KEYS=[MANUAL_KEY,GLOBAL_KEY,SHARES_KEY,DESC_KEY,FINANCE_KEY];
   var FINANCE_LEGACY_KEYS=['cjm_finance_inputs_v1'];
   // Горизонт совпадает с baseline PNL: июль 2026 → декабрь 2027 (18 месяцев).
   var FIN_MONTHS=['Июль 2026','Август 2026','Сентябрь 2026','Октябрь 2026','Ноябрь 2026','Декабрь 2026','Январь 2027','Февраль 2027','Март 2027','Апрель 2027','Май 2027','Июнь 2027','Июль 2027','Август 2027','Сентябрь 2027','Октябрь 2027','Ноябрь 2027','Декабрь 2027'];
@@ -39,9 +41,9 @@
   // Важно: выручка растёт сильнее расходов за счёт накопительного SEO/бренд-эффекта,
   // а расходы растут только линейным планом.
   var FIN_DEFAULTS={
-    // 12% — реалистичный response-scale спроса: первые месяцы дают слабый рост,
-    // затем эффект накопленных вложений ускоряется, но без скачков по 30%+ при
-    // уже набранном обороте в несколько миллионов.
+    // 12% — базовый response-scale спроса: первые месяцы дают слабый рост,
+    // затем эффект накопленных вложений ускоряется. После мая 2027 включается
+    // отдельное замедление, чтобы большие месячные объёмы не разгонялись слишком резко.
     monthlyGrowth:12,
     // «Степень» роста управляет ФОРМОЙ траектории, а не её масштабом.
     // Модель роста (нормирована на горизонт, без «двойной экспоненты»):
@@ -61,6 +63,9 @@
     // p=1.7 заметно сдвигает отдачу к поздним месяцам: это отражает PNL-сценарий,
     // где SEO-страницы и бренд накапливают эффект не мгновенно, а после разгона.
     growthPower:1.7,
+    // После мая 2027 оставляем только часть дальнейшего экспоненциального прироста:
+    // 55% даёт плавный рост летом-осенью вместо прежнего резкого ускорения.
+    postMayGrowthFactor:55,
     costGrowthMonthly:6,
     paidDemandShare:15,
     // 4 источника трафика: стартовая структура близка к PNL июля 2026:
@@ -357,6 +362,71 @@
   function $(id){return document.getElementById(id);}
   function esc(value){return String(value==null?'':value).replace(/[&<>"'\/`]/g,function(c){return HTML_ESCAPE_MAP[c];});}
   var memStore={};
+  function isSharedStateKey(key){return SHARED_STATE_KEYS.indexOf(key)>=0;}
+  function sharedStateEndpoint(){
+    if(sharedState.endpoint!==null)return sharedState.endpoint;
+    var cfg=(typeof window!=='undefined'&&window.VYRUCHAI_SHARED_STATE_URL!=null)?String(window.VYRUCHAI_SHARED_STATE_URL).trim():'';
+    sharedState.endpoint=cfg||'/api/cjm-state';
+    return sharedState.endpoint;
+  }
+  function updateSharedStatus(){
+    var el=$('cjmSharedStateStatus');if(!el)return;
+    var text='Локально';
+    if(sharedState.saving)text='Сохраняем в базу…';
+    else if(sharedState.available)text='Синхронизировано с базой';
+    else if(sharedState.error)text='База недоступна, сохранено локально';
+    el.textContent=text;
+    el.className='cjm-shared-state '+(sharedState.available?'ok':(sharedState.error?'warn':''));
+  }
+  function persistSharedStateNow(){
+    var endpoint=sharedStateEndpoint();
+    if(!endpoint||typeof fetch!=='function')return;
+    var values=sharedState.pending;
+    sharedState.pending={};
+    if(!Object.keys(values).length)return;
+    sharedState.saving=true;sharedState.error=false;updateSharedStatus();
+    fetch(endpoint,{
+      method:'PUT',
+      headers:{'Content-Type':'application/json'},
+      credentials:'same-origin',
+      body:JSON.stringify({values:values,updatedAt:new Date().toISOString()})
+    }).then(function(r){
+      if(!r.ok)throw new Error('shared-state '+r.status);
+      sharedState.available=true;sharedState.error=false;
+    }).catch(function(){
+      sharedState.available=false;sharedState.error=true;
+      Object.keys(values).forEach(function(k){sharedState.pending[k]=values[k];});
+    }).finally(function(){sharedState.saving=false;updateSharedStatus();});
+  }
+  function scheduleSharedStateWrite(key,value){
+    if(!isSharedStateKey(key))return;
+    sharedState.pending[key]=value;
+    if(sharedState.timer)clearTimeout(sharedState.timer);
+    sharedState.timer=setTimeout(persistSharedStateNow,600);
+    updateSharedStatus();
+  }
+  function loadSharedState(done){
+    var endpoint=sharedStateEndpoint();
+    if(!endpoint||typeof fetch!=='function'){if(done)done(false);return;}
+    fetch(endpoint,{method:'GET',credentials:'same-origin',cache:'no-store'}).then(function(r){
+      if(!r.ok)throw new Error('shared-state '+r.status);
+      return r.json();
+    }).then(function(data){
+      var values=data&&data.values&&typeof data.values==='object'?data.values:data;
+      if(!values||typeof values!=='object')return false;
+      SHARED_STATE_KEYS.forEach(function(key){
+        if(values[key]!=null){
+          memStore[key]=values[key];
+          try{localStorage.setItem(key,JSON.stringify(values[key]));}catch(e){}
+        }
+      });
+      sharedState.loaded=true;sharedState.available=true;sharedState.error=false;updateSharedStatus();
+      return true;
+    }).then(function(changed){if(done)done(!!changed);}).catch(function(){
+      sharedState.loaded=true;sharedState.available=false;sharedState.error=true;updateSharedStatus();
+      if(done)done(false);
+    });
+  }
   function read(key,fallback){
     try{var raw=localStorage.getItem(key);if(raw!=null)return JSON.parse(raw);}
     catch(e){/* localStorage unavailable — fall through to in-memory */}
@@ -366,6 +436,7 @@
     memStore[key]=value;
     try{localStorage.setItem(key,JSON.stringify(value));}
     catch(e){/* in-memory copy already kept */}
+    scheduleSharedStateWrite(key,value);
   }
   function fmt(v){return Math.round(Number(v)||0).toLocaleString('ru-RU');}
   function rub(v){return fmt(v)+' ₽';}
@@ -693,6 +764,7 @@
 
   // Основной расчёт: возвращает помесячные ряды и агрегаты.
   //   exp(t)         = horizon × (t/horizon)^growthPower   — показатель, нормированный на горизонт
+  //   после мая 2027 exp(t) дополнительно сглаживается через postMayGrowthFactor
   //   revenueScale_t = (1+g)^exp(t)   — монотонный рост выручки/спроса без взрыва
   //   costScale_t    = 1 + costGrowthMonthly × t — линейный рост расходов, не экспонента
   //   contacts_t     = Σ contacts_i0 × response_i(t), где SEO получает полный
@@ -745,6 +817,8 @@
     var cfShare=clamp(inp.cfApprovalShare,0,100)/100;
     var costGrowth=clamp(inp.costGrowthMonthly,0,200)/100;
     var paidShare=clamp(inp.paidDemandShare,0,100)/100;
+    var postMayGrowthFactor=clamp(inp.postMayGrowthFactor,0,100)/100;
+    var postMayStart=FIN_MONTHS.indexOf('Май 2027');
     var n=FIN_MONTHS.length;
     var horizon=n-1; // длина горизонта в шагах (t = 0..horizon)
     var contacts=[],visits=[],apps=[],issues=[],revenue=[],cost=[],profit=[],cumProfit=[],cumInvest=[],cfClients=[],cfRevenue=[],ppc=[],scales=[],costScales=[];
@@ -769,12 +843,17 @@
       // Свойства:
       //   • строго монотонно растёт по t (t/horizon ∈ [0..1], x^power возрастает при power>0),
       //     поэтому бизнес «всегда приростает» из месяца в месяц;
-      //   • конечная точка фиксирована: exp(horizon)=horizon ⇒ scale_end=(1+g)^horizon
-      //     при ЛЮБОМ power — степень задаёт только ФОРМУ траектории, а не масштаб взрыва;
+      //   • после мая 2027 дальнейший прирост exp(t) умножается на postMayGrowthFactor,
+      //     поэтому лето–осень 2027 растут медленнее и без резкого взлёта;
       //   • power=1 → чистая экспонента (1+g)^t (прежнее поведение по умолчанию);
       //   • power>1 → рост back-loaded (медленный старт, разгон к концу — эффект накопленных
       //     вложений); power<1 → front-loaded (быстрый старт, насыщение).
-      var expT=horizon>0?horizon*Math.pow(t/horizon,power):0;
+      var rawExpT=horizon>0?horizon*Math.pow(t/horizon,power):0;
+      var expT=rawExpT;
+      if(postMayStart>=0&&t>postMayStart){
+        var startExp=horizon>0?horizon*Math.pow(postMayStart/horizon,power):0;
+        expT=startExp+(rawExpT-startExp)*postMayGrowthFactor;
+      }
       var revenueScale=Math.pow(1+g,expT);
       var costScale=1+costGrowth*t;
       scales.push(revenueScale);
@@ -871,7 +950,7 @@
       avgVc:avgVc,avgCc:avgCc,avgCa:avgCa,avgAi:avgAi,avgConv:avgConv,
       blendedPayout:blendedPayout,
       blendedRevPerContact:blendedRevPerContact,visitsPerContact:visitsPerContact,
-      revPerContact:revPerContact,sources:sources,scales:scales,costScales:costScales,growthPower:power,
+      revPerContact:revPerContact,sources:sources,scales:scales,costScales:costScales,growthPower:power,postMayGrowthFactor:postMayGrowthFactor,
       contacts:contacts,visits:visits,apps:apps,issues:issues,revenue:revenue,cost:cost,profit:profit,
       cumProfit:cumProfit,cumInvest:cumInvest,cfClients:cfClients,cfRevenue:cfRevenue,ppc:ppc,
       segIssuesLast:segIssuesLast,segRevenueLast:segRevenueLast,segCacLast:segCacLast,
@@ -1963,6 +2042,7 @@
     finInputsFunnel:[
       {key:'monthlyGrowth',label:'Темп роста в месяц (база экспоненты)',suffix:'%',step:'0.5',min:-50,max:200},
       {key:'growthPower',label:'Степень роста выручки — форма траектории',suffix:'',step:'0.05',min:0.1,max:5},
+      {key:'postMayGrowthFactor',label:'Скорость роста после мая 2027',suffix:'%',step:'1',min:0,max:100},
       {key:'costGrowthMonthly',label:'Линейный прирост расходов в месяц',suffix:'%',step:'0.5',min:0,max:200},
       {key:'paidDemandShare',label:'Доля SEO-эффекта для платных каналов',suffix:'%',step:'1',min:0,max:100}
     ],
@@ -2149,6 +2229,7 @@
         '<div class="fin-target-item"><span class="fin-target-num">'+esc(pct(inp.monthlyGrowth,1))+'</span><span class="fin-target-cap">Темп роста спроса</span></div>'+
         '<div class="fin-target-item"><span class="fin-target-num">'+esc(pct(inp.costGrowthMonthly,1))+'</span><span class="fin-target-cap">Расходы: линейный прирост в месяц</span></div>'+
         '<div class="fin-target-item"><span class="fin-target-num">'+esc((res.growthPower).toLocaleString('ru-RU',{maximumFractionDigits:2}))+'</span><span class="fin-target-cap">Форма роста выручки (p&gt;1 разгон к концу)</span></div>'+
+        '<div class="fin-target-item"><span class="fin-target-num">'+esc(pct(res.postMayGrowthFactor*100,0))+'</span><span class="fin-target-cap">Скорость после мая 2027</span></div>'+
         growthItem+
         '<div class="fin-progress"><span style="width:'+progress.toFixed(1)+'%"></span></div>';
     }
@@ -2382,6 +2463,10 @@
     initInnerTabs();
     initTheme();
     renderAll();
+    loadSharedState(function(changed){
+      if(changed){applyStoredShares();renderAll();}
+      else updateSharedStatus();
+    });
   }
 
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init);
