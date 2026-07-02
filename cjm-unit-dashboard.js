@@ -38,6 +38,8 @@
   // порядок 12–13 млн ₽/мес. Важно: выручка растёт сильнее расходов за счёт
   // накопительного SEO/бренд-эффекта, а расходы растут только линейным планом.
   var FIN_DEFAULTS={
+    // 30% — это не рост расходов, а response-scale выручки: при стартовой
+    // выручке PNL около 220 тыс. ₽ он даёт декабрь 2027 порядка 12,5 млн ₽.
     monthlyGrowth:30,
     // «Степень» роста управляет ФОРМОЙ траектории, а не её масштабом.
     // Модель роста (нормирована на горизонт, без «двойной экспоненты»):
@@ -59,8 +61,9 @@
     paidDemandShare:25,
     // 4 источника трафика: стартовая структура близка к PNL июля 2026:
     // 300 тыс. ₽ Яндекс.Директ + 450 тыс. ₽ SEO + 100 тыс. ₽ PR/бренд.
-    // CPL — правдоподобная эффективная стоимость оставленного номера на раннем
-    // этапе, пока SEO ещё не раскрыл накопительный эффект.
+    // CPL здесь — не цена клика, а эффективная стоимость оставленного номера.
+    // На раннем этапе она на порядок выше прежних demo-CPL, потому что SEO/бренд
+    // расходы уже есть, а накопленный органический поток контактов ещё мал.
     srcYdBudget:300000, srcYdCpl:1800,
     srcSeoBudget:450000, srcSeoCpl:2200,
     srcPrBudget:100000,  srcPrCpl:2500,
@@ -82,7 +85,8 @@
     crVc_Repeat:9.6, crCc_Repeat:65, crCa_Repeat:78, crAi_Repeat:55,
     crVc_Sleeping:9.6, crCc_Sleeping:50, crCa_Sleeping:76, crAi_Sleeping:50,
     crVc_Noncore:9.6, crCc_Noncore:40, crCa_Noncore:65, crAi_Noncore:40,
-    // Фикс. расходы
+    // Фикс. расходы. devMonthly=500 тыс. ₽ отражает стартовый PNL-разгон
+    // разработки/интеграций, а не постоянное масштабирование расходов.
     fotMonthly:325000, devMonthly:500000,
     // Центрофинанс как трекер лида (не источник объёма)
     cfApprovalShare:30, cfPayout:0,
@@ -110,6 +114,7 @@
   // 48 шагов бинарного поиска дают точность значительно выше 0,01 п.п. для
   // подсказки «нужный рост», но остаются незаметными по CPU в браузере.
   var MAX_GROWTH_BISECTION_ITERATIONS=48;
+  var GROWTH_BISECTION_EPSILON=0.000001;
 
   // 5 segments per CJM/JTBD spec (Miro):
   //  1. new        — Новый клиент            (yellow)
@@ -640,9 +645,12 @@
     return {items:items,totalBudget:totalBudget,totalContacts:totalContacts,avgCpl:avgCpl};
   }
 
-  // Возвращает множитель контактов для источника: SEO получает полный
-  // накопительный response-scale, а paid/PR/other — только paidShare от
-  // прироста, чтобы расходы не превращались в прямую экспоненту выручки.
+  // Возвращает множитель контактов для источника.
+  // Параметры:
+  //   item.meta.key — ключ источника из FIN_SRC_META;
+  //   revenueScale  — полный накопительный множитель спроса/выручки;
+  //   paidShare     — доля [0..1] SEO-эффекта для paid/PR/other.
+  // Формула: SEO = revenueScale; остальные = 1 + (revenueScale - 1) × paidShare.
   function finSourceResponseScale(item,revenueScale,paidShare){
     if(item&&item.meta&&item.meta.key==='Seo')return revenueScale;
     return 1+(revenueScale-1)*paidShare;
@@ -808,6 +816,7 @@
           var sEnd=Math.pow(1+mid,horizon);
           var endContacts=seoBase*sEnd+paidBase*(1+(sEnd-1)*paidShare);
           if(endContacts>=neededEndContacts)hi=mid;else lo=mid;
+          if(Math.abs(hi-lo)<GROWTH_BISECTION_EPSILON)break;
         }
         neededGrowth=hi*100;
       }
@@ -1916,7 +1925,7 @@
     ],
     finInputsFunnel:[
       {key:'monthlyGrowth',label:'Темп роста в месяц (база экспоненты)',suffix:'%',step:'0.5',min:-50,max:200},
-      {key:'growthPower',label:'Степень роста выручки — форма траектории (p)',suffix:'p',step:'0.05',min:0.1,max:5},
+      {key:'growthPower',label:'Степень роста выручки — форма траектории',suffix:'',step:'0.05',min:0.1,max:5},
       {key:'costGrowthMonthly',label:'Линейный прирост расходов в месяц',suffix:'%',step:'0.5',min:0,max:200},
       {key:'paidDemandShare',label:'Доля SEO-эффекта для платных каналов',suffix:'%',step:'1',min:0,max:100}
     ],
