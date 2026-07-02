@@ -33,32 +33,43 @@
   // Модель драйвится не визитами/CPC, а бюджетами по источникам трафика и
   // «стоимостью оставленного номера» (CPL): бюджет_i / CPL_i = контакты_i.
   // Контакты → Заявки → Выдачи. Доли и CPA — по 5 сегментам, редактируются вручную.
-  // Дефолты отражают целевой план: положительная прибыль уже с июля 2026,
-  // понятный стартовый медиа-бюджет 200 тыс. ₽/мес и выход к декабрю 2027
-  // на 20+ млн ₽ выручки при росте 20%/мес и положительной помесячной динамике.
+  // Дефолты откалиброваны по baseline PNL: стартовые вложения ≈1,7 млн ₽/мес,
+  // выручка стартует около 200–250 тыс. ₽/мес и выходит к декабрю 2027 на
+  // порядок 12–13 млн ₽/мес. Важно: выручка растёт сильнее расходов за счёт
+  // накопительного SEO/бренд-эффекта, а расходы растут только линейным планом.
   var FIN_DEFAULTS={
-    monthlyGrowth:20,
+    // 30% — это не рост расходов, а response-scale выручки: при стартовой
+    // выручке PNL около 220 тыс. ₽ он даёт декабрь 2027 порядка 12,5 млн ₽.
+    monthlyGrowth:30,
     // «Степень» роста управляет ФОРМОЙ траектории, а не её масштабом.
     // Модель роста (нормирована на горизонт, без «двойной экспоненты»):
     //   exp(t)  = horizon · (t / horizon)^growthPower
-    //   scale_t = (1 + monthlyGrowth)^exp(t)
+    //   revenueScale_t = (1 + monthlyGrowth)^exp(t)
     //   growthPower=1  → чистая экспонента (1+g)^t (поведение по умолчанию)
     //   growthPower>1  → рост back-loaded: медленный старт, разгон к концу (вложения дают
     //                    отложенную отдачу — «раскачка» инвестиций и монетизации)
     //   growthPower<1  → рост front-loaded: быстрый старт и насыщение
     // Конечная точка scale_end=(1+g)^horizon фиксирована при любом growthPower, поэтому
     // степень НЕ приводит к взрыву показателя (раньше t^p давало млрд при p=2).
-    // Выручка, расходы и прибыль привязаны к одному scale_t (расходы через traffic-бюджет,
-    // выручка через контакты): рост вложений (бюджеты) поднимает и расходы, и объём контактов,
-    // а монетизация (CPA/конверсии) превращает объём в выручку — всё взаимосвязано через scale_t.
-    growthPower:1,
-    // 4 источника трафика: стартуем с 200 тыс. ₽/мес суммарного медиа-бюджета.
-    // CPL оставляем целевым: масштабирование предполагает сохранение качества каналов
-    // за счёт микса SEO/PR/Direct/Other и ежемесячной оптимизации закупки.
-    srcYdBudget:90000, srcYdCpl:180,
-    srcSeoBudget:30000, srcSeoCpl:45,
-    srcPrBudget:20000,  srcPrCpl:120,
-    srcOtherBudget:60000, srcOtherCpl:150,
+    // Выручка и расходы больше НЕ привязаны к одному scale_t: контакты/выручка
+    // получают экспоненциальный response-scale, но медиарасходы растут линейно
+    // через costGrowthMonthly. SEO берёт 100% накопительного эффекта, платные
+    // источники — только paidDemandShare% от него (иначе модель превращается в
+    // прямую зависимость «вложили ×2 → заработали ×2»).
+    // p=1.2 слегка сдвигает отдачу к поздним месяцам: это отражает PNL-сценарий,
+    // где SEO-страницы и бренд накапливают эффект не мгновенно, а после разгона.
+    growthPower:1.2,
+    costGrowthMonthly:9,
+    paidDemandShare:25,
+    // 4 источника трафика: стартовая структура близка к PNL июля 2026:
+    // 300 тыс. ₽ Яндекс.Директ + 450 тыс. ₽ SEO + 100 тыс. ₽ PR/бренд.
+    // CPL здесь — не цена клика, а эффективная стоимость оставленного номера.
+    // На раннем этапе она на порядок выше прежних demo-CPL, потому что SEO/бренд
+    // расходы уже есть, а накопленный органический поток контактов ещё мал.
+    srcYdBudget:300000, srcYdCpl:1800,
+    srcSeoBudget:450000, srcSeoCpl:2200,
+    srcPrBudget:100000,  srcPrCpl:2500,
+    srcOtherBudget:0, srcOtherCpl:2000,
     // 5 сегментов — доли (%) и ставка CPA (₽ за выдачу партнёру)
     shareNew:30, shareRejected:20, shareRepeat:20, shareSleeping:15, shareNoncore:15,
     payoutNew:3200, payoutRejected:2700, payoutRepeat:3000, payoutSleeping:2300, payoutNoncore:1800,
@@ -76,12 +87,13 @@
     crVc_Repeat:9.6, crCc_Repeat:65, crCa_Repeat:78, crAi_Repeat:55,
     crVc_Sleeping:9.6, crCc_Sleeping:50, crCa_Sleeping:76, crAi_Sleeping:50,
     crVc_Noncore:9.6, crCc_Noncore:40, crCa_Noncore:65, crAi_Noncore:40,
-    // Фикс. расходы
-    fotMonthly:325000, devMonthly:200000,
+    // Фикс. расходы. devMonthly=500 тыс. ₽ отражает стартовый PNL-разгон
+    // разработки/интеграций, а не постоянное масштабирование расходов.
+    fotMonthly:325000, devMonthly:500000,
     // Центрофинанс как трекер лида (не источник объёма)
     cfApprovalShare:30, cfPayout:0,
     // Цель
-    targetRevenue:20000000
+    targetRevenue:12500000
   };
   var FIN_SEG_META=[
     {key:'New',name:'Новый',color:'var(--yellow)',shareKey:'shareNew',payoutKey:'payoutNew',
@@ -101,6 +113,10 @@
     {key:'Pr',name:'PR / соцсети',color:'var(--violet)',budgetKey:'srcPrBudget',cplKey:'srcPrCpl'},
     {key:'Other',name:'Прочие источники',color:'var(--blue)',budgetKey:'srcOtherBudget',cplKey:'srcOtherCpl'}
   ];
+  // 48 шагов бинарного поиска — верхняя защита от бесконечного цикла; обычно
+  // поиск завершается раньше по epsilon ≈0,0001 п.п. месячного темпа.
+  var MAX_GROWTH_BISECTION_ITERATIONS=48;
+  var GROWTH_BISECTION_EPSILON=0.000001;
 
   // 5 segments per CJM/JTBD spec (Miro):
   //  1. new        — Новый клиент            (yellow)
@@ -631,11 +647,23 @@
     return {items:items,totalBudget:totalBudget,totalContacts:totalContacts,avgCpl:avgCpl};
   }
 
+  // Возвращает множитель контактов для источника.
+  // Параметры:
+  //   item.meta.key — ключ источника из FIN_SRC_META;
+  //   revenueScale  — полный накопительный множитель спроса/выручки;
+  //   paidShare     — доля [0..1] SEO-эффекта для paid/PR/other.
+  // Формула: SEO = revenueScale; остальные = 1 + (revenueScale - 1) × paidShare.
+  function finSourceResponseScale(item,revenueScale,paidShare){
+    if(item&&item.meta&&item.meta.key==='Seo')return revenueScale;
+    return 1+(revenueScale-1)*paidShare;
+  }
+
   // Основной расчёт: возвращает помесячные ряды и агрегаты.
   //   exp(t)         = horizon × (t/horizon)^growthPower   — показатель, нормированный на горизонт
-  //   scale_t        = (1+g)^exp(t)   — монотонный рост без взрыва (endpoint = (1+g)^horizon)
-  //   contacts_t     = contacts_0     × scale_t
-  //   trafficCost_t  = totalBudget    × scale_t
+  //   revenueScale_t = (1+g)^exp(t)   — монотонный рост выручки/спроса без взрыва
+  //   costScale_t    = 1 + costGrowthMonthly × t — линейный рост расходов, не экспонента
+  //   contacts_t     = Σ contacts_i0 × response_i(t), где SEO получает полный
+  //                    накопительный эффект, а платные источники — только часть
   //   Для каждого сегмента i (доля share_i, посегментные CR):
   //     segContacts_i(t) = contacts_t × share_i
   //     segIssues_i(t)   = segContacts_i(t) × crCc_i × crCa_i × crAi_i
@@ -682,9 +710,11 @@
     var contacts0=sources.totalContacts;
     var trafficCost0=sources.totalBudget;
     var cfShare=clamp(inp.cfApprovalShare,0,100)/100;
+    var costGrowth=clamp(inp.costGrowthMonthly,0,200)/100;
+    var paidShare=clamp(inp.paidDemandShare,0,100)/100;
     var n=FIN_MONTHS.length;
     var horizon=n-1; // длина горизонта в шагах (t = 0..horizon)
-    var contacts=[],visits=[],apps=[],issues=[],revenue=[],cost=[],profit=[],cumProfit=[],cumInvest=[],cfClients=[],cfRevenue=[],ppc=[],scales=[];
+    var contacts=[],visits=[],apps=[],issues=[],revenue=[],cost=[],profit=[],cumProfit=[],cumInvest=[],cfClients=[],cfRevenue=[],ppc=[],scales=[],costScales=[];
     // Помесячные ряды по сегментам (для раскрывающейся таблицы «Помесячный план»).
     // segMonthly[i] хранит месяц-за-месяцем контакты/заявки/выдачи/выручку/маркет-расход/CAC/прибыль сегмента.
     // CAC_i(t) = mediaCost_i(t) / issues_i(t), где mediaCost_i(t) — часть медиа-бюджета,
@@ -700,9 +730,9 @@
     var runProfit=0,runInvest=0,peakNeed=0,paybackIdx=-1;
     var fixedMonthly=inp.fotMonthly+inp.devMonthly;
     for(var t=0;t<n;t++){
-      // Рост, нормированный на горизонт (устраняет «двойную экспоненту» и взрыв до млрд):
+      // Рост выручки/спроса, нормированный на горизонт (устраняет «двойную экспоненту» и взрыв до млрд):
       //   exp(t)   = horizon · (t / horizon)^power   — показатель степени
-      //   scale_t  = (1 + g)^exp(t)
+      //   revenueScale_t  = (1 + g)^exp(t)
       // Свойства:
       //   • строго монотонно растёт по t (t/horizon ∈ [0..1], x^power возрастает при power>0),
       //     поэтому бизнес «всегда приростает» из месяца в месяц;
@@ -712,16 +742,20 @@
       //   • power>1 → рост back-loaded (медленный старт, разгон к концу — эффект накопленных
       //     вложений); power<1 → front-loaded (быстрый старт, насыщение).
       var expT=horizon>0?horizon*Math.pow(t/horizon,power):0;
-      var scale=Math.pow(1+g,expT);
-      scales.push(scale);
-      var ct=contacts0*scale;
-      var mediaTotal=trafficCost0*scale;
+      var revenueScale=Math.pow(1+g,expT);
+      var costScale=1+costGrowth*t;
+      scales.push(revenueScale);
+      costScales.push(costScale);
+      var totalScaledContacts=sources.items.reduce(function(sum,it){
+        return sum+it.contacts*finSourceResponseScale(it,revenueScale,paidShare);
+      },0);
+      var mediaTotal=trafficCost0*costScale;
       // Аггрегация по сегментам: контакты дробятся по долям, каждый сегмент даёт
       // свой поток заявок/выдач/выручки и свой объём визитов.
       var totalApps=0,totalIss=0,totalRev=0,totalVis=0;
       var segCache=[];
       for(var i=0;i<FIN_SEG_META.length;i++){
-        var segC=ct*shares[i];
+        var segC=totalScaledContacts*shares[i];
         var segClick=segC*crCc[i];
         var segApp=segClick*crCa[i];
         var segIss=segApp*crAi[i];
@@ -761,7 +795,7 @@
       runProfit+=p;runInvest+=c;
       if(runProfit<0)peakNeed=Math.max(peakNeed,-runProfit);
       if(paybackIdx<0&&runProfit>=0&&t>0)paybackIdx=t;
-      contacts.push(ct);visits.push(totalVis);apps.push(totalApps);issues.push(totalIss);
+      contacts.push(totalScaledContacts);visits.push(totalVis);apps.push(totalApps);issues.push(totalIss);
       revenue.push(rev);cost.push(c);profit.push(p);
       cumProfit.push(runProfit);cumInvest.push(runInvest);cfClients.push(cfCl);cfRevenue.push(cfRev);
       ppc.push(totalIss>0?p/totalIss:0);
@@ -771,11 +805,24 @@
     var neededGrowth=null;
     if(revPerContact>0&&contacts0>0&&n>1){
       var neededEndContacts=target/revPerContact;
-      // Обратная задача: конечная точка scale_end=(1+g)^horizon не зависит от power
-      // (показатель нормирован на горизонт), поэтому нужный темп ищется как чистая экспонента:
-      //   (1+g)^horizon = neededEndContacts/contacts0  →  1+g = ratio^(1/horizon)
       if(horizon>0){
-        neededGrowth=(Math.pow(neededEndContacts/contacts0,1/horizon)-1)*100;
+        var seoBase=0,paidBase=0;
+        sources.items.forEach(function(it){
+          if(it.meta.key==='Seo')seoBase+=it.contacts;
+          else paidBase+=it.contacts;
+        });
+        // Ищем нужный месячный темп в диапазоне −50%…+200%.
+        var lo=-0.5,hi=2;
+        for(var bi=0;bi<MAX_GROWTH_BISECTION_ITERATIONS;bi++){
+          var mid=(lo+hi)/2;
+          var sEnd=Math.pow(1+mid,horizon);
+          var endContacts=seoBase*sEnd+paidBase*(1+(sEnd-1)*paidShare);
+          if(endContacts>=neededEndContacts)hi=mid;else lo=mid;
+          if(Math.abs(hi-lo)<GROWTH_BISECTION_EPSILON)break;
+        }
+        var foundScale=Math.pow(1+hi,horizon);
+        var foundContacts=seoBase*foundScale+paidBase*(1+(foundScale-1)*paidShare);
+        neededGrowth=foundContacts>=neededEndContacts*0.999?hi*100:null;
       }
     }
     // Blended CAC = общий медиа-бюджет / общие выдачи (сводный по всему горизонту).
@@ -791,7 +838,7 @@
       avgVc:avgVc,avgCc:avgCc,avgCa:avgCa,avgAi:avgAi,avgConv:avgConv,
       blendedPayout:blendedPayout,
       blendedRevPerContact:blendedRevPerContact,visitsPerContact:visitsPerContact,
-      revPerContact:revPerContact,sources:sources,scales:scales,growthPower:power,
+      revPerContact:revPerContact,sources:sources,scales:scales,costScales:costScales,growthPower:power,
       contacts:contacts,visits:visits,apps:apps,issues:issues,revenue:revenue,cost:cost,profit:profit,
       cumProfit:cumProfit,cumInvest:cumInvest,cfClients:cfClients,cfRevenue:cfRevenue,ppc:ppc,
       segIssuesLast:segIssuesLast,segRevenueLast:segRevenueLast,segCacLast:segCacLast,
@@ -1882,7 +1929,9 @@
     ],
     finInputsFunnel:[
       {key:'monthlyGrowth',label:'Темп роста в месяц (база экспоненты)',suffix:'%',step:'0.5',min:-50,max:200},
-      {key:'growthPower',label:'Степень роста — форма траектории (p)',suffix:'p',step:'0.05',min:0.1,max:5}
+      {key:'growthPower',label:'Степень роста выручки — форма траектории',suffix:'',step:'0.05',min:0.1,max:5},
+      {key:'costGrowthMonthly',label:'Линейный прирост расходов в месяц',suffix:'%',step:'0.5',min:0,max:200},
+      {key:'paidDemandShare',label:'Доля SEO-эффекта для платных каналов',suffix:'%',step:'1',min:0,max:100}
     ],
     finInputsSegCr:(function(){
       // 5 сегментов × 4 стадии воронки — генерируется по FIN_SEG_META, СЕГМЕНТ-МАЖОРНО
@@ -2055,8 +2104,9 @@
         '<div class="fin-target-item"><span class="fin-target-num">'+esc(millions(res.lastRevenue))+'</span><span class="fin-target-cap">Выручка на конец</span></div>'+
         '<div class="fin-target-item"><span class="fin-target-num">'+esc(millions(res.target))+'</span><span class="fin-target-cap">Цель · декабрь 2027</span></div>'+
         statusItem+
-        '<div class="fin-target-item"><span class="fin-target-num">'+esc(pct(inp.monthlyGrowth,1))+'</span><span class="fin-target-cap">База экспоненты роста в месяц</span></div>'+
-        '<div class="fin-target-item"><span class="fin-target-num">'+esc((res.growthPower).toLocaleString('ru-RU',{maximumFractionDigits:2}))+'</span><span class="fin-target-cap">Степень роста · форма (p&gt;1 разгон к концу)</span></div>'+
+        '<div class="fin-target-item"><span class="fin-target-num">'+esc(pct(inp.monthlyGrowth,1))+'</span><span class="fin-target-cap">Экспонента выручки / SEO-спроса</span></div>'+
+        '<div class="fin-target-item"><span class="fin-target-num">'+esc(pct(inp.costGrowthMonthly,1))+'</span><span class="fin-target-cap">Расходы: линейный прирост в месяц</span></div>'+
+        '<div class="fin-target-item"><span class="fin-target-num">'+esc((res.growthPower).toLocaleString('ru-RU',{maximumFractionDigits:2}))+'</span><span class="fin-target-cap">Форма роста выручки (p&gt;1 разгон к концу)</span></div>'+
         growthItem+
         '<div class="fin-progress"><span style="width:'+progress.toFixed(1)+'%"></span></div>';
     }
@@ -2066,7 +2116,7 @@
       var vStart=res.visits[0]||0,vEnd=res.visits[last]||0;
       visitsEl.innerHTML=
         '<div class="fin-cf-cell"><span class="fin-cf-cap">Визиты на маркетплейс · старт</span><span class="fin-cf-val">'+esc(fmt(vStart))+'</span><span class="fin-cf-note">Июль 2026 · при средневзвешенной CR визит→контакт <b>'+esc(pct(res.avgVc*100,2))+'</b></span></div>'+
-        '<div class="fin-cf-cell"><span class="fin-cf-cap">Визиты на маркетплейс · декабрь 2027</span><span class="fin-cf-val">'+esc(fmt(vEnd))+'</span><span class="fin-cf-note">Рост (1+'+esc(pct(inp.monthlyGrowth,1))+')^exp(t), exp(t)=H·(t/H)^'+esc((res.growthPower).toLocaleString('ru-RU',{maximumFractionDigits:2}))+'</span></div>'+
+        '<div class="fin-cf-cell"><span class="fin-cf-cap">Визиты на маркетплейс · декабрь 2027</span><span class="fin-cf-val">'+esc(fmt(vEnd))+'</span><span class="fin-cf-note">SEO-компаунд: (1+'+esc(pct(inp.monthlyGrowth,1))+')^exp(t), платные каналы получают '+esc(pct(inp.paidDemandShare,0))+' эффекта; расходы растут линейно</span></div>'+
         '<div class="fin-cf-cell"><span class="fin-cf-cap">Средние конверсии по сегментам</span><span class="fin-cf-val">'+esc(pct(res.avgCc*100,1))+' · '+esc(pct(res.avgCa*100,1))+' · '+esc(pct(res.avgAi*100,1))+'</span><span class="fin-cf-note">Контакт→Клик · Клик→Заявка · Заявка→Апрув (взвешено по долям)</span></div>';
     }
     // Источники трафика — сводка (контакты, доли, средний CPL)
@@ -2078,8 +2128,8 @@
         return '<div class="fin-src-card" style="border-top-color:'+esc(it.meta.color)+'">'+
           '<span class="fin-src-name">'+esc(it.meta.name)+'</span>'+
           '<span class="fin-src-val">'+esc(fmt(it.contacts))+'</span>'+
-          '<span class="fin-src-cap">контактов / мес · доля '+esc(shareTxt)+'</span>'+
-          '<span class="fin-src-note">бюджет '+esc(rub(it.budget))+' · CPL '+esc(rub(it.cpl))+'</span>'+
+          '<span class="fin-src-cap">контактов / мес на старте · доля '+esc(shareTxt)+'</span>'+
+          '<span class="fin-src-note">бюджет '+esc(rub(it.budget))+' · CPL '+esc(rub(it.cpl))+(it.meta.key==='Seo'?' · полный накопительный SEO-эффект':' · частичный бренд/SEO-эффект')+'</span>'+
         '</div>';
       }).join('');
       var footer='<div class="fin-src-footer">'+
