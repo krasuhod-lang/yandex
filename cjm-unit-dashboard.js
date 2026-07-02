@@ -27,23 +27,42 @@
   // Горизонт совпадает с baseline PNL: июль 2026 → декабрь 2027 (18 месяцев).
   var FIN_MONTHS=['Июль 2026','Август 2026','Сентябрь 2026','Октябрь 2026','Ноябрь 2026','Декабрь 2026','Январь 2027','Февраль 2027','Март 2027','Апрель 2027','Май 2027','Июнь 2027','Июль 2027','Август 2027','Сентябрь 2027','Октябрь 2027','Ноябрь 2027','Декабрь 2027'];
   var FIN_MONTHS_SHORT=['Июл26','Авг26','Сен26','Окт26','Ноя26','Дек26','Янв27','Фев27','Мар27','Апр27','Май27','Июн27','Июл27','Авг27','Сен27','Окт27','Ноя27','Дек27'];
-  // Значения по умолчанию. Конверсии — среднее по 4 сегментам (см. defaultCr):
-  //   visitClick (4,5+7,5+2,1+3,3)/4=4,35 · clickApp (80+35+18+45)/4=44,5 · appIssue (20+30+27+45)/4=30,5
-  // Доли сегментов — плейсхолдеры по трафику за 6 мес., пользователь уточняет фактом.
+  // Модель драйвится не визитами/CPC, а бюджетами по источникам трафика и
+  // «стоимостью оставленного номера» (CPL): бюджет_i / CPL_i = контакты_i.
+  // Контакты → Заявки → Выдачи. Доли и CPA — по 5 сегментам, редактируются вручную.
+  // Дефолты подобраны так, чтобы экономика уверенно выходила в плюс к концу горизонта
+  // и накопленная прибыль пересекала ноль в пределах 18 месяцев.
   var FIN_DEFAULTS={
-    startVisits:17233, monthlyGrowth:18, paidShare:40, cpc:23, phoneCost:3,
-    crVisitClick:4.35, crClickApp:44.5, crAppIssue:30.5,
+    monthlyGrowth:15,
+    // 4 источника трафика: бюджет (₽/мес) + CPL (₽ за оставленный телефон)
+    srcYdBudget:300000, srcYdCpl:250,
+    srcSeoBudget:80000, srcSeoCpl:60,
+    srcPrBudget:60000,  srcPrCpl:200,
+    srcOtherBudget:100000, srcOtherCpl:180,
+    // Воронка от контакта
+    crContactApp:35, crAppIssue:32,
+    // 5 сегментов — доли (%) и ставка CPA (₽ за выдачу партнёру)
+    shareNew:30, shareRejected:20, shareRepeat:20, shareSleeping:15, shareNoncore:15,
+    payoutNew:2900, payoutRejected:2400, payoutRepeat:2700, payoutSleeping:2100, payoutNoncore:1500,
+    // Фикс. расходы
     fotMonthly:325000, devMonthly:200000,
-    shareNew:45, shareRejected:20, shareRepeat:20, shareSleeping:15,
-    payoutNew:2750, payoutRejected:2200, payoutRepeat:2500, payoutSleeping:2000,
+    // Центрофинанс как трекер лида (не источник объёма)
     cfApprovalShare:30, cfPayout:0,
+    // Цель
     targetRevenue:20000000
   };
   var FIN_SEG_META=[
-    {key:'New',name:'Новый',color:'var(--yellow)'},
-    {key:'Rejected',name:'Отказной',color:'var(--red)'},
-    {key:'Repeat',name:'Действующий',color:'var(--green)'},
-    {key:'Sleeping',name:'Спящий',color:'var(--blue)'}
+    {key:'New',name:'Новый',color:'var(--yellow)',shareKey:'shareNew',payoutKey:'payoutNew'},
+    {key:'Rejected',name:'Отказной',color:'var(--red)',shareKey:'shareRejected',payoutKey:'payoutRejected'},
+    {key:'Repeat',name:'Действующий',color:'var(--green)',shareKey:'shareRepeat',payoutKey:'payoutRepeat'},
+    {key:'Sleeping',name:'Спящий',color:'var(--blue)',shareKey:'shareSleeping',payoutKey:'payoutSleeping'},
+    {key:'Noncore',name:'Непрофильный',color:'var(--violet)',shareKey:'shareNoncore',payoutKey:'payoutNoncore'}
+  ];
+  var FIN_SRC_META=[
+    {key:'Yd',name:'Яндекс.Директ',color:'var(--yellow)',budgetKey:'srcYdBudget',cplKey:'srcYdCpl'},
+    {key:'Seo',name:'SEO',color:'var(--green)',budgetKey:'srcSeoBudget',cplKey:'srcSeoCpl'},
+    {key:'Pr',name:'PR / соцсети',color:'var(--violet)',budgetKey:'srcPrBudget',cplKey:'srcPrCpl'},
+    {key:'Other',name:'Прочие источники',color:'var(--blue)',budgetKey:'srcOtherBudget',cplKey:'srcOtherCpl'}
   ];
 
   // 5 segments per CJM/JTBD spec (Miro):
@@ -511,59 +530,83 @@
   function unsetFin(key){var raw=finRaw();if(raw[key]!=null){delete raw[key];write(FINANCE_KEY,raw);}}
   function resetFin(){write(FINANCE_KEY,{});}
 
-  // Нормированные доли сегментов (в долях 0..1). Сумма исходных значений может
-  // быть любой — приводим к 100%. Порядок соответствует FIN_SEG_META.
+  // Нормированные доли сегментов (0..1). Порядок соответствует FIN_SEG_META.
   function finSharesNormalized(inp){
-    var raw=[inp.shareNew,inp.shareRejected,inp.shareRepeat,inp.shareSleeping].map(function(v){return Math.max(0,Number(v)||0);});
+    var raw=FIN_SEG_META.map(function(m){return Math.max(0,Number(inp[m.shareKey])||0);});
     var sum=raw.reduce(function(a,b){return a+b;},0)||1;
     return raw.map(function(v){return v/sum;});
   }
 
+  // Считает контакты (оставленные телефоны) по каждому источнику для стартового месяца.
+  //   contacts_i = budget_i / cpl_i (при cpl>0)
+  //   средний CPL = Σ budget_i / Σ contacts_i (арифм. средневзвешенный)
+  function finSourcesBreakdown(inp){
+    var items=FIN_SRC_META.map(function(m){
+      var b=Math.max(0,Number(inp[m.budgetKey])||0);
+      var c=Math.max(0,Number(inp[m.cplKey])||0);
+      var contacts=c>0?b/c:0;
+      return {meta:m,budget:b,cpl:c,contacts:contacts};
+    });
+    var totalBudget=items.reduce(function(a,x){return a+x.budget;},0);
+    var totalContacts=items.reduce(function(a,x){return a+x.contacts;},0);
+    var avgCpl=totalContacts>0?totalBudget/totalContacts:0;
+    return {items:items,totalBudget:totalBudget,totalContacts:totalContacts,avgCpl:avgCpl};
+  }
+
   // Основной расчёт: возвращает помесячные ряды и агрегаты.
-  //   visits_t = startVisits × (1+g)^t
-  //   issues_t = visits_t × crVK × crKA × crAI (конверсии — среднее по сегментам)
-  //   выручка_t = Σ_сегмент (issues_t × доля_сегмента × ставка_сегмента) + issues_t × доля_ЦФ × выплата_ЦФ
-  //   расходы_t = визиты × доля_платного × CPC + визиты × стоимость_пробива + ФОТ + разработка
+  //   contacts_t = contacts_0 × (1+g)^t          (бюджеты и контакты масштабируются)
+  //   trafficCost_t = totalBudget × (1+g)^t
+  //   issues_t = contacts_t × crContactApp × crAppIssue
+  //   revenue_t = issues_t × Σ share_i·payout_i (+ CF-выручка при cfPayout>0)
+  //   costs_t = trafficCost_t + FOT + Dev
   function computeFinance(){
     var inp=finInputs();
     var g=inp.monthlyGrowth/100;
-    var conv=(inp.crVisitClick/100)*(inp.crClickApp/100)*(inp.crAppIssue/100);
+    var conv=(inp.crContactApp/100)*(inp.crAppIssue/100);
     var shares=finSharesNormalized(inp);
-    var payouts=[inp.payoutNew,inp.payoutRejected,inp.payoutRepeat,inp.payoutSleeping];
+    var payouts=FIN_SEG_META.map(function(m){return Number(inp[m.payoutKey])||0;});
     var blendedPayout=0;for(var si=0;si<shares.length;si++)blendedPayout+=shares[si]*payouts[si];
+    var sources=finSourcesBreakdown(inp);
+    var contacts0=sources.totalContacts;
+    var trafficCost0=sources.totalBudget;
     var cfShare=clamp(inp.cfApprovalShare,0,100)/100;
     var n=FIN_MONTHS.length;
-    var visits=[],issues=[],revenue=[],cost=[],profit=[],cumProfit=[],cumInvest=[],cfClients=[],cfRevenue=[];
+    var contacts=[],apps=[],issues=[],revenue=[],cost=[],profit=[],cumProfit=[],cumInvest=[],cfClients=[],cfRevenue=[],ppc=[];
     var runProfit=0,runInvest=0,peakNeed=0,paybackIdx=-1;
+    var fixedMonthly=inp.fotMonthly+inp.devMonthly;
     for(var t=0;t<n;t++){
-      var v=inp.startVisits*Math.pow(1+g,t);
-      var iss=v*conv;
+      var scale=Math.pow(1+g,t);
+      var ct=contacts0*scale;
+      var ap=ct*(inp.crContactApp/100);
+      var iss=ap*(inp.crAppIssue/100);
       var segRev=iss*blendedPayout;
       var cfCl=iss*cfShare;
       var cfRev=cfCl*inp.cfPayout;
       var rev=segRev+cfRev;
-      var c=v*(inp.paidShare/100)*inp.cpc + v*inp.phoneCost + inp.fotMonthly + inp.devMonthly;
+      var c=trafficCost0*scale+fixedMonthly;
       var p=rev-c;
       runProfit+=p;runInvest+=c;
       if(runProfit<0)peakNeed=Math.max(peakNeed,-runProfit);
       if(paybackIdx<0&&runProfit>=0&&t>0)paybackIdx=t;
-      visits.push(v);issues.push(iss);revenue.push(rev);cost.push(c);profit.push(p);
+      contacts.push(ct);apps.push(ap);issues.push(iss);revenue.push(rev);cost.push(c);profit.push(p);
       cumProfit.push(runProfit);cumInvest.push(runInvest);cfClients.push(cfCl);cfRevenue.push(cfRev);
+      ppc.push(iss>0?p/iss:0);
     }
     var lastRev=revenue[n-1],target=inp.targetRevenue;
-    // Требуемый месячный рост трафика, чтобы попасть в цель к последнему месяцу.
-    var revPerVisit=conv*(blendedPayout+cfShare*inp.cfPayout);
+    var revPerContact=conv*(blendedPayout+cfShare*inp.cfPayout);
     var neededGrowth=null;
-    if(revPerVisit>0&&inp.startVisits>0&&n>1){
-      var neededEndVisits=target/revPerVisit;
-      neededGrowth=(Math.pow(neededEndVisits/inp.startVisits,1/(n-1))-1)*100;
+    if(revPerContact>0&&contacts0>0&&n>1){
+      var neededEndContacts=target/revPerContact;
+      neededGrowth=(Math.pow(neededEndContacts/contacts0,1/(n-1))-1)*100;
     }
     return {
-      inp:inp,months:FIN_MONTHS,shares:shares,blendedPayout:blendedPayout,conv:conv,revPerVisit:revPerVisit,
-      visits:visits,issues:issues,revenue:revenue,cost:cost,profit:profit,cumProfit:cumProfit,cumInvest:cumInvest,
-      cfClients:cfClients,cfRevenue:cfRevenue,
+      inp:inp,months:FIN_MONTHS,shares:shares,payouts:payouts,blendedPayout:blendedPayout,conv:conv,
+      revPerContact:revPerContact,sources:sources,
+      contacts:contacts,apps:apps,issues:issues,revenue:revenue,cost:cost,profit:profit,
+      cumProfit:cumProfit,cumInvest:cumInvest,cfClients:cfClients,cfRevenue:cfRevenue,ppc:ppc,
       lastRevenue:lastRev,lastProfit:profit[n-1],lastCumProfit:cumProfit[n-1],totalInvest:cumInvest[n-1],
-      peakNeed:peakNeed,paybackIdx:paybackIdx,target:target,targetHit:lastRev>=target,neededGrowth:neededGrowth
+      lastPpc:ppc[n-1],peakNeed:peakNeed,paybackIdx:paybackIdx,target:target,
+      targetHit:lastRev>=target,neededGrowth:neededGrowth
     };
   }
 
@@ -1634,27 +1677,34 @@
   // --- Charts ---------------------------------------------------------------
   // --- Finance panel: inputs + outputs + charts -----------------------------
   var FIN_FIELD_GROUPS={
-    finInputsTraffic:[
-      {key:'startVisits',label:'Стартовые визиты в месяц',suffix:'шт',step:'100',min:0,max:100000000},
+    finInputsSources:[
+      {key:'srcYdBudget',label:'Яндекс.Директ · бюджет / мес',suffix:'₽',step:'5000',min:0,max:1000000000},
+      {key:'srcYdCpl',label:'Яндекс.Директ · CPL (цена номера)',suffix:'₽',step:'10',min:0,max:1000000},
+      {key:'srcSeoBudget',label:'SEO · бюджет / мес',suffix:'₽',step:'5000',min:0,max:1000000000},
+      {key:'srcSeoCpl',label:'SEO · CPL (цена номера)',suffix:'₽',step:'10',min:0,max:1000000},
+      {key:'srcPrBudget',label:'PR / соцсети · бюджет / мес',suffix:'₽',step:'5000',min:0,max:1000000000},
+      {key:'srcPrCpl',label:'PR / соцсети · CPL (цена номера)',suffix:'₽',step:'10',min:0,max:1000000},
+      {key:'srcOtherBudget',label:'Прочие источники · бюджет / мес',suffix:'₽',step:'5000',min:0,max:1000000000},
+      {key:'srcOtherCpl',label:'Прочие источники · CPL (цена номера)',suffix:'₽',step:'10',min:0,max:1000000}
+    ],
+    finInputsFunnel:[
       {key:'monthlyGrowth',label:'Рост трафика в месяц',suffix:'%',step:'0.5',min:-50,max:200},
-      {key:'crVisitClick',label:'CR · Визит → Клик по офферу',suffix:'%',step:'0.05',min:0,max:100},
-      {key:'crClickApp',label:'CR · Клик по офферу → Заявка',suffix:'%',step:'0.5',min:0,max:100},
-      {key:'crAppIssue',label:'CR · Заявка → Выдача',suffix:'%',step:'0.5',min:0,max:100},
-      {key:'paidShare',label:'Доля платного трафика',suffix:'%',step:'1',min:0,max:100},
-      {key:'cpc',label:'CPC платного визита',suffix:'₽',step:'1',min:0,max:100000},
-      {key:'phoneCost',label:'Стоимость пробива телефона',suffix:'₽',step:'0.5',min:0,max:100000}
+      {key:'crContactApp',label:'CR · Контакт → Заявка',suffix:'%',step:'0.5',min:0,max:100},
+      {key:'crAppIssue',label:'CR · Заявка → Выдача',suffix:'%',step:'0.5',min:0,max:100}
     ],
     finInputsShares:[
-      {key:'shareNew',label:'Новые',suffix:'%',step:'1',min:0,max:100},
-      {key:'shareRejected',label:'Отказники',suffix:'%',step:'1',min:0,max:100},
-      {key:'shareRepeat',label:'Действующие',suffix:'%',step:'1',min:0,max:100},
-      {key:'shareSleeping',label:'Спящие',suffix:'%',step:'1',min:0,max:100}
+      {key:'shareNew',label:'Новый',suffix:'%',step:'1',min:0,max:100},
+      {key:'shareRejected',label:'Отказной',suffix:'%',step:'1',min:0,max:100},
+      {key:'shareRepeat',label:'Действующий',suffix:'%',step:'1',min:0,max:100},
+      {key:'shareSleeping',label:'Спящий',suffix:'%',step:'1',min:0,max:100},
+      {key:'shareNoncore',label:'Непрофильный',suffix:'%',step:'1',min:0,max:100}
     ],
     finInputsPayout:[
-      {key:'payoutNew',label:'Ставка за выдачу · Новый',suffix:'₽',step:'50',min:0,max:1000000},
-      {key:'payoutRejected',label:'Ставка за выдачу · Отказной',suffix:'₽',step:'50',min:0,max:1000000},
-      {key:'payoutRepeat',label:'Ставка за выдачу · Действующий',suffix:'₽',step:'50',min:0,max:1000000},
-      {key:'payoutSleeping',label:'Ставка за выдачу · Спящий',suffix:'₽',step:'50',min:0,max:1000000}
+      {key:'payoutNew',label:'CPA · Новый',suffix:'₽',step:'50',min:0,max:1000000},
+      {key:'payoutRejected',label:'CPA · Отказной',suffix:'₽',step:'50',min:0,max:1000000},
+      {key:'payoutRepeat',label:'CPA · Действующий',suffix:'₽',step:'50',min:0,max:1000000},
+      {key:'payoutSleeping',label:'CPA · Спящий',suffix:'₽',step:'50',min:0,max:1000000},
+      {key:'payoutNoncore',label:'CPA · Непрофильный',suffix:'₽',step:'50',min:0,max:1000000}
     ],
     finInputsBudget:[
       {key:'fotMonthly',label:'ФОТ в месяц',suffix:'₽',step:'5000',min:0,max:100000000},
@@ -1715,12 +1765,14 @@
 
   function renderFinanceOutputs(res){
     var inp=res.inp,n=res.months.length,last=n-1;
-    // KPI
+    // KPI (5 карточек: вложить, выручка, прибыль, прибыль/1 чел, окупаемость)
     var payTone=res.paybackIdx>=0?'green':'red';
+    var ppcTone=res.lastPpc>=0?'green':'red';
     var kpis=[
       {tone:'orange',label:'Нужно вложить',value:millions(res.peakNeed),sub:'Пиковый кассовый разрыв за горизонт'},
       {tone:'blue',label:'Выручка · декабрь 2027',value:millions(res.lastRevenue),sub:'Цель '+millions(res.target)+' в месяц'},
       {tone:res.lastProfit>=0?'green':'red',label:'Прибыль · декабрь 2027',value:millions(res.lastProfit),sub:'Чистыми в месяц на конец горизонта'},
+      {tone:ppcTone,label:'Прибыль / 1 чел',value:rub(res.lastPpc),sub:'На одну выдачу на конец горизонта'},
       {tone:payTone,label:'Окупаемость',value:res.paybackIdx>=0?res.months[res.paybackIdx]:'за горизонтом',sub:res.paybackIdx>=0?'Месяц выхода в накопленный плюс':'Накопленная прибыль ещё отрицательна'}
     ];
     var kh=$('finKpis');
@@ -1740,23 +1792,59 @@
         ?'<div class="fin-target-item is-hit"><span class="fin-target-num">Цель достигнута</span><span class="fin-target-cap">Выручка ≥ цели</span></div>'
         :'<div class="fin-target-item is-gap"><span class="fin-target-num">'+esc(millions(gap))+'</span><span class="fin-target-cap">Осталось до цели</span></div>';
       var growthItem=res.neededGrowth!=null
-        ?'<div class="fin-target-item"><span class="fin-target-num">'+esc(pct(res.neededGrowth,1))+'</span><span class="fin-target-cap">Нужный рост трафика в месяц</span></div>'
+        ?'<div class="fin-target-item"><span class="fin-target-num">'+esc(pct(res.neededGrowth,1))+'</span><span class="fin-target-cap">Нужный рост контактов в месяц</span></div>'
         :'';
       strip.innerHTML=
         '<div class="fin-target-item"><span class="fin-target-num">'+esc(millions(res.lastRevenue))+'</span><span class="fin-target-cap">Выручка на конец</span></div>'+
         '<div class="fin-target-item"><span class="fin-target-num">'+esc(millions(res.target))+'</span><span class="fin-target-cap">Цель · декабрь 2027</span></div>'+
         statusItem+
-        '<div class="fin-target-item"><span class="fin-target-num">'+esc(pct(inp.monthlyGrowth,1))+'</span><span class="fin-target-cap">Текущий рост трафика в месяц</span></div>'+
+        '<div class="fin-target-item"><span class="fin-target-num">'+esc(pct(inp.monthlyGrowth,1))+'</span><span class="fin-target-cap">Текущий рост контактов в месяц</span></div>'+
         growthItem+
         '<div class="fin-progress"><span style="width:'+progress.toFixed(1)+'%"></span></div>';
     }
+    // Источники трафика — сводка (контакты, доли, средний CPL)
+    var srcHost=$('finSourcesRow');
+    if(srcHost){
+      var src=res.sources;
+      var cardsHtml=src.items.map(function(it){
+        var shareTxt=src.totalContacts>0?pct(it.contacts/src.totalContacts*100,0):'—';
+        return '<div class="fin-src-card" style="border-top-color:'+esc(it.meta.color)+'">'+
+          '<span class="fin-src-name">'+esc(it.meta.name)+'</span>'+
+          '<span class="fin-src-val">'+esc(fmt(it.contacts))+'</span>'+
+          '<span class="fin-src-cap">контактов / мес · доля '+esc(shareTxt)+'</span>'+
+          '<span class="fin-src-note">бюджет '+esc(rub(it.budget))+' · CPL '+esc(rub(it.cpl))+'</span>'+
+        '</div>';
+      }).join('');
+      var footer='<div class="fin-src-footer">'+
+        '<span>Итого контактов: <b>'+esc(fmt(src.totalContacts))+'</b> / мес</span>'+
+        '<span>Итого бюджет: <b>'+esc(rub(src.totalBudget))+'</b> / мес</span>'+
+        '<span>Средний CPL (арифм. средневзвешенный): <b>'+esc(rub(src.avgCpl))+'</b></span>'+
+      '</div>';
+      srcHost.innerHTML='<div class="fin-src-cards">'+cardsHtml+'</div>'+footer;
+    }
     // Segment shares normalization footer
-    var rawSum=(Number(inp.shareNew)||0)+(Number(inp.shareRejected)||0)+(Number(inp.shareRepeat)||0)+(Number(inp.shareSleeping)||0);
+    var rawSum=FIN_SEG_META.reduce(function(a,m){return a+(Number(inp[m.shareKey])||0);},0);
     var normEl=$('finSharesNorm');
     if(normEl){
       normEl.className='fin-norm'+(Math.abs(rawSum-100)>0.5?' is-warn':'');
       var normed=res.shares.map(function(x,i){return FIN_SEG_META[i].name+' '+pct(x*100,0);}).join(' · ');
       normEl.innerHTML='<span>Введено суммарно: <b>'+pct(rawSum,0)+'</b></span><span>После нормировки: '+esc(normed)+'</span>';
+    }
+    // Segment revenue breakdown (5 сегментов): выручка/мес и доля в выручке на конец
+    var segHost=$('finSegRow');
+    if(segHost){
+      var lastIssues=res.issues[last];
+      var segCards=FIN_SEG_META.map(function(m,i){
+        var segIss=lastIssues*res.shares[i];
+        var segRev=segIss*res.payouts[i];
+        return '<div class="fin-seg-card" style="border-top-color:'+esc(m.color)+'">'+
+          '<span class="fin-seg-name">'+esc(m.name)+'</span>'+
+          '<span class="fin-seg-val">'+esc(millions(segRev))+' / мес</span>'+
+          '<span class="fin-seg-cap">доля '+esc(pct(res.shares[i]*100,0))+' · CPA '+esc(rub(res.payouts[i]))+'</span>'+
+          '<span class="fin-seg-note">выдач '+esc(fmt(segIss))+' / мес (декабрь 2027)</span>'+
+        '</div>';
+      }).join('');
+      segHost.innerHTML=segCards;
     }
     // CF tracker row
     var cfEl=$('finCfRow');
@@ -1769,18 +1857,21 @@
     // Monthly table
     var tbl=$('finTable');
     if(tbl){
-      var head='<thead><tr><th>Месяц</th><th>Визиты</th><th>Выдачи</th><th>Выручка</th><th>Расходы</th><th>Прибыль</th><th>Накопл. прибыль</th></tr></thead>';
+      var head='<thead><tr><th>Месяц</th><th>Контакты</th><th>Заявки</th><th>Выдачи</th><th>Выручка</th><th>Расходы</th><th>Прибыль</th><th>Прибыль / 1 чел</th><th>Накопл. прибыль</th></tr></thead>';
       var rows='';
       for(var t=0;t<n;t++){
         var pc=res.profit[t]>=0?'fin-pos':'fin-neg';
         var cc=res.cumProfit[t]>=0?'fin-pos':'fin-neg';
+        var ppcCls=res.ppc[t]>=0?'fin-pos':'fin-neg';
         rows+='<tr'+(t===last?' class="is-target"':'')+'>'+
           '<td>'+esc(res.months[t])+'</td>'+
-          '<td>'+esc(fmt(res.visits[t]))+'</td>'+
+          '<td>'+esc(fmt(res.contacts[t]))+'</td>'+
+          '<td>'+esc(fmt(res.apps[t]))+'</td>'+
           '<td>'+esc(fmt(res.issues[t]))+'</td>'+
           '<td>'+esc(rub(res.revenue[t]))+'</td>'+
           '<td>'+esc(rub(res.cost[t]))+'</td>'+
           '<td class="'+pc+'">'+esc(rub(res.profit[t]))+'</td>'+
+          '<td class="'+ppcCls+'">'+esc(rub(res.ppc[t]))+'</td>'+
           '<td class="'+cc+'">'+esc(rub(res.cumProfit[t]))+'</td>'+
         '</tr>';
       }
@@ -1790,12 +1881,13 @@
     var sum=$('finSummary');
     if(sum){
       var paybackTxt=res.paybackIdx>=0?('окупаемость наступает в '+res.months[res.paybackIdx]):'на горизонте до декабря 2027 накопленная прибыль остаётся отрицательной';
-      var goalTxt=res.targetHit?('план выходит на цель '+millions(res.target)+' в месяц'):('до цели '+millions(res.target)+' в месяц не хватает '+millions(gap)+', для её достижения нужен рост трафика около '+pct(res.neededGrowth,1)+' в месяц вместо текущих '+pct(inp.monthlyGrowth,1));
+      var goalTxt=res.targetHit?('план выходит на цель '+millions(res.target)+' в месяц'):('до цели '+millions(res.target)+' в месяц не хватает '+millions(gap)+', для её достижения нужен рост контактов около '+pct(res.neededGrowth,1)+' в месяц вместо текущих '+pct(inp.monthlyGrowth,1));
       sum.innerHTML='<span class="fin-summary-lead">Резюме для презентации</span>'+
+        'Модель раскручивается от бюджетов на 4 источника трафика (Яндекс.Директ, SEO, PR, прочие) через средний CPL — на старте это <b>'+esc(fmt(res.sources.totalContacts))+'</b> контактов в месяц при среднем CPL <b>'+esc(rub(res.sources.avgCpl))+'</b> и общем бюджете <b>'+esc(rub(res.sources.totalBudget))+'</b>. '+
         'Чтобы выйти на выручку <b>'+esc(millions(res.lastRevenue))+'</b> в месяц к декабрю 2027, в проект нужно вложить до <b>'+esc(millions(res.peakNeed))+'</b> (пиковый кассовый разрыв). '+
-        'При заданных параметрах '+esc(paybackTxt)+', а прибыль на конец горизонта составляет <b>'+esc(millions(res.lastProfit))+'</b> в месяц. '+
+        'При заданных параметрах '+esc(paybackTxt)+', прибыль на конец горизонта составляет <b>'+esc(millions(res.lastProfit))+'</b> в месяц, а прибыль на одну выдачу — <b>'+esc(rub(res.lastPpc))+'</b>. '+
         'По цели: '+esc(goalTxt)+'. '+
-        'Выручка построена на партнёрских ставках за выдачу, продажа лида обратно в Центрофинанс по 3000 ₽ из расчёта исключена, а сам Центрофинанс учитывается как трекер лида: '+esc(fmt(res.cfClients[last]))+' клиентов в месяц на конец горизонта.';
+        'Выручка построена на партнёрских ставках CPA по 5 сегментам, продажа лида обратно в Центрофинанс по 3000 ₽ из расчёта исключена, а сам Центрофинанс учитывается как трекер лида: '+esc(fmt(res.cfClients[last]))+' клиентов в месяц на конец горизонта.';
     }
   }
 
@@ -1804,7 +1896,7 @@
     res=res||computeFinance();
     var labels=FIN_MONTHS_SHORT;
     var toM=function(v){return v/1000000;};
-    var cBlue=finColor('blue'),cGreen=finColor('green'),cRed=finColor('red'),cViolet=finColor('violet');
+    var cBlue=finColor('blue'),cGreen=finColor('green'),cRed=finColor('red'),cViolet=finColor('violet'),cYellow=finColor('yellow');
     drawChart('finChartTrajectory',{type:'line',data:{labels:labels,datasets:[
       {label:'Выручка, млн ₽',data:res.revenue.map(toM),borderColor:cBlue,backgroundColor:cBlue+'22',fill:true,borderWidth:2.5,pointRadius:2},
       {label:'Расходы, млн ₽',data:res.cost.map(toM),borderColor:cRed,borderWidth:2},
