@@ -1694,7 +1694,7 @@ button:active:not(:disabled){transform:translateY(0) scale(.97)}
       <div class="fin-kpis" id="finKpis"></div>
 
       <div class="card fin-target-card">
-        <div class="card-title"><div><h2>Прогноз продаж и цель</h2><p>Нарастающая траектория от текущих 60–70 тыс. ₽/мес к 20 млн ₽ выручки и 10+ млн ₽ прибыли в декабре 2027</p></div></div>
+        <div class="card-title"><div><h2>Прогноз продаж и цель</h2><p>Траектория откалибрована по PNL: стартовая выручка около 200–250 тыс. ₽/мес, декабрь 2027 — порядка 12,5 млн ₽; расходы растут линейно, а выручка ускоряется за счёт накопительного SEO-эффекта</p></div></div>
         <div class="fin-target-strip" id="finTargetStrip"></div>
         <div class="fin-chart-wrap"><canvas id="finChartTrajectory"></canvas></div>
       </div>
@@ -1722,7 +1722,7 @@ button:active:not(:disabled){transform:translateY(0) scale(.97)}
       <div class="cjm-section-head"><div><h2>Параметры на входе</h2><p>Проставьте свои значения — модель и графики пересчитаются мгновенно</p></div></div>
       <div class="fin-inputs-grid">
         <div class="card"><div class="card-title"><div><h2>Источники трафика · бюджет и CPL</h2></div></div><div class="cjm-manual-grid" id="finInputsSources"></div></div>
-        <div class="card"><div class="card-title"><div><h2>Рост · темп и форма траектории</h2><p>Выручка, расходы и прибыль привязаны к росту scale(t) = (1 + monthlyGrowth)<sup>exp(t)</sup>, где exp(t) = H·(t/H)<sup>p</sup> нормирован на горизонт H. Конечная точка (1 + monthlyGrowth)<sup>H</sup> не зависит от p — степень p задаёт только <b>форму</b>: p&nbsp;&gt;&nbsp;1 — медленный старт и разгон к концу, p&nbsp;&lt;&nbsp;1 — быстрый старт и насыщение.</p></div></div><div class="cjm-manual-grid" id="finInputsFunnel"></div></div>
+        <div class="card"><div class="card-title"><div><h2>Рост · темп и форма траектории</h2><p>Выручка считается через response-scale: SEO получает полный накопительный эффект scale(t) = (1 + monthlyGrowth)<sup>exp(t)</sup>, где exp(t) = H·(t/H)<sup>p</sup>, а платные каналы — только заданную долю этого эффекта. Расходы не экспоненциальные: медиабюджет растёт линейно по месячному приросту расходов.</p></div></div><div class="cjm-manual-grid" id="finInputsFunnel"></div></div>
         <div class="card"><div class="card-title"><div><h2>Доли по 5 сегментам</h2></div></div><div class="cjm-manual-grid" id="finInputsShares"></div><div class="fin-norm" id="finSharesNorm"></div></div>
         <div class="card"><div class="card-title"><div><h2>Ставки CPA по 5 сегментам</h2></div></div><div class="cjm-manual-grid" id="finInputsPayout"></div></div>
         <div class="card"><div class="card-title"><div><h2>Конверсии по сегментам · воронка</h2><p>Четыре стадии на сегмент: <b>Визит → Контакт → Клик по офферу → Заявка → Выдача (Апрув)</b>. Значения <b>единым источником</b> подтягиваются из блока «Ручной ввод показателей» по каждому сегменту — правьте их там, чтобы финмодель и CJM-воронка не расходились. Здесь можно только переопределить CR для финмодели (очистите поле — вернётся значение из сегментов). Чем ниже произведение конверсий, тем выше <b>CAC</b> сегмента.</p></div></div><div id="finInputsSegCr"></div></div>
