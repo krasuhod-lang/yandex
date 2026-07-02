@@ -44,7 +44,7 @@
     { id: 'sleep',    name: 'Спящий',      short: 'Сонн.',  accent: 'var(--violet)' }
   ];
 
-  // Базовая («As-Is») модель: все вводные откалиброваны так, чтобы общий Blended LTV/CAC ≈ 0.56x
+  // Базовая («As-Is») модель: все вводные откалиброваны так, чтобы общий Blended LTV/CAC ≈ 0.62x
   // (проект убыточен) — это исходная точка модели. Целевые оптимизации (Quiz,
   // Traffic Mix, Smart Safe Router → БФЛ) накладываются поверх через applyMode(mode='tobe')
   // и поднимают Blended LTV/CAC до ≈ 2.6x. Значения не «исторический факт», а согласованный
@@ -70,7 +70,7 @@
     crLeadBfl: 10,         // % в квалифицированный лид БФЛ
     eplBfl: 3000,          // Выплата БФЛ (EPL) в ₽
     // Сегменты: CAC, retention 1y, retention 2y, доля сегмента в общем трафике (%)
-    // Базовая («As-Is») модель: Blended LTV/CAC ≈ 0.56x — проект убыточен.
+    // Базовая («As-Is») модель: Blended LTV/CAC ≈ 0.62x — проект убыточен.
     seg: {
       new:     { cac: 1200, ret1: 25, ret2: 15, share: 45, funnelMul: 1.00 },
       repeat:  { cac:  450, ret1: 45, ret2: 30, share: 25, funnelMul: 1.30 },
@@ -359,11 +359,11 @@
 
   /* ============================== РАСЧЁТЫ ============================== */
 
-  // Метрики на один лид: gross/net revenue per lead, конверсия лида в выдачу.
+  // Метрики на одну успешную выдачу: gross/net после RevShare; OPEX учитывается отдельно на уровне лида.
   // ТЗ §2.4.1: RPL = Σ выручки / число лидов; здесь rpl = ожидаемая выручка на ОДИН лид с учётом CR.
   function leadEconomics(p) {
     var gross = p.epl + (p.crCross / 100) * p.crossEpl;
-    var net = gross * (1 - p.revShare / 100) - p.opex;
+    var net = gross * (1 - p.revShare / 100);
     var crApprove = (p.crLeadClickout / 100) * (p.crClickoutIssue / 100);
     return { gross: gross, net: net, crApprove: crApprove };
   }
@@ -1398,7 +1398,7 @@
     return '<div class="ue2-card ue2-waterfall-card">' +
       '<div class="ue2-card-head ue2-row-between">' +
         '<div><h2>Структура доходов и расходов на 1 лид</h2>' +
-          '<p>EPL + Cross-sell − OPEX − RevShare − CAC × (CR лид→выдача) = Маржа на выданный кредит. Положительные бары — доходы, отрицательные — расходы.</p></div>' +
+          '<p>(EPL + Cross-sell) × CR лида→выдача − RevShare − CAC − OPEX = ожидаемая маржа на лида. Положительные бары — доходы, отрицательные — расходы.</p></div>' +
         '<label class="ue2-seg-select">Сегмент' +
           '<select id="ueWaterSeg">' +
             SEGMENTS.map(function (s) { return '<option value="' + s.id + '"' + (s.id === activeFunnelSeg ? ' selected' : '') + '>' + esc(s.name) + '</option>'; }).join('') +
@@ -1416,13 +1416,13 @@
     var s = p.seg[segId];
     var crSegment = (p.crLeadClickout / 100) * (p.crClickoutIssue / 100) * (s.funnelMul || 1);
     // На одного «лида» считаем ожидаемую маржу. EPL и Cross-sell реализуются только при выдаче,
-    // поэтому масштабируем их на crSegment. CAC распределён на всех лидов (CAC*crSegment ≈ CAC на выдачу).
+    // поэтому масштабируем их на crSegment. CAC и OPEX заданы как расходы на каждого лида.
     var epl = p.epl * crSegment;
     var crossRev = (p.crCross / 100) * p.crossEpl * crSegment;
     var grossRev = epl + crossRev;
     var revShareCost = grossRev * (p.revShare / 100);
     var opex = p.opex;
-    var cacPerLead = s.cac * crSegment; // CAC, проецированный на ожидание выдачи с лида
+    var cacPerLead = s.cac;
     var profit = grossRev - revShareCost - opex - cacPerLead;
 
     var items = [
