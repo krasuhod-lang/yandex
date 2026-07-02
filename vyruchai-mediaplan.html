@@ -1540,6 +1540,57 @@ button:active:not(:disabled){transform:translateY(0) scale(.97)}
 .cjm-share-reset{border:1px solid var(--line-strong);background:var(--surface);color:var(--text);border-radius:980px;padding:7px 16px;font-size:12.5px;font-weight:600}
 .cjm-share-reset:hover{border-color:var(--blue);color:var(--blue)}
 @media (max-width:720px){.cjm-share-row{grid-template-columns:1fr;gap:8px}.cjm-share-norm{text-align:left}}
+/* Finance model tab */
+.fin-kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px}
+@media(max-width:1000px){.fin-kpis{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:520px){.fin-kpis{grid-template-columns:1fr}}
+.fin-kpi{position:relative;border:1px solid var(--line);border-radius:var(--radius-sm);padding:17px 18px;background:var(--surface);box-shadow:var(--shadow-soft);display:flex;flex-direction:column;gap:6px;border-left:4px solid var(--line-strong);overflow:hidden;transition:transform .22s var(--ease),box-shadow .22s var(--ease),border-color .22s var(--ease);animation:finRise .5s var(--ease) both}
+.fin-kpi:hover{transform:translateY(-3px);box-shadow:var(--shadow-hover)}
+.fin-kpi.tone-green{border-left-color:var(--green)}
+.fin-kpi.tone-blue{border-left-color:var(--blue)}
+.fin-kpi.tone-violet{border-left-color:var(--violet)}
+.fin-kpi.tone-red{border-left-color:var(--red)}
+.fin-kpi.tone-orange{border-left-color:var(--orange)}
+.fin-kpi-label{font-size:11.5px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);font-weight:700}
+.fin-kpi-value{font-size:27px;line-height:1.04;letter-spacing:-.03em;font-weight:700;font-variant-numeric:tabular-nums}
+.fin-kpi.tone-green .fin-kpi-value{color:var(--green)}
+.fin-kpi.tone-red .fin-kpi-value{color:var(--red)}
+.fin-kpi.tone-blue .fin-kpi-value{color:var(--blue)}
+.fin-kpi.tone-violet .fin-kpi-value{color:var(--violet)}
+.fin-kpi-sub{font-size:12px;color:var(--muted);line-height:1.4}
+@keyframes finRise{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+.fin-target-strip{display:flex;flex-wrap:wrap;gap:10px 22px;align-items:baseline}
+.fin-target-item{display:flex;flex-direction:column;gap:2px}
+.fin-target-item .fin-target-num{font-size:20px;font-weight:800;font-variant-numeric:tabular-nums;letter-spacing:-.02em}
+.fin-target-item .fin-target-cap{font-size:11.5px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.05em}
+.fin-target-item.is-gap .fin-target-num{color:var(--orange)}
+.fin-target-item.is-hit .fin-target-num{color:var(--green)}
+.fin-progress{flex:1 1 100%;height:10px;border-radius:980px;background:var(--surface-3);overflow:hidden;position:relative}
+.fin-progress span{display:block;height:100%;border-radius:980px;background:linear-gradient(90deg,var(--blue),var(--violet));transition:width .6s var(--ease)}
+.fin-chart-wrap{position:relative;width:100%}
+.fin-grid-2{align-items:stretch}
+.fin-inputs-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:var(--gap)}
+@media(max-width:900px){.fin-inputs-grid{grid-template-columns:1fr}}
+.fin-norm{margin-top:12px;font-size:12.5px;color:var(--muted);font-weight:700;display:flex;justify-content:space-between;gap:10px;border-top:1px dashed var(--line);padding-top:10px}
+.fin-norm b{color:var(--text);font-variant-numeric:tabular-nums}
+.fin-norm.is-warn b{color:var(--orange)}
+.fin-cf-row{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}
+@media(max-width:760px){.fin-cf-row{grid-template-columns:1fr}}
+.fin-cf-cell{border:1px solid var(--line);border-radius:var(--radius-xs);padding:14px 16px;background:var(--surface-2);display:flex;flex-direction:column;gap:5px;border-top:3px solid var(--violet)}
+.fin-cf-cell .fin-cf-val{font-size:22px;font-weight:800;font-variant-numeric:tabular-nums;letter-spacing:-.02em}
+.fin-cf-cell .fin-cf-cap{font-size:11.5px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.05em}
+.fin-cf-cell .fin-cf-note{font-size:12px;color:var(--muted);line-height:1.4}
+.fin-table th,.fin-table td{white-space:nowrap;font-variant-numeric:tabular-nums}
+.fin-table tbody tr{transition:background .15s var(--ease)}
+.fin-table tbody tr:hover{background:color-mix(in srgb,var(--blue) 6%,transparent)}
+.fin-table tr.is-target td{color:var(--green);font-weight:700}
+.fin-table td.fin-neg{color:var(--red)}
+.fin-table td.fin-pos{color:var(--green)}
+.fin-summary-card{background:linear-gradient(170deg,var(--surface),var(--surface-2))}
+.fin-summary{font-size:15px;line-height:1.65;color:var(--text)}
+.fin-summary b{font-weight:800;font-variant-numeric:tabular-nums}
+.fin-summary .fin-summary-lead{font-size:12px;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);font-weight:800;display:block;margin-bottom:8px}
+@media(prefers-reduced-motion:reduce){.fin-kpi{animation:none}.fin-progress span{transition:none}}
 </style>
 </head>
 <body>
@@ -1599,6 +1650,44 @@ button:active:not(:disabled){transform:translateY(0) scale(.97)}
       <div class="card"><div class="card-title"><div><h2>Воронки на 10 000 пользователей · по сегментам</h2><p>Все 5 сегментов рядом — видны абсолютные значения и CR%. Лидер по выручке подсвечен зелёным.</p></div></div><div class="cjm-matrix-funnels" id="cjmMatrixFunnels"></div></div>
       <div class="card"><div class="card-title"><div><h2>Сводка по всем сегментам</h2><p>Сколько денег принесёт каждый сегмент при базе 10 000 визитов</p></div></div><div class="ue2-table-wrap"><table class="ue2-scn-table" id="cjmCalcTable"></table></div></div>
       <div class="card"><div class="card-title"><div><h2>Сравнительная экономика</h2><p>Лучшие значения подсвечены зелёным, худшие — красным · LTV/CAC оценивается светофором (&gt;2 ×, 1–2 ×, &lt;1 ×)</p></div></div><div class="ue2-table-wrap"><table class="ue2-scn-table" id="cjmSummaryTable"></table></div></div>
+    </section>
+
+    <!-- Finance model panel: Бюджет → Прогноз продаж → Ожидаемая прибыль -->
+    <section id="cjm-tab-finance" class="cjm-panel">
+      <div class="cjm-section-head"><div><h2>Финмодель до декабря 2027</h2><p>Единый план «Бюджет → Прогноз продаж → Ожидаемая прибыль». Воронка считается от реального трафика, база Центрофинанс работает как трекер лида. Все параметры на входе редактируются вручную.</p></div><button type="button" class="cjm-reset-btn" id="finReset" title="Сбросить все параметры к значениям по умолчанию">Сбросить к дефолтам</button></div>
+
+      <div class="fin-kpis" id="finKpis"></div>
+
+      <div class="card fin-target-card">
+        <div class="card-title"><div><h2>Прогноз продаж и цель</h2><p>Траектория выручки против цели 20 млн ₽/мес к декабрю 2027 и месячные расходы</p></div></div>
+        <div class="fin-target-strip" id="finTargetStrip"></div>
+        <div class="fin-chart-wrap"><canvas id="finChartTrajectory" height="300"></canvas></div>
+      </div>
+
+      <div class="grid two fin-grid-2">
+        <div class="card"><div class="card-title"><div><h2>Помесячный P&amp;L</h2><p>Выручка минус расходы формируют прибыль по месяцам</p></div></div><div class="fin-chart-wrap"><canvas id="finChartPnl" height="280"></canvas></div></div>
+        <div class="card"><div class="card-title"><div><h2>Окупаемость вложений</h2><p>Накопленная прибыль против накопленных вложений — точка пересечения и есть окупаемость</p></div></div><div class="fin-chart-wrap"><canvas id="finChartPayback" height="280"></canvas></div></div>
+      </div>
+
+      <div class="cjm-section-head"><div><h2>Параметры на входе</h2><p>Проставьте свои значения — модель и графики пересчитаются мгновенно</p></div></div>
+      <div class="fin-inputs-grid">
+        <div class="card"><div class="card-title"><div><h2>Трафик и воронка</h2></div></div><div class="cjm-manual-grid" id="finInputsTraffic"></div></div>
+        <div class="card"><div class="card-title"><div><h2>Сегментация за 6 месяцев</h2></div></div><div class="cjm-manual-grid" id="finInputsShares"></div><div class="fin-norm" id="finSharesNorm"></div></div>
+        <div class="card"><div class="card-title"><div><h2>Монетизация по сегментам</h2></div></div><div class="cjm-manual-grid" id="finInputsPayout"></div></div>
+        <div class="card"><div class="card-title"><div><h2>Бюджет и цель</h2></div></div><div class="cjm-manual-grid" id="finInputsBudget"></div></div>
+      </div>
+
+      <div class="card fin-cf-card">
+        <div class="card-title"><div><h2>Центрофинанс как трекер лида</h2><p>Продажа лида обратно в Центрофинанс по 3000 ₽ убрана из расчёта как невыгодная. Здесь видно, сколько клиентов Центрофинанс получает в месяц и сколько на этом можно заработать по вашей ставке</p></div></div>
+        <div class="fin-cf-row" id="finCfRow"></div>
+      </div>
+
+      <div class="card fin-table-card">
+        <div class="card-title"><div><h2>Помесячный план</h2><p>Бюджет, прогноз продаж и ожидаемая прибыль по каждому месяцу горизонта</p></div></div>
+        <div class="ue2-table-wrap"><table class="ue2-scn-table fin-table" id="finTable"></table></div>
+      </div>
+
+      <div class="card fin-summary-card"><div class="fin-summary" id="finSummary"></div></div>
     </section>
   </main>
 </div>
