@@ -1610,6 +1610,12 @@ button:active:not(:disabled){transform:translateY(0) scale(.97)}
 .fin-table tr.is-target td{color:var(--green);font-weight:700}
 .fin-table td.fin-neg{color:var(--red)}
 .fin-table td.fin-pos{color:var(--green)}
+.fin-expand-btn{background:transparent;border:1px solid var(--line);color:var(--muted);cursor:pointer;font-size:12px;line-height:1;width:22px;height:22px;border-radius:4px;padding:0;transition:all .15s var(--ease)}
+.fin-expand-btn:hover{background:var(--blue);color:#fff;border-color:var(--blue)}
+.fin-expand-btn[aria-expanded="true"]{background:var(--blue);color:#fff;border-color:var(--blue)}
+.fin-table tr.fin-row-seg td{font-size:12px;color:var(--muted);padding-top:4px;padding-bottom:4px}
+.fin-table tr.fin-row-seg td.fin-pos{color:color-mix(in srgb,var(--green) 90%,var(--muted))}
+.fin-table tr.fin-row-seg td.fin-neg{color:color-mix(in srgb,var(--red) 90%,var(--muted))}
 .fin-summary-card{background:linear-gradient(170deg,var(--surface),var(--surface-2))}
 .fin-summary{font-size:15px;line-height:1.65;color:var(--text)}
 .fin-summary b{font-weight:800;font-variant-numeric:tabular-nums}
@@ -1714,7 +1720,7 @@ button:active:not(:disabled){transform:translateY(0) scale(.97)}
         <div class="card"><div class="card-title"><div><h2>Рост · экспонента и её степень</h2><p>Выручка, расходы и прибыль привязаны к экспоненте scale(t) = (1 + monthlyGrowth)^(t<sup>p</sup>). Степень p&nbsp;&gt;&nbsp;1 ускоряет рост, p&nbsp;&lt;&nbsp;1 — насыщает.</p></div></div><div class="cjm-manual-grid" id="finInputsFunnel"></div></div>
         <div class="card"><div class="card-title"><div><h2>Доли по 5 сегментам</h2></div></div><div class="cjm-manual-grid" id="finInputsShares"></div><div class="fin-norm" id="finSharesNorm"></div></div>
         <div class="card"><div class="card-title"><div><h2>Ставки CPA по 5 сегментам</h2></div></div><div class="cjm-manual-grid" id="finInputsPayout"></div></div>
-        <div class="card"><div class="card-title"><div><h2>Конверсии по сегментам · воронка</h2><p>Значения тянем из сегментов CJM и берём средневзвешенные по долям. Меняете здесь — пересчитываются посегментная выручка, объём визитов и итоговая математика.</p></div></div><div class="cjm-manual-grid" id="finInputsSegCr"></div></div>
+        <div class="card"><div class="card-title"><div><h2>Конверсии по сегментам · воронка</h2><p>Четыре стадии на сегмент: <b>Визит → Контакт → Клик по офферу → Заявка → Выдача (Апрув)</b>. Меняете здесь — пересчитывается посегментная выручка, объём визитов, помесячный план и <b>CAC</b> каждого сегмента: чем ниже произведение конверсий, тем выше стоимость привлечённого клиента.</p></div></div><div class="cjm-manual-grid" id="finInputsSegCr"></div></div>
         <div class="card"><div class="card-title"><div><h2>Фиксированные расходы, Центрофинанс и цель</h2></div></div><div class="cjm-manual-grid" id="finInputsBudget"></div></div>
       </div>
 
@@ -1724,7 +1730,7 @@ button:active:not(:disabled){transform:translateY(0) scale(.97)}
       </div>
 
       <div class="card fin-table-card">
-        <div class="card-title"><div><h2>Помесячный план</h2><p>Бюджет, прогноз продаж, ожидаемая прибыль и прибыль на 1 клиента по каждому месяцу горизонта</p></div></div>
+        <div class="card-title"><div><h2>Помесячный план</h2><p>Бюджет, прогноз продаж, ожидаемая прибыль и прибыль на 1 клиента по каждому месяцу горизонта. Нажмите <b>▸</b> в начале строки, чтобы развернуть месяц и увидеть цифры по 5 сегментам (контакты, заявки, выдачи, выручка, CAC, прибыль). Работает для любого месяца — от Июля 2026 до Декабря 2027.</p></div></div>
         <div class="ue2-table-wrap"><table class="ue2-scn-table fin-table" id="finTable"></table></div>
       </div>
     </section>

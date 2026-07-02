@@ -641,9 +641,18 @@
     var cfShare=clamp(inp.cfApprovalShare,0,100)/100;
     var n=FIN_MONTHS.length;
     var contacts=[],visits=[],apps=[],issues=[],revenue=[],cost=[],profit=[],cumProfit=[],cumInvest=[],cfClients=[],cfRevenue=[],ppc=[],scales=[];
+    // Помесячные ряды по сегментам (для раскрывающейся таблицы «Помесячный план»).
+    // segMonthly[i] хранит месяц-за-месяцем контакты/заявки/выдачи/выручку/маркет-расход/CAC/прибыль сегмента.
+    // CAC_i(t) = mediaCost_i(t) / issues_i(t), где mediaCost_i(t) — часть медиа-бюджета,
+    // атрибутируемая сегменту через его долю контактов. CAC зависит от 4-х конверсий воронки:
+    // при прочих равных, чем ниже crCc·crCa·crAi у сегмента, тем выше CAC этого сегмента.
+    var segMonthly=FIN_SEG_META.map(function(){
+      return {contacts:[],apps:[],issues:[],revenue:[],mediaCost:[],cac:[],profit:[],visits:[]};
+    });
     // Посегментные ряды выручки/выдач (для карточек по сегментам и последнего месяца)
     var segIssuesLast=FIN_SEG_META.map(function(){return 0;});
     var segRevenueLast=FIN_SEG_META.map(function(){return 0;});
+    var segCacLast=FIN_SEG_META.map(function(){return 0;});
     var runProfit=0,runInvest=0,peakNeed=0,paybackIdx=-1;
     var fixedMonthly=inp.fotMonthly+inp.devMonthly;
     for(var t=0;t<n;t++){
@@ -651,9 +660,11 @@
       var scale=Math.pow(1+g,Math.pow(t,power));
       scales.push(scale);
       var ct=contacts0*scale;
+      var mediaTotal=trafficCost0*scale;
       // Аггрегация по сегментам: контакты дробятся по долям, каждый сегмент даёт
       // свой поток заявок/выдач/выручки и свой объём визитов.
       var totalApps=0,totalIss=0,totalRev=0,totalVis=0;
+      var segCache=[];
       for(var i=0;i<FIN_SEG_META.length;i++){
         var segC=ct*shares[i];
         var segClick=segC*crCc[i];
@@ -661,17 +672,37 @@
         var segIss=segApp*crAi[i];
         var segRev=segIss*payouts[i];
         var segVis=crVc[i]>0?segC/crVc[i]:0;
+        // Аллокация медиа-бюджета на сегмент = доля контактов сегмента × общий media_t.
+        var segMedia=mediaTotal*shares[i];
+        var segCac=segIss>0?segMedia/segIss:0;
         totalApps+=segApp;
         totalIss+=segIss;
         totalRev+=segRev;
         totalVis+=segVis;
-        if(t===n-1){segIssuesLast[i]=segIss;segRevenueLast[i]=segRev;}
+        segCache.push({contacts:segC,apps:segApp,issues:segIss,revenue:segRev,mediaCost:segMedia,cac:segCac,visits:segVis});
+        if(t===n-1){segIssuesLast[i]=segIss;segRevenueLast[i]=segRev;segCacLast[i]=segCac;}
       }
       var cfCl=totalIss*cfShare;
       var cfRev=cfCl*inp.cfPayout;
       var rev=totalRev+cfRev;
-      var c=trafficCost0*scale+fixedMonthly;
+      var c=mediaTotal+fixedMonthly;
       var p=rev-c;
+      // Разносим фиксированные расходы по сегментам пропорционально долям (для отображения прибыли сегмента).
+      // Прибыль сегмента = выручка − медиа-аллокация − доля фикс-косты. CF-выручка добавляется в общий итог,
+      // а не в отдельный сегмент, поэтому сумма Σ segProfit_i может отличаться от общего profit_t на cfRev.
+      for(var k=0;k<FIN_SEG_META.length;k++){
+        var sc=segCache[k];
+        var segFixed=fixedMonthly*shares[k];
+        var segProfit=sc.revenue-sc.mediaCost-segFixed;
+        segMonthly[k].contacts.push(sc.contacts);
+        segMonthly[k].apps.push(sc.apps);
+        segMonthly[k].issues.push(sc.issues);
+        segMonthly[k].revenue.push(sc.revenue);
+        segMonthly[k].mediaCost.push(sc.mediaCost);
+        segMonthly[k].cac.push(sc.cac);
+        segMonthly[k].profit.push(segProfit);
+        segMonthly[k].visits.push(sc.visits);
+      }
       runProfit+=p;runInvest+=c;
       if(runProfit<0)peakNeed=Math.max(peakNeed,-runProfit);
       if(paybackIdx<0&&runProfit>=0&&t>0)paybackIdx=t;
@@ -692,6 +723,13 @@
         neededGrowth=(Math.pow(neededEndContacts/contacts0,1/denom)-1)*100;
       }
     }
+    // Blended CAC = общий медиа-бюджет / общие выдачи (сводный по всему горизонту).
+    // На конец горизонта считаем отдельно, чтобы отобразить в KPI.
+    var totalMedia=cost.reduce(function(a,c,i){return a+(c-fixedMonthly);},0);
+    var totalIssuesHz=issues.reduce(function(a,x){return a+x;},0);
+    var blendedCac=totalIssuesHz>0?totalMedia/totalIssuesHz:0;
+    var mediaLast=cost[n-1]-fixedMonthly;
+    var blendedCacLast=issues[n-1]>0?mediaLast/issues[n-1]:0;
     return {
       inp:inp,months:FIN_MONTHS,shares:shares,payouts:payouts,
       crVc:crVc,crCc:crCc,crCa:crCa,crAi:crAi,segConv:segConv,segRevPerContact:segRevPerContact,
@@ -701,7 +739,9 @@
       revPerContact:revPerContact,sources:sources,scales:scales,growthPower:power,
       contacts:contacts,visits:visits,apps:apps,issues:issues,revenue:revenue,cost:cost,profit:profit,
       cumProfit:cumProfit,cumInvest:cumInvest,cfClients:cfClients,cfRevenue:cfRevenue,ppc:ppc,
-      segIssuesLast:segIssuesLast,segRevenueLast:segRevenueLast,
+      segIssuesLast:segIssuesLast,segRevenueLast:segRevenueLast,segCacLast:segCacLast,
+      segMonthly:segMonthly,fixedMonthly:fixedMonthly,
+      blendedCac:blendedCac,blendedCacLast:blendedCacLast,
       lastRevenue:lastRev,lastProfit:profit[n-1],lastCumProfit:cumProfit[n-1],totalInvest:cumInvest[n-1],
       lastPpc:ppc[n-1],peakNeed:peakNeed,paybackIdx:paybackIdx,target:target,
       targetHit:lastRev>=target,neededGrowth:neededGrowth
@@ -1888,6 +1928,7 @@
       {tone:'orange',label:'Нужно вложить',value:millions(res.peakNeed),sub:'Пиковый кассовый разрыв за горизонт'},
       {tone:'blue',label:'Выручка · декабрь 2027',value:millions(res.lastRevenue),sub:'Цель '+millions(res.target)+' в месяц'},
       {tone:res.lastProfit>=0?'green':'red',label:'Прибыль · декабрь 2027',value:millions(res.lastProfit),sub:'Чистыми в месяц на конец горизонта'},
+      {tone:'violet',label:'CAC · декабрь 2027',value:rub(res.blendedCacLast),sub:'Медиа-бюджет / выдачи · зависит от 4 конверсий'},
       {tone:ppcTone,label:'Прибыль / 1 чел',value:rub(res.lastPpc),sub:'На одну выдачу на конец горизонта'},
       {tone:payTone,label:'Окупаемость',value:res.paybackIdx>=0?res.months[res.paybackIdx]:'за горизонтом',sub:res.paybackIdx>=0?'Месяц выхода в накопленный плюс':'Накопленная прибыль ещё отрицательна'}
     ];
@@ -1965,12 +2006,13 @@
       var segCards=FIN_SEG_META.map(function(m,i){
         var segIss=res.segIssuesLast[i];
         var segRev=res.segRevenueLast[i];
-        var stageTxt=pct(res.crCc[i]*100,1)+' · '+pct(res.crCa[i]*100,1)+' · '+pct(res.crAi[i]*100,1);
+        var segCac=res.segCacLast[i];
+        var stageTxt=pct(res.crVc[i]*100,1)+' · '+pct(res.crCc[i]*100,1)+' · '+pct(res.crCa[i]*100,1)+' · '+pct(res.crAi[i]*100,1);
         return '<div class="fin-seg-card" style="border-top-color:'+esc(m.color)+'">'+
           '<span class="fin-seg-name">'+esc(m.name)+'</span>'+
           '<span class="fin-seg-val">'+esc(millions(segRev))+' / мес</span>'+
-          '<span class="fin-seg-cap">доля '+esc(pct(res.shares[i]*100,0))+' · CPA '+esc(rub(res.payouts[i]))+'</span>'+
-          '<span class="fin-seg-note">выдач '+esc(fmt(segIss))+' / мес (декабрь 2027) · CR '+esc(stageTxt)+'</span>'+
+          '<span class="fin-seg-cap">доля '+esc(pct(res.shares[i]*100,0))+' · CPA '+esc(rub(res.payouts[i]))+' · CAC '+esc(rub(segCac))+'</span>'+
+          '<span class="fin-seg-note">выдач '+esc(fmt(segIss))+' / мес (декабрь 2027) · CR визит→контакт→клик→заявка→апрув '+esc(stageTxt)+'</span>'+
         '</div>';
       }).join('');
       segHost.innerHTML=segCards;
@@ -1983,28 +2025,70 @@
         '<div class="fin-cf-cell"><span class="fin-cf-cap">Выручка от Центрофинанс</span><span class="fin-cf-val">'+esc(rub(res.cfRevenue[last]))+'</span><span class="fin-cf-note">По вашей ставке · продажа лида обратно по 3000 ₽ убрана из расчёта</span></div>'+
         '<div class="fin-cf-cell"><span class="fin-cf-cap">Ставка Центрофинанс за клиента</span><span class="fin-cf-val">'+esc(rub(inp.cfPayout))+'</span><span class="fin-cf-note">0 ₽ означает, что лид обратно в Центрофинанс не продаём</span></div>';
     }
-    // Monthly table
+    // Monthly table — с раскрывающимися строками по сегментам.
+    // Каждая строка месяца имеет data-fin-month. Клик по стрелке раскрывает 5 суб-строк
+    // (по сегментам): контакты, заявки, выдачи, выручка, CAC, прибыль — считаются
+    // из массивов res.segMonthly[i], т.е. работают ДЛЯ ЛЮБОГО МЕСЯЦА (не только последнего).
     var tbl=$('finTable');
     if(tbl){
-      var head='<thead><tr><th>Месяц</th><th>Контакты</th><th>Заявки</th><th>Выдачи</th><th>Выручка</th><th>Расходы</th><th>Прибыль</th><th>Прибыль / 1 чел</th><th>Накопл. прибыль</th></tr></thead>';
+      var head='<thead><tr><th style="width:28px"></th><th>Месяц</th><th>Контакты</th><th>Заявки</th><th>Выдачи</th><th>Выручка</th><th>Расходы</th><th>CAC</th><th>Прибыль</th><th>Прибыль / 1 чел</th><th>Накопл. прибыль</th></tr></thead>';
       var rows='';
       for(var t=0;t<n;t++){
         var pc=res.profit[t]>=0?'fin-pos':'fin-neg';
         var cc=res.cumProfit[t]>=0?'fin-pos':'fin-neg';
         var ppcCls=res.ppc[t]>=0?'fin-pos':'fin-neg';
-        rows+='<tr'+(t===last?' class="is-target"':'')+'>'+
+        var mediaT=res.cost[t]-res.fixedMonthly;
+        var cacT=res.issues[t]>0?mediaT/res.issues[t]:0;
+        rows+='<tr class="fin-row-month'+(t===last?' is-target':'')+'" data-fin-month="'+t+'">'+
+          '<td><button type="button" class="fin-expand-btn" data-fin-toggle="'+t+'" aria-expanded="false" aria-label="Раскрыть сегменты">▸</button></td>'+
           '<td>'+esc(res.months[t])+'</td>'+
           '<td>'+esc(fmt(res.contacts[t]))+'</td>'+
           '<td>'+esc(fmt(res.apps[t]))+'</td>'+
           '<td>'+esc(fmt(res.issues[t]))+'</td>'+
           '<td>'+esc(rub(res.revenue[t]))+'</td>'+
           '<td>'+esc(rub(res.cost[t]))+'</td>'+
+          '<td>'+esc(rub(cacT))+'</td>'+
           '<td class="'+pc+'">'+esc(rub(res.profit[t]))+'</td>'+
           '<td class="'+ppcCls+'">'+esc(rub(res.ppc[t]))+'</td>'+
           '<td class="'+cc+'">'+esc(rub(res.cumProfit[t]))+'</td>'+
         '</tr>';
+        // Скрытые суб-строки по сегментам этого месяца.
+        for(var si=0;si<FIN_SEG_META.length;si++){
+          var sm=res.segMonthly[si];
+          var sProfit=sm.profit[t];
+          var sProfitCls=sProfit>=0?'fin-pos':'fin-neg';
+          var sPpc=sm.issues[t]>0?sProfit/sm.issues[t]:0;
+          var sPpcCls=sPpc>=0?'fin-pos':'fin-neg';
+          rows+='<tr class="fin-row-seg" data-fin-seg-of="'+t+'" style="display:none;background:var(--surface-2,rgba(127,127,127,.06));">'+
+            '<td></td>'+
+            '<td style="padding-left:28px;color:var(--muted);"><span class="fin-seg-dot" style="display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:6px;background:'+esc(FIN_SEG_META[si].color)+'"></span>'+esc(FIN_SEG_META[si].name)+'</td>'+
+            '<td>'+esc(fmt(sm.contacts[t]))+'</td>'+
+            '<td>'+esc(fmt(sm.apps[t]))+'</td>'+
+            '<td>'+esc(fmt(sm.issues[t]))+'</td>'+
+            '<td>'+esc(rub(sm.revenue[t]))+'</td>'+
+            '<td>'+esc(rub(sm.mediaCost[t]))+' · медиа</td>'+
+            '<td>'+esc(rub(sm.cac[t]))+'</td>'+
+            '<td class="'+sProfitCls+'">'+esc(rub(sProfit))+'</td>'+
+            '<td class="'+sPpcCls+'">'+esc(rub(sPpc))+'</td>'+
+            '<td style="color:var(--muted);">доля '+esc(pct(res.shares[si]*100,0))+'</td>'+
+          '</tr>';
+        }
       }
       tbl.innerHTML=head+'<tbody>'+rows+'</tbody>';
+      // Делегированный обработчик клика по кнопке раскрытия (переживает перерисовку).
+      if(!tbl._finExpandWired){
+        tbl._finExpandWired=true;
+        tbl.addEventListener('click',function(ev){
+          var btn=ev.target.closest?ev.target.closest('[data-fin-toggle]'):null;
+          if(!btn)return;
+          var idx=btn.getAttribute('data-fin-toggle');
+          var subs=tbl.querySelectorAll('tr.fin-row-seg[data-fin-seg-of="'+idx+'"]');
+          var open=btn.getAttribute('aria-expanded')==='true';
+          subs.forEach(function(row){row.style.display=open?'none':'';});
+          btn.setAttribute('aria-expanded',open?'false':'true');
+          btn.textContent=open?'▸':'▾';
+        });
+      }
     }
     // Блок «Резюме для презентации» удалён по требованию — итоги считываются
     // напрямую из KPI-карточек и посегментных карточек выше.
