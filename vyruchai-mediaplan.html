@@ -1678,18 +1678,18 @@ button:active:not(:disabled){transform:translateY(0) scale(.97)}
 
     <!-- Finance model panel: Бюджет → Прогноз продаж → Ожидаемая прибыль -->
     <section id="cjm-tab-finance" class="cjm-panel">
-      <div class="cjm-section-head"><div><h2>Финмодель до декабря 2027</h2><p>Инновационный борд «Источники трафика → воронка от контакта → выручка по 5 сегментам → ожидаемая прибыль». Экономика заложена в сегментах — мы играем объёмом, а бюджеты формируются по каналам (Яндекс.Директ, SEO, PR, прочие) через среднюю CPL (цену оставленного номера).</p></div><button type="button" class="cjm-reset-btn" id="finReset" title="Сбросить все параметры к значениям по умолчанию">Сбросить к дефолтам</button></div>
+      <div class="cjm-section-head"><div><h2>Финмодель до декабря 2027</h2></div><button type="button" class="cjm-reset-btn" id="finReset" title="Сбросить все параметры к значениям по умолчанию">Сбросить к дефолтам</button></div>
 
       <div class="fin-kpis" id="finKpis"></div>
 
       <div class="card fin-target-card">
-        <div class="card-title"><div><h2>Прогноз продаж и цель</h2><p>Траектория выручки против цели 20 млн ₽/мес к декабрю 2027 и месячные расходы</p></div></div>
+        <div class="card-title"><div><h2>Прогноз продаж и цель</h2><p>Нарастающая траектория от текущих 60–70 тыс. ₽/мес к 20 млн ₽ выручки и 10+ млн ₽ прибыли в декабре 2027</p></div></div>
         <div class="fin-target-strip" id="finTargetStrip"></div>
         <div class="fin-chart-wrap"><canvas id="finChartTrajectory"></canvas></div>
       </div>
 
       <div class="grid two fin-grid-2">
-        <div class="card"><div class="card-title"><div><h2>Помесячный P&amp;L</h2><p>Выручка минус расходы формируют прибыль по месяцам</p></div></div><div class="fin-chart-wrap"><canvas id="finChartPnl"></canvas></div></div>
+        <div class="card"><div class="card-title"><div><h2>Помесячный P&amp;L</h2><p>Первые месяцы показывают инвестиционный разгон; прибыль появляется после накопления объёма</p></div></div><div class="fin-chart-wrap"><canvas id="finChartPnl"></canvas></div></div>
         <div class="card"><div class="card-title"><div><h2>Окупаемость вложений</h2><p>Накопленная прибыль против накопленных вложений — точка пересечения и есть окупаемость</p></div></div><div class="fin-chart-wrap"><canvas id="finChartPayback"></canvas></div></div>
       </div>
 
