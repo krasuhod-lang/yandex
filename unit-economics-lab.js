@@ -13,6 +13,7 @@
   'use strict';
 
   var STORE_KEY = 'ue_segments_v1';
+  var EDITED_KEY = 'ue_segments_edited_v1';    // множество ключей, изменённых пользователем; такие ключи не перетираются пресетом To-Be
   var SLOTS_KEY = 'ue_segments_slots_v1';      // именованные сценарии пользователя (≤ 5)
   var COMPARE_KEY = 'ue_segments_compare_v1';  // {a:slotId, b:slotId} для split-view
   var THRESH_KEY = 'ue_segments_thresholds_v1';// настраиваемые пороги светофора
@@ -85,6 +86,29 @@
   //     лиды, поэтому растут downstream-конверсии и средний EPL (динамические тарифы).
   //   • Smart Safe Router: «Просроченные» маршрутизируются на офферы БФЛ, фикс-EPL 10 000 ₽.
   //   Калибровка даёт Blended LTV/CAC ≈ 2.6x (> 2.5x целевого порога).
+  // ---- Реестр «правок пользователя» -------------------------------------
+  // Любой ключ, который пользователь двинул в панели управления, попадает
+  // в эту структуру (объект-словарь, сериализуется в localStorage). applyMode
+  // использует его, чтобы НЕ перетирать правки жёстко зашитыми значениями To-Be —
+  // тогда изменения ползунков (в том числе по сегментам) сразу видны в юнит-экономике.
+  function loadEdited() {
+    try {
+      var raw = localStorage.getItem(EDITED_KEY);
+      if (!raw) return {};
+      var obj = JSON.parse(raw);
+      return (obj && typeof obj === 'object') ? obj : {};
+    } catch (e) { return {}; }
+  }
+  function saveEdited(map) { try { localStorage.setItem(EDITED_KEY, JSON.stringify(map || {})); } catch (e) {} }
+  function markEdited(key) { var m = loadEdited(); m[key] = 1; saveEdited(m); }
+  function clearEdited() { try { localStorage.removeItem(EDITED_KEY); } catch (e) {} }
+  function isEdited(key) { return !!loadEdited()[key]; }
+  // Присваивает поле объекта, только если пользователь не редактировал это поле вручную.
+  function setIfNotEdited(obj, key, path, value) {
+    if (isEdited(path)) return;
+    obj[key] = value;
+  }
+
   function applyMode(base, mode) {
     var p = deepCopy(base);
     if (mode !== 'tobe') {
@@ -102,47 +126,47 @@
     // Действие: интерактивная преквалификация до формы лида.
     // Цифра: CR Visit→Lead 8% → 9,6% (+20%, QUIZ_UPLIFT). Почему: квиз вовлекает и
     // отсеивает нецелевых ещё до лида, поэтому до лида доходит более качественный трафик.
-    p.crVisitLead = Math.round(base.crVisitLead * (1 + QUIZ_UPLIFT) * 10) / 10;
+    setIfNotEdited(p, 'crVisitLead', 'crVisitLead', Math.round(base.crVisitLead * (1 + QUIZ_UPLIFT) * 10) / 10);
     // [Рычаг 1, продолжение] Преквалифицированный лид лучше конвертится дальше по воронке.
     // Цифра: CR Lead→Clickout 55% → 80% и CR Clickout→Issue 55% → 80%. Почему: квиз уже
     // собрал параметры запроса, поэтому пользователю показывается релевантный оффер и он
     // реже отваливается на клик-ауте и одобрении.
-    p.crLeadClickout = 80;
-    p.crClickoutIssue = 80;
+    setIfNotEdited(p, 'crLeadClickout', 'crLeadClickout', 80);
+    setIfNotEdited(p, 'crClickoutIssue', 'crClickoutIssue', 80);
     // [Рычаг 1, продолжение] Средний payout (EPL) растёт с 1600 → 3000 ₽. Почему: квиз
     // позволяет включить динамические тарифы и направлять лид на внешние источники
     // (БФЛ/CPA/банки) с более высокой подтверждённой выплатой, а не только на дешёвую выдачу.
-    p.epl = 3000;
-    p.crossEpl = 3000;
+    setIfNotEdited(p, 'epl', 'epl', 3000);
+    setIfNotEdited(p, 'crossEpl', 'crossEpl', 3000);
     // [Рычаг 4] Кросс-сейл некредитных банковских продуктов (Банки/РКО) для «Повторных»/«Спящих».
     // Цифра: CR кросс-сейла 5% → 60%. Почему: для уже знакомой базы предлагаем карты/РКО/страховки —
     // короткий и дешёвый второй заход монетизации, который в As-Is не использовался.
-    p.crCrossBank = 60;
+    setIfNotEdited(p, 'crCrossBank', 'crCrossBank', 60);
     // [Рычаг 3] Квалификация в лид БФЛ для «Просроченных».
     // Цифра: CR Lead→БФЛ 10% → 35% и фикс-payout БФЛ 3000 → 10000 ₽. Почему: просроченный интент
     // отправляем не на заведомо отказную выдачу, а на профильного партнёра БФЛ/рефинанс с высокой выплатой.
-    p.crLeadBfl = 35;
-    p.eplBfl = 10000;
+    setIfNotEdited(p, 'crLeadBfl', 'crLeadBfl', 35);
+    setIfNotEdited(p, 'eplBfl', 'eplBfl', 10000);
     // [Рычаг 5] РЕСТРУКТУРИЗАЦИЯ ТРАФИК-МИКСА (снижает Blended CAC без новых затрат).
     // Действие: перераспределяем бюджет с дорогих Новых на дешёвых Повторных.
     // Цифра: доли Новый 45→30, Повторный 25→40, Просроченный 20, Спящий 10. Почему: CAC повторного
     // (450 ₽) кратно ниже CAC нового (1200 ₽), поэтому сам сдвиг долей тянет Blended CAC вниз.
-    p.seg.new.share = 30;
-    p.seg.repeat.share = 40;
-    p.seg.overdue.share = 20;
-    p.seg.sleep.share = 10;
+    setIfNotEdited(p.seg.new,     'share', 'seg.new.share',     30);
+    setIfNotEdited(p.seg.repeat,  'share', 'seg.repeat.share',  40);
+    setIfNotEdited(p.seg.overdue, 'share', 'seg.overdue.share', 20);
+    setIfNotEdited(p.seg.sleep,   'share', 'seg.sleep.share',   10);
     // [Рычаг 1, итог по CAC] CAC Нового 1200 → 700 ₽ (−42%). Почему: рост CR Visit→Lead на +20%
     // означает, что тот же рекламный бюджет даёт больше лидов → стоимость одного лида падает.
-    p.seg.new.cac = 700;
+    setIfNotEdited(p.seg.new, 'cac', 'seg.new.cac', 700);
     // [Рычаг 2] CRM-УПЛИФТ ПОВТОРНЫХ (удержание → выше LTV₂).
     // Действие: триггерные коммуникации и кабинет для возвратных сделок.
     // Цифра: retention 1y 45% → 55%, retention 2y 30% → 38%. Почему: удержанный клиент приносит
     // дисконтированный доход в 12 и 24 мес, поэтому LTV₂ повторного сегмента растёт.
-    p.seg.repeat.ret1 = 55;
-    p.seg.repeat.ret2 = 38;
+    setIfNotEdited(p.seg.repeat, 'ret1', 'seg.repeat.ret1', 55);
+    setIfNotEdited(p.seg.repeat, 'ret2', 'seg.repeat.ret2', 38);
     // [Рычаг 3, итог по CAC] CAC Просроченного 800 → 650 ₽. Почему: профильный источник БФЛ/CPA
     // монетизирует именно просроченный интент, поэтому платный трафик на него обходится дешевле.
-    p.seg.overdue.cac = 650;
+    setIfNotEdited(p.seg.overdue, 'cac', 'seg.overdue.cac', 650);
     // §2.3 Smart Safe Router → жёстко маршрутизирует «Просроченных» в ветку БФЛ.
     p.seg.overdue.router = 'bfl';
     p.seg.overdue.eplBfl = p.eplBfl;
@@ -1837,6 +1861,8 @@
       baseParams[path] = v;
     }
     save(baseParams);
+    // Помечаем ключ как «правку пользователя», чтобы применение To-Be-пресета не перетирало его.
+    markEdited(path);
   }
 
   function partialRefresh() {
@@ -2089,6 +2115,7 @@
     if (reset) reset.addEventListener('click', function () {
       baseParams = deepCopy(DEFAULT_PARAMS);
       save(baseParams);
+      clearEdited(); // сбрасываем маркеры правок — To-Be снова применяется полностью
       render();
     });
     wireMainOnly();
