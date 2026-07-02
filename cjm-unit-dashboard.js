@@ -56,6 +56,8 @@
     // через costGrowthMonthly. SEO берёт 100% накопительного эффекта, платные
     // источники — только paidDemandShare% от него (иначе модель превращается в
     // прямую зависимость «вложили ×2 → заработали ×2»).
+    // p=1.2 слегка сдвигает отдачу к поздним месяцам: это отражает PNL-сценарий,
+    // где SEO-страницы и бренд накапливают эффект не мгновенно, а после разгона.
     growthPower:1.2,
     costGrowthMonthly:9,
     paidDemandShare:25,
@@ -111,8 +113,8 @@
     {key:'Pr',name:'PR / соцсети',color:'var(--violet)',budgetKey:'srcPrBudget',cplKey:'srcPrCpl'},
     {key:'Other',name:'Прочие источники',color:'var(--blue)',budgetKey:'srcOtherBudget',cplKey:'srcOtherCpl'}
   ];
-  // 48 шагов бинарного поиска дают точность значительно выше 0,01 п.п. для
-  // подсказки «нужный рост», но остаются незаметными по CPU в браузере.
+  // 48 шагов бинарного поиска — верхняя защита от бесконечного цикла; обычно
+  // поиск завершается раньше по epsilon ≈0,0001 п.п. месячного темпа.
   var MAX_GROWTH_BISECTION_ITERATIONS=48;
   var GROWTH_BISECTION_EPSILON=0.000001;
 
@@ -818,7 +820,9 @@
           if(endContacts>=neededEndContacts)hi=mid;else lo=mid;
           if(Math.abs(hi-lo)<GROWTH_BISECTION_EPSILON)break;
         }
-        neededGrowth=hi*100;
+        var foundScale=Math.pow(1+hi,horizon);
+        var foundContacts=seoBase*foundScale+paidBase*(1+(foundScale-1)*paidShare);
+        neededGrowth=foundContacts>=neededEndContacts*0.999?hi*100:null;
       }
     }
     // Blended CAC = общий медиа-бюджет / общие выдачи (сводный по всему горизонту).
