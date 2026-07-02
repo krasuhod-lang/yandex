@@ -1895,15 +1895,21 @@
     var sum=$('finSummary');
     if(sum){
       var paybackTxt=res.paybackIdx>=0?('окупаемость наступает в '+res.months[res.paybackIdx]):'на горизонте до декабря 2027 накопленная прибыль остаётся отрицательной';
-      var firstPositiveIdx=res.profit.findIndex(function(x){return x>=0;});
+      var firstPositiveIdx=-1;
+      for(var pi=0;pi<res.profit.length;pi++){
+        if(res.profit[pi]>=0){firstPositiveIdx=pi;break;}
+      }
       var firstPositiveTxt=firstPositiveIdx>=0?('месячная прибыль становится положительной в '+res.months[firstPositiveIdx]):'месячная прибыль остаётся отрицательной до конца горизонта';
       var goalTxt=res.targetHit?('план выходит на цель '+millions(res.target)+' в месяц'):('до цели '+millions(res.target)+' в месяц не хватает '+millions(gap)+', для её достижения нужен рост контактов около '+pct(res.neededGrowth,1)+' в месяц вместо текущих '+pct(inp.monthlyGrowth,1));
-      sum.innerHTML='<span class="fin-summary-lead">Резюме для презентации</span>'+
-        'Текущая база почти нулевая: ориентир <b>60–70 тыс. ₽/мес</b> без вложений. С июля включаем нарастающее финансирование 4 источников (Яндекс.Директ, SEO, PR, прочие) через средний CPL — на старте это <b>'+esc(fmt(res.sources.totalContacts))+'</b> контактов в месяц при среднем CPL <b>'+esc(rub(res.sources.avgCpl))+'</b> и общем бюджете <b>'+esc(rub(res.sources.totalBudget))+'</b>. '+
-        'Чтобы выйти на выручку <b>'+esc(millions(res.lastRevenue))+'</b> в месяц к декабрю 2027, в проект нужно вложить до <b>'+esc(millions(res.peakNeed))+'</b> (пиковый кассовый разрыв). '+
-        'Быстрой окупаемости в первый год не закладываем: '+esc(firstPositiveTxt)+', '+esc(paybackTxt)+'. При заданных параметрах прибыль на конец горизонта составляет <b>'+esc(millions(res.lastProfit))+'</b> в месяц, то есть целевой уровень 10+ млн ₽/мес, а прибыль на одну выдачу — <b>'+esc(rub(res.lastPpc))+'</b>. '+
-        'По цели: '+esc(goalTxt)+'. '+
-        'Выручка построена на партнёрских ставках CPA по 5 сегментам, продажа лида обратно в Центрофинанс по 3000 ₽ из расчёта исключена, а сам Центрофинанс учитывается как трекер лида: '+esc(fmt(res.cfClients[last]))+' клиентов в месяц на конец горизонта.';
+      var summaryParts=[
+        '<span class="fin-summary-lead">Резюме для презентации</span>',
+        'Текущая база почти нулевая: ориентир <b>60–70 тыс. ₽/мес</b> без вложений. С июля включаем нарастающее финансирование 4 источников (Яндекс.Директ, SEO, PR, прочие) через средний CPL — на старте это <b>'+esc(fmt(res.sources.totalContacts))+'</b> контактов в месяц при среднем CPL <b>'+esc(rub(res.sources.avgCpl))+'</b> и общем бюджете <b>'+esc(rub(res.sources.totalBudget))+'</b>.',
+        'Чтобы выйти на выручку <b>'+esc(millions(res.lastRevenue))+'</b> в месяц к декабрю 2027, в проект нужно вложить до <b>'+esc(millions(res.peakNeed))+'</b> (пиковый кассовый разрыв).',
+        'Быстрой окупаемости в первый год не закладываем: '+esc(firstPositiveTxt)+', '+esc(paybackTxt)+'. При заданных параметрах прибыль на конец горизонта составляет <b>'+esc(millions(res.lastProfit))+'</b> в месяц, то есть целевой уровень 10+ млн ₽/мес, а прибыль на одну выдачу — <b>'+esc(rub(res.lastPpc))+'</b>.',
+        'По цели: '+esc(goalTxt)+'.',
+        'Выручка построена на партнёрских ставках CPA по 5 сегментам, продажа лида обратно в Центрофинанс по 3000 ₽ из расчёта исключена, а сам Центрофинанс учитывается как трекер лида: '+esc(fmt(res.cfClients[last]))+' клиентов в месяц на конец горизонта.'
+      ];
+      sum.innerHTML=summaryParts.join(' ');
     }
   }
 
