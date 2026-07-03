@@ -42,13 +42,21 @@ class Chart{
  _observeResize(){
   if(typeof ResizeObserver==='undefined')return;
   const parent=this.canvas.parentElement;if(!parent)return;
+  // Дебаунсим редрав, чтобы серия быстрых ресайзов (например, при
+  // раскрытии вкладки или ресайзе окна) не приводила к десяткам draw() подряд.
+  let scheduled=0;
   this._ro=new ResizeObserver(()=>{
    if(!this.ctx||!this.canvas)return;
    const rect=this.canvas.getBoundingClientRect();
    const w=Math.round(rect.width),h=Math.round(rect.height);
    if(w===this._lastW&&h===this._lastH)return;
-   this.progress=1;
-   this.draw();
+   if(scheduled)clearTimeout(scheduled);
+   scheduled=setTimeout(()=>{
+    scheduled=0;
+    if(!this.ctx||!this.canvas)return;
+    this.progress=1;
+    this.draw();
+   },80);
   });
   try{this._ro.observe(parent);}catch(e){}
  }
