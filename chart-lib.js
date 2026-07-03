@@ -301,3 +301,6 @@ class Chart{
  }
 }
 function chartFont(){return '"Golos Text", -apple-system, BlinkMacSystemFont, "SF Pro Text", sans-serif'}
+// Reads current theme colors from CSS variables on :root so charts stay in sync
+// with light/dark themes without hard-coding hex values.
+function chartColors(){const s=getComputedStyle(document.documentElement);return {text:s.getPropertyValue('--text').trim(),muted:s.getPropertyValue('--muted').trim(),line:s.getPropertyValue('--line').trim(),blue:s.getPropertyValue('--blue').trim(),green:s.getPropertyValue('--green').trim(),orange:s.getPropertyValue('--orange').trim(),red:s.getPropertyValue('--red').trim(),violet:s.getPropertyValue('--violet').trim()}}

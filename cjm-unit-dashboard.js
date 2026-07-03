@@ -40,10 +40,12 @@
   // Важно: выручка растёт сильнее расходов за счёт накопительного SEO/бренд-эффекта,
   // а расходы растут только линейным планом.
   var FIN_DEFAULTS={
-    // 12% — базовый response-scale спроса: первые месяцы дают слабый рост,
+    // 10.5% — базовый response-scale спроса: первые месяцы дают слабый рост,
     // затем эффект накопленных вложений ускоряется. После мая 2027 включается
     // отдельное замедление, чтобы большие месячные объёмы не разгонялись слишком резко.
-    monthlyGrowth:12,
+    // Снижен относительно прежних 12% ~на 12%, чтобы траектория выглядела реалистичнее
+    // и выручка не разгонялась чрезмерно быстро.
+    monthlyGrowth:10.5,
     // «Степень» роста управляет ФОРМОЙ траектории, а не её масштабом.
     // Модель роста (нормирована на горизонт, без «двойной экспоненты»):
     //   exp(t)  = horizon · (t / horizon)^growthPower
@@ -2500,20 +2502,6 @@
         '<div class="fin-target-item"><span class="fin-target-num">'+esc(pct(inp.costGrowthMonthly,1))+'</span><span class="fin-target-cap">Расходы: линейный прирост в месяц</span></div>'+
         '<div class="fin-progress"><span style="width:'+progress.toFixed(1)+'%"></span></div>';
     }
-    // Визиты на маркетплейс — производные от контактов и средневзвешенной CR визит→контакт.
-    // Формат — компактная табличка (старт · декабрь 2027 · средние конверсии по сегментам).
-    var visitsEl=$('finVisitsRow');
-    if(visitsEl){
-      var vStart=res.visits[0]||0,vEnd=res.visits[last]||0;
-      visitsEl.innerHTML=
-        '<div class="fin-simple-table-wrap"><table class="fin-simple-table"><thead><tr>'+
-          '<th>Показатель</th><th>Значение</th><th>Комментарий</th>'+
-        '</tr></thead><tbody>'+
-          '<tr><td>Визиты на маркетплейс · старт</td><td>'+esc(fmt(vStart))+'</td><td>Июль 2026 · при средневзвешенной CR визит→контакт '+esc(pct(res.avgVc*100,2))+'</td></tr>'+
-          '<tr><td>Визиты на маркетплейс · декабрь 2027</td><td>'+esc(fmt(vEnd))+'</td><td>SEO-компаунд по контактам, платные каналы получают '+esc(pct(inp.paidDemandShare,0))+' эффекта</td></tr>'+
-          '<tr><td>Средние конверсии по сегментам</td><td>'+esc(pct(res.avgCc*100,1))+' · '+esc(pct(res.avgCa*100,1))+' · '+esc(pct(res.avgAi*100,1))+'</td><td>Контакт→Клик · Клик→Заявка · Заявка→Апрув (взвешено по долям)</td></tr>'+
-        '</tbody></table></div>';
-    }
     // Источники трафика — таблица (контакты, доли, бюджет, CPL).
     var srcHost=$('finSourcesRow');
     if(srcHost){
@@ -2566,7 +2554,7 @@
         var chSum=mediaBaseSum>0?it.budget*costScaleSum:0;
         var chShare=startupBudget>0?chSum/startupBudget*100:0;
         return '<tr>'+
-          '<td><span class="fin-simple-dot" style="background:'+esc(it.meta.color)+'"></span>Медиа-бюджет · '+esc(it.meta.name)+'</td>'+
+          '<td><span class="fin-simple-dot" style="background:'+esc(it.meta.color)+'"></span>'+esc(it.meta.name)+'</td>'+
           '<td>'+esc(rub(chSum))+'</td>'+
           '<td>'+esc(pct(chShare,0))+'</td>'+
         '</tr>';
