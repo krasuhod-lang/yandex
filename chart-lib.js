@@ -17,11 +17,13 @@ class Chart{
   if(!canvas){console.warn('Chart canvas is missing');return}
   this.ctx=canvas.getContext('2d');
   this.progress=0;this.hoverIndex=-1;this.layout=null;this._raf=0;
+  this._lastW=0;this._lastH=0;
   this._ensureTooltip();
   this._onMove=this._onMove.bind(this);
   this._onLeave=this._onLeave.bind(this);
   canvas.addEventListener('mousemove',this._onMove);
   canvas.addEventListener('mouseleave',this._onLeave);
+  this._observeResize();
   this._animate();
  }
  _ensureTooltip(){
@@ -32,8 +34,27 @@ class Chart{
   if(!tt){tt=document.createElement('div');tt.className='chart-tooltip';parent.appendChild(tt)}
   this.tooltip=tt;
  }
+ // Наблюдаем за изменениями размера родителя canvas: если график был построен
+ // при скрытом (или узком) контейнере — например, при загрузке страницы с
+ // шаринг-ссылкой на финмодель — то после активации вкладки размер меняется и
+ // мы должны перерисовать график с новой шириной/высотой. Без этого чарты
+ // остаются пустыми/минимального размера.
+ _observeResize(){
+  if(typeof ResizeObserver==='undefined')return;
+  const parent=this.canvas.parentElement;if(!parent)return;
+  this._ro=new ResizeObserver(()=>{
+   if(!this.ctx||!this.canvas)return;
+   const rect=this.canvas.getBoundingClientRect();
+   const w=Math.round(rect.width),h=Math.round(rect.height);
+   if(w===this._lastW&&h===this._lastH)return;
+   this.progress=1;
+   this.draw();
+  });
+  try{this._ro.observe(parent);}catch(e){}
+ }
  destroy(){
   if(this._raf)cancelAnimationFrame(this._raf);
+  if(this._ro){try{this._ro.disconnect();}catch(e){}this._ro=null;}
   if(this.canvas){
    this.canvas.removeEventListener('mousemove',this._onMove);
    this.canvas.removeEventListener('mouseleave',this._onLeave);
@@ -74,6 +95,7 @@ class Chart{
   const width=Math.max(MIN_CANVAS_WIDTH,rect.width||(parent&&parent.clientWidth)||DEFAULT_CANVAS_WIDTH);
   const height=Math.max(140,rect.height||(parent&&parent.clientHeight)||DEFAULT_CANVAS_HEIGHT);
   this.canvas.width=width*dpr;this.canvas.height=height*dpr;this.canvas.style.width=width+'px';this.canvas.style.height=height+'px';
+  this._lastW=width;this._lastH=height;
   ctx.setTransform(dpr,0,0,dpr,0,0);ctx.clearRect(0,0,width,height);
   const colors=chartColors();
   const datasets=cfg.data.datasets||[], labels=cfg.data.labels||[];
