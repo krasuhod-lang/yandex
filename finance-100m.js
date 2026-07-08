@@ -36,9 +36,19 @@
     riskShare: 1,
     taxRate: 20,
     startRevenue: 250000,
+    // Стартовый маркетинговый бюджет — вложения на этапе раскачки, когда
+    // выручки ещё нет, но каналы уже нужно наполнять. Согласовано с логикой
+    // финмодели «до декабря 2027»: сразу вкладываем ≈1 млн ₽/мес, чтобы
+    // сформировать первичный поток контактов и разогнать воронку.
+    startMarketing: 1000000,
     horizonMonths: 36,
     cacInflation: 2,
-    fotIndex: 7
+    fotIndex: 7,
+    // Начальный месяц горизонта. По умолчанию — август 2027, как согласовано
+    // с финмоделью «до декабря 2027» (после её окончания начинается фаза
+    // масштабирования до 100 млн ₽/мес чистыми).
+    startMonth: 8,
+    startYear: 2027
   };
 
   // Метаданные полей: подпись, единица, min/max, пояснение связи с
@@ -52,11 +62,11 @@
     {key:'grossMargin', label:'Валовая маржа', suffix:'% от выручки', min:10, max:95,
       hint:'После прямой себестоимости и выплат партнёрам. База для покрытия OPEX.'},
     {key:'marketingShare', label:'Маркетинг и медиа', suffix:'% от выручки', min:0, max:60,
-      hint:'Подтягивается из финмодели «до декабря 2027» (медиа-бюджет / выручка на конце горизонта). Введите значение, чтобы переопределить.'},
+      hint:'Доля маркетинга от выручки на конце горизонта. Подтягивается из финмодели «до декабря 2027», если не переопределено. От стартового маркетинга до этой доли — экспоненциальный рост.'},
     {key:'fotShare', label:'ФОТ с налогами', suffix:'% от выручки', min:0, max:40,
-      hint:'При среднем ФОТ на сотрудника — задаёт численность штата.'},
+      hint:'ФОТ каждого месяца = выручка × доля × индексация. Штат растёт вместе с выручкой (fot / средний ФОТ).'},
     {key:'avgFot', label:'Средний ФОТ на сотрудника', suffix:'₽ в месяц, с налогами', min:30000, max:2000000,
-      hint:'Штат = (выручка × доля ФОТ) / средний ФОТ.'},
+      hint:'Штат текущего месяца = ФОТ месяца / средний ФОТ.'},
     {key:'devShare', label:'Разработка и продукт', suffix:'% от выручки', min:0, max:20,
       hint:'Инженерия, продукт, аналитика, данные.'},
     {key:'gaShare', label:'Административные расходы', suffix:'% от выручки', min:0, max:15,
@@ -64,13 +74,19 @@
     {key:'riskShare', label:'Резерв на риски', suffix:'% от выручки', min:0, max:10,
       hint:'Буфер на регуляторные и рыночные колебания.'},
     {key:'taxRate', label:'Налог на прибыль', suffix:'% от EBITDA', min:0, max:50,
-      hint:'Чистая прибыль = EBITDA × (1 − ставка налога).'},
+      hint:'Начисляется только с прибыли. Накопленные убытки прошлых месяцев уменьшают базу — налог появляется только после покрытия убытков инвестиционной фазы.'},
     {key:'startRevenue', label:'Стартовая выручка', suffix:'₽ в месяц', min:0, max:1000000000,
       hint:'База траектории роста. Требуемый темп выводится из соотношения цель / старт. При 0 используется значение по умолчанию.'},
+    {key:'startMarketing', label:'Стартовый маркетинг', suffix:'₽ в месяц', min:0, max:100000000,
+      hint:'Инвестиции в маркетинг с первого месяца, до появления выручки. Растут по экспоненте до маркетинга на конце горизонта (выручка × доля маркетинга).'},
+    {key:'startMonth', label:'Стартовый месяц', suffix:'1–12', min:1, max:12,
+      hint:'Номер месяца начала горизонта (1 — январь, 12 — декабрь). По умолчанию 8 (август).'},
+    {key:'startYear', label:'Стартовый год', suffix:'год', min:2020, max:2100,
+      hint:'Год начала горизонта. По умолчанию 2027 — как продолжение финмодели «до декабря 2027».'},
     {key:'horizonMonths', label:'Горизонт', suffix:'месяцев до цели', min:6, max:120,
       hint:'Задаёт требуемый месячный темп роста выручки.'},
     {key:'cacInflation', label:'Инфляция стоимости привлечения', suffix:'% в месяц', min:0, max:10,
-      hint:'Аукционное давление конкурентов. Ужесточает маркетинг-бюджет со временем.'},
+      hint:'Ориентир аукционного давления. Траектория маркетинга задаётся связкой «стартовый маркетинг → маркетинг на конце горизонта», поэтому параметр носит справочный характер.'},
     {key:'fotIndex', label:'Индексация ФОТ', suffix:'% в год', min:0, max:30,
       hint:'Ежегодное повышение окладов при удержании штата.'}
   ];
@@ -231,6 +247,18 @@
   // Такая структура делает видимой закономерность: цель по прибыли жёстко
   // детерминирует выручку и штат, а темп роста и время выхода на масштаб —
   // расстояние от старта.
+  // Метка «мес год» для строки таблицы. При некорректном стартовом месяце
+  // или годе — возвращаем короткий индекс, чтобы не ломать разметку.
+  function monthLabel(inp,t){
+    var m0=Math.round(Number(inp.startMonth));
+    var y0=Math.round(Number(inp.startYear));
+    if(!(m0>=1&&m0<=12)||!(y0>=1900&&y0<=9999))return 'м. '+t;
+    var idx=(m0-1)+t;
+    var year=y0+Math.floor(idx/12);
+    var month=((idx%12)+12)%12;
+    return MONTH_NAMES_RU[month]+' '+year;
+  }
+
   function compute(){
     var inp=inputs();
     var revEnd = inp.targetNetProfit/(inp.netMargin/100);
@@ -252,39 +280,58 @@
     var start=inp.startRevenue>0?inp.startRevenue:DEFAULTS.startRevenue;
     var g = Math.pow(revEnd/start,1/H)-1;
 
+    // Стартовый маркетинг: инвестиционная фаза начинается сразу, до появления
+    // выручки. Экспоненциальная траектория от startMkt (t=0) до marketingEnd (t=H)
+    // повторяет логику финмодели «до декабря 2027», где деньги в каналы
+    // вкладываются с первого месяца. При нулевом startMkt используем дефолт.
+    var startMkt=inp.startMarketing>0?inp.startMarketing:DEFAULTS.startMarketing;
+    // Экспонента корректна только при marketingEnd>0 и startMkt>0.
+    var mktG=(marketingEnd>0&&startMkt>0)?Math.pow(marketingEnd/startMkt,1/H)-1:0;
+
     // Объёмная воронка из показателей сегментов (может отсутствовать, если модуль
     // сегментов не загружен — тогда funnel===null и объёмы просто не показываются).
     var funnel=segmentFunnel();
 
     var rows=[];
     var cumProfit=0, minCum=0, breakEvenIdx=-1, targetIdx=-1;
+    // Перенос накопленных убытков: пока EBITDA<0, копим их; после выхода
+    // в плюс сначала покрываем накопленный убыток и лишь затем начисляем налог.
+    // Это стандартная логика налогового переноса убытков и объясняет, почему
+    // налог не должен появляться до полного покрытия инвестиционной фазы.
+    var lossCarry=0;
     for(var t=0;t<=H;t++){
       var rev = start*Math.pow(1+g,t);
       var gross = rev*inp.grossMargin/100;
-      // Множители инфляции заякорены на конец горизонта (t−H): заданные доли
-      // маркетинга и ФОТ соблюдаются в последнем месяце, а в прошлом стоимость
-      // привлечения и оклады были ниже. Последняя строка таблицы совпадает
-      // с end-point-цепочкой.
-      var mktMul = Math.pow(1+inp.cacInflation/100,t-H);
-      var marketing = rev*inp.marketingShare/100*mktMul;
+      // Маркетинг: экспоненциальная траектория от стартового бюджета до
+      // маркетинга на конце горизонта. Инфляция стоимости привлечения
+      // наложена сверху (заякорена на конец горизонта, чтобы marketing_H=marketingEnd).
+      var marketing = startMkt*Math.pow(1+mktG,t);
       var fotIdx = Math.pow(1+inp.fotIndex/100,(t-H)/12);
-      // Штат считаем по цели/end-point и держим постоянным во времени;
-      // расходы на ФОТ растут только за счёт индексации окладов. Так модель
-      // отражает большой штат как структурную инвестицию, а не как реакцию
-      // на выручку месяц-в-месяц.
-      var fot = headcount*inp.avgFot*fotIdx;
+      // ФОТ месяца = выручка × доля ФОТ × индексация окладов.
+      // Штат помесячно = ФОТ месяца / средний ФОТ (растёт вместе с выручкой),
+      // а не удерживается константой на end-point значении.
+      var fot = rev*inp.fotShare/100*fotIdx;
+      var hc  = Math.max(0,Math.round(fot/Math.max(1,inp.avgFot)));
       var dev = rev*inp.devShare/100;
       var ga  = rev*inp.gaShare/100;
       var risk= rev*inp.riskShare/100;
       var opex= marketing+fot+dev+ga+risk;
       var ebitda= gross-opex;
-      var tax = Math.max(0,ebitda)*inp.taxRate/100;
+      // Налог только с положительной прибыли и только после покрытия накопленного убытка.
+      var tax=0;
+      if(ebitda>0){
+        var taxable=Math.max(0,ebitda-lossCarry);
+        tax=taxable*inp.taxRate/100;
+        lossCarry=Math.max(0,lossCarry-ebitda);
+      }else{
+        lossCarry+=-ebitda;
+      }
       var np  = ebitda-tax;
       cumProfit += np;
       if(cumProfit<minCum)minCum=cumProfit;
       if(breakEvenIdx<0&&cumProfit>=0&&t>0)breakEvenIdx=t;
       if(targetIdx<0&&np>=inp.targetNetProfit)targetIdx=t;
-      var row={t:t,rev:rev,gross:gross,marketing:marketing,fot:fot,dev:dev,ga:ga,risk:risk,opex:opex,ebitda:ebitda,tax:tax,np:np,cum:cumProfit,headcount:headcount};
+      var row={t:t,label:monthLabel(inp,t),rev:rev,gross:gross,marketing:marketing,fot:fot,dev:dev,ga:ga,risk:risk,opex:opex,ebitda:ebitda,tax:tax,np:np,cum:cumProfit,headcount:hc};
       if(funnel){
         // Объёмы воронки, выведенные из выручки месяца через конверсии сегментов.
         row.approvals=rev*funnel.apprPerRuble;
@@ -308,7 +355,7 @@
       revEnd:revEnd, grossEnd:grossEnd, marketingEnd:marketingEnd, fotEnd:fotEnd,
       headcount:headcount, devEnd:devEnd, gaEnd:gaEnd, riskEnd:riskEnd,
       opexEnd:opexEnd, ebitdaEnd:ebitdaEnd, taxEnd:taxEnd, npEnd:npEnd,
-      startEff:start,
+      startEff:start, startMktEff:startMkt,
       monthlyGrowth:g, horizon:H, rows:rows, funnel:funnelEnd,
       breakEvenIdx:breakEvenIdx, targetIdx:targetIdx, peakInvest:-minCum
     };
@@ -380,10 +427,10 @@
       '.fin100-kpi.tone-green .fin100-kpi-value{color:var(--green)}'+
       '.fin100-kpi.tone-red .fin100-kpi-value{color:var(--red)}'+
       '.fin100-kpi .fin100-kpi-sub{font-size:11.5px;color:var(--muted);line-height:1.4}'+
-      '.fin100-table-wrap{overflow:auto;border:1px solid var(--line);border-radius:var(--radius-xs)}'+
-      '.fin100-table{width:100%;border-collapse:collapse;font-size:12.5px;min-width:1000px;font-variant-numeric:tabular-nums}'+
+      '.fin100-table-wrap{max-height:75vh;overflow:auto;border:1px solid var(--line);border-radius:var(--radius-xs);position:relative}'+
+      '.fin100-table{width:100%;border-collapse:separate;border-spacing:0;font-size:12.5px;min-width:1000px;font-variant-numeric:tabular-nums}'+
       '.fin100-table th,.fin100-table td{padding:8px 11px;text-align:right;border-bottom:1px solid var(--line);white-space:nowrap}'+
-      '.fin100-table th{position:sticky;top:0;background:var(--surface-3);font-size:10.5px;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);font-weight:800;z-index:1}'+
+      '.fin100-table thead th{position:sticky;top:0;background:var(--surface-3);font-size:10.5px;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);font-weight:800;z-index:2;box-shadow:inset 0 -1px 0 var(--line)}'+
       '.fin100-table td:first-child,.fin100-table th:first-child{text-align:left;font-weight:600}'+
       '.fin100-table tbody tr:nth-child(even){background:var(--surface-2)}'+
       '.fin100-table tbody tr.is-target{background:color-mix(in srgb,var(--green) 12%,var(--surface))}'+
@@ -452,8 +499,8 @@
       {tone:'orange',label:'ФОТ с налогами',value:millions(res.fotEnd),sub:'При штате и среднем ФОТ'},
       {tone:'blue',label:'Требуемый темп роста',value:pct(res.monthlyGrowth*100,1)+' в месяц',sub:'Из соотношения цель / старт за '+res.horizon+' мес'},
       {tone:res.peakInvest>0?'red':'green',label:'Пиковый кассовый разрыв',value:millions(res.peakInvest),sub:'Максимум накопленного убытка на инвестиционной фазе'},
-      {tone:'green',label:'Месяц выхода в накопленный плюс',value:res.breakEvenIdx>=0?('м. '+res.breakEvenIdx):'за горизонтом',sub:'Кумулятивная прибыль ≥ 0'},
-      {tone:hitTarget?'green':'red',label:'Месяц достижения цели',value:res.targetIdx>=0?('м. '+res.targetIdx):'за горизонтом',sub:'Месячная NP ≥ '+millions(res.inp.targetNetProfit)}
+      {tone:'green',label:'Месяц выхода в накопленный плюс',value:res.breakEvenIdx>=0?monthLabel(res.inp,res.breakEvenIdx):'за горизонтом',sub:'Кумулятивная прибыль ≥ 0'},
+      {tone:hitTarget?'green':'red',label:'Месяц достижения цели',value:res.targetIdx>=0?monthLabel(res.inp,res.targetIdx):'за горизонтом',sub:'Месячная NP ≥ '+millions(res.inp.targetNetProfit)}
     ];
     if(res.funnel){
       // Объёмы воронки на конце горизонта, выведенные из требуемой выручки через
@@ -480,11 +527,11 @@
     if(note){
       note.textContent='Траектория от стартовой выручки '+millions(res.startEff)+
         (res.inp.startRevenue>0?'':' (стартовая выручка не задана — использовано значение по умолчанию)')+
-        ' до требуемой '+millions(res.revEnd)+' за '+res.horizon+' месяцев. '+
+        ' до требуемой '+millions(res.revEnd)+' за '+res.horizon+' месяцев (старт — '+monthLabel(res.inp,0)+'). '+
         'Требуемый месячный темп роста выручки: '+pct(res.monthlyGrowth*100,1)+'. '+
-        'Маркетинг индексируется на инфляцию стоимости привлечения ('+pct(res.inp.cacInflation,1)+' в месяц), '+
-        'ФОТ — на годовую индексацию окладов ('+pct(res.inp.fotIndex,0)+' в год); '+
-        'заданные доли расходов соблюдаются в последнем месяце горизонта.'+
+        'Маркетинг стартует с '+millions(res.startMktEff)+' в месяц и по экспоненте выходит на '+millions(res.marketingEnd)+' к концу горизонта. '+
+        'ФОТ каждого месяца = выручка × доля ФОТ × индексация окладов ('+pct(res.inp.fotIndex,0)+' в год); штат растёт вместе с выручкой. '+
+        'Налог начисляется только после покрытия накопленных убытков инвестиционной фазы.'+
         (res.funnel?' Объёмы воронки (трафик, контакты, заявки, апрувы) выведены из выручки через конверсии сегментов.':'')+
         (res.ebitdaEnd<0?' Внимание: при заданной структуре OPEX превышает валовую прибыль — EBITDA отрицательна даже на конце горизонта; увеличьте валовую маржу или сократите доли расходов.':'');
     }
@@ -496,6 +543,7 @@
       '<th>Валовая</th>'+
       '<th>Маркетинг</th>'+
       '<th>ФОТ</th>'+
+      '<th>Штат</th>'+
       '<th>Разработка</th>'+
       '<th>G&amp;A</th>'+
       '<th>Резерв</th>'+
@@ -512,10 +560,10 @@
       if(res.targetIdx===r.t)cls.push('is-target');
       else if(res.breakEvenIdx===r.t)cls.push('is-breakeven');
       return '<tr'+(cls.length?' class="'+cls.join(' ')+'"':'')+'>'+
-        '<td>м. '+r.t+'</td>'+
+        '<td>'+esc(r.label)+'</td>'+
         td(r.rev)+
         (hasFunnel?tdq(r.traffic)+tdq(r.contacts)+tdq(r.applications)+tdq(r.approvals):'')+
-        td(r.gross)+td(r.marketing)+td(r.fot)+td(r.dev)+td(r.ga)+td(r.risk)+td(r.opex)+td(r.ebitda)+td(r.tax)+td(r.np)+td(r.cum)+
+        td(r.gross)+td(r.marketing)+td(r.fot)+'<td>'+esc(fmt(r.headcount))+'</td>'+td(r.dev)+td(r.ga)+td(r.risk)+td(r.opex)+td(r.ebitda)+td(r.tax)+td(r.np)+td(r.cum)+
       '</tr>';
     }).join('')+'</tbody>';
     host.innerHTML=head+body;
