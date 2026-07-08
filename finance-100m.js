@@ -36,19 +36,19 @@
     riskShare: 1,
     taxRate: 20,
     startRevenue: 250000,
-    // Стартовый маркетинговый бюджет — вложения на этапе раскачки, когда
-    // выручки ещё нет, но каналы уже нужно наполнять. Согласовано с логикой
-    // финмодели «до декабря 2027»: сразу вкладываем ≈1 млн ₽/мес, чтобы
-    // сформировать первичный поток контактов и разогнать воронку.
+    // Стартовые бюджеты инвестиционной фазы. Их можно вручную поднять до
+    // 100 млн ₽/мес, чтобы раскладывать сценарий масштабирования крупнее,
+    // чем базовая финмодель до декабря 2027.
     startMarketing: 1000000,
+    startFot: 1000000,
+    startDev: 1000000,
     horizonMonths: 36,
     cacInflation: 2,
     fotIndex: 7,
-    // Начальный месяц горизонта. По умолчанию — август 2027, как согласовано
-    // с финмоделью «до декабря 2027» (после её окончания начинается фаза
-    // масштабирования до 100 млн ₽/мес чистыми).
+    // Начальный месяц горизонта. По умолчанию — август 2026, чтобы модель 100 млн
+    // начиналась раньше и детальнее раскладывала весь путь до декабря 2027 и далее.
     startMonth: 8,
-    startYear: 2027
+    startYear: 2026
   };
 
   // Метаданные полей: подпись, единица, min/max, пояснение связи с
@@ -64,7 +64,7 @@
     {key:'marketingShare', label:'Маркетинг и медиа', suffix:'% от выручки', min:0, max:60,
       hint:'Доля маркетинга от выручки на конце горизонта. Подтягивается из финмодели «до декабря 2027», если не переопределено. От стартового маркетинга до этой доли — экспоненциальный рост.'},
     {key:'fotShare', label:'ФОТ с налогами', suffix:'% от выручки', min:0, max:40,
-      hint:'ФОТ каждого месяца = выручка × доля × индексация. Штат растёт вместе с выручкой (fot / средний ФОТ).'},
+      hint:'Целевая доля ФОТ на конце горизонта. До неё модель растит стартовый ФОТ.'},
     {key:'avgFot', label:'Средний ФОТ на сотрудника', suffix:'₽ в месяц, с налогами', min:30000, max:2000000,
       hint:'Штат текущего месяца = ФОТ месяца / средний ФОТ.'},
     {key:'devShare', label:'Разработка и продукт', suffix:'% от выручки', min:0, max:20,
@@ -79,10 +79,14 @@
       hint:'База траектории роста. Требуемый темп выводится из соотношения цель / старт. При 0 используется значение по умолчанию.'},
     {key:'startMarketing', label:'Стартовый маркетинг', suffix:'₽ в месяц', min:0, max:100000000,
       hint:'Инвестиции в маркетинг с первого месяца, до появления выручки. Растут по экспоненте до маркетинга на конце горизонта (выручка × доля маркетинга).'},
+    {key:'startFot', label:'Стартовый ФОТ', suffix:'₽ в месяц', min:0, max:100000000,
+      hint:'Команда на старте инвестиционной фазы. Растёт до ФОТ на конце горизонта (выручка × доля ФОТ).'},
+    {key:'startDev', label:'Стартовая разработка', suffix:'₽ в месяц', min:0, max:100000000,
+      hint:'Бюджет разработки и продукта на старте. Растёт до бюджета на конце горизонта (выручка × доля разработки).'},
     {key:'startMonth', label:'Стартовый месяц', suffix:'1–12', min:1, max:12,
       hint:'Номер месяца начала горизонта (1 — январь, 12 — декабрь). По умолчанию 8 (август).'},
     {key:'startYear', label:'Стартовый год', suffix:'год', min:2020, max:2100,
-      hint:'Год начала горизонта. По умолчанию 2027 — как продолжение финмодели «до декабря 2027».'},
+      hint:'Год начала горизонта. По умолчанию 2026 — старт с августа 2026 года и далее.'},
     {key:'horizonMonths', label:'Горизонт', suffix:'месяцев до цели', min:6, max:120,
       hint:'Задаёт требуемый месячный темп роста выручки.'},
     {key:'cacInflation', label:'Инфляция стоимости привлечения', suffix:'% в месяц', min:0, max:10,
@@ -169,13 +173,14 @@
 
   // --- Воронка объёмов из показателей сегментов ------------------------------
   // Финмодель top-down даёт требуемую выручку. Из неё, используя посегментные
-  // конверсии (Визит→Контакт→Клик→Заявка→Апрув) и выплату за выдачу из вкладок
-  // сегментов CJM, выводим необходимые объёмы: апрувы, заявки, контакты, трафик.
-  // Связь: выручка = Σ апрувы_i × выплата_i; апрувы распределяются по долям сегментов.
-  //   апрувы_i     = апрувы_всего × доля_i
-  //   заявки_i     = апрувы_i / crAi_i           (Заявка → Апрув)
-  //   контакты_i   = заявки_i / (crCc_i × crCa_i) (Контакт → Клик → Заявка)
-  //   трафик_i     = контакты_i / crVc_i          (Визит → Контакт)
+  // конверсии (Визит→Контакт→Клик→Заявка→Выдача) и выплату за выдачу из вкладок
+  // сегментов CJM, выводим необходимые объёмы: выдачи, заявки, клики, контакты, трафик.
+  // Связь: выручка = Σ выдачи_i × выплата_i; выдачи распределяются по долям сегментов.
+  //   выдачи_i     = выдачи_всего × доля_i
+  //   заявки_i     = выдачи_i / crAi_i             (Заявка → Выдача)
+  //   клики_i      = заявки_i / crCa_i             (Клик → Заявка)
+  //   контакты_i   = клики_i / crCc_i              (Контакт → Клик)
+  //   трафик_i     = контакты_i / crVc_i           (Визит → Контакт)
   // Так как конверсии постоянны во времени, объёмы линейно масштабируются с выручкой,
   // поэтому считаем множители «на 1 ₽ выручки» и применяем их к каждому месяцу.
   function segmentFunnel(){
@@ -186,10 +191,10 @@
     try{data=bridge.getFunnel();}catch(e){return null;}
     if(!data||!data.segments||!data.segments.length)return null;
     var segs=data.segments;
-    var blendedPayout=0; // Σ доля_i × выплата_i — средняя выручка на один апрув
-    // Множители «на один апрув»: сколько заявок/контактов/визитов приходится на
-    // один апрув с учётом распределения апрувов по долям сегментов.
-    var appsPerAppr=0,contPerAppr=0,visPerAppr=0;
+    var blendedPayout=0; // Σ доля_i × выплата_i — средняя выручка на одну выдачу
+    // Множители «на одну выдачу»: сколько заявок/кликов/контактов/визитов приходится
+    // на одну выдачу с учётом распределения выдач по долям сегментов.
+    var appsPerAppr=0,clicksPerAppr=0,contPerAppr=0,visPerAppr=0;
     var usableShare=0;
     for(var i=0;i<segs.length;i++){
       var s=segs[i];
@@ -200,24 +205,31 @@
       // (бесконечный объём) — чтобы не ломать расчёт делением на ноль.
       if(s.crAi>0&&s.crCa>0&&s.crCc>0&&s.crVc>0){
         var apps=share/s.crAi;
-        var cont=apps/(s.crCc*s.crCa);
+        var clicks=apps/s.crCa;
+        var cont=clicks/s.crCc;
         var vis=cont/s.crVc;
         appsPerAppr+=apps;
+        clicksPerAppr+=clicks;
         contPerAppr+=cont;
         visPerAppr+=vis;
         usableShare+=share;
       }
     }
     if(!isFinite(blendedPayout)||blendedPayout<=0||usableShare<=0)return null;
-    // Апрувов на 1 ₽ выручки = 1 / средняя выплата за апрув.
+    // Выдач на 1 ₽ выручки = 1 / средняя выплата за выдачу.
     var apprPerRuble=1/blendedPayout;
     return {
       segments:segs,
       blendedPayout:blendedPayout,
       apprPerRuble:apprPerRuble,
       appsPerRuble:apprPerRuble*appsPerAppr,
+      clicksPerRuble:apprPerRuble*clicksPerAppr,
       contactsPerRuble:apprPerRuble*contPerAppr,
-      trafficPerRuble:apprPerRuble*visPerAppr
+      trafficPerRuble:apprPerRuble*visPerAppr,
+      avgCrVc:(visPerAppr>0&&contPerAppr>0)?contPerAppr/visPerAppr:0,
+      avgCrCc:(contPerAppr>0&&clicksPerAppr>0)?clicksPerAppr/contPerAppr:0,
+      avgCrCa:(clicksPerAppr>0&&appsPerAppr>0)?appsPerAppr/clicksPerAppr:0,
+      avgCrAi:appsPerAppr>0?usableShare/appsPerAppr:0
     };
   }
 
@@ -239,11 +251,9 @@
   // выручка_end за horizonMonths, темп g = (выручка_end/старт)^(1/H) − 1.
   // Стартовая выручка 0 вырождает экспоненту, поэтому трактуется как «не задано»
   // и заменяется значением по умолчанию.
-  // Маркетинг учитывает CAC-инфляцию, ФОТ — годовую индексацию окладов.
-  // Оба множителя заякорены на конец горизонта ((1+r)^(t−H)): заданные доли
-  // маркетинга и ФОТ действительны в конце траектории, а в прошлом стоимость
-  // привлечения и оклады были ниже. Так последний месяц таблицы в точности
-  // совпадает с блоком «Ключевые показатели на конце горизонта».
+  // Маркетинг, ФОТ и разработка идут от явно заданных стартовых бюджетов до
+  // целевых долей от выручки на конце горизонта. ФОТ-индексация применяется
+  // к средней стоимости сотрудника при расчёте штата.
   // Такая структура делает видимой закономерность: цель по прибыли жёстко
   // детерминирует выручку и штат, а темп роста и время выхода на масштаб —
   // расстояние от старта.
@@ -257,6 +267,14 @@
     var year=y0+Math.floor(idx/12);
     var month=((idx%12)+12)%12;
     return MONTH_NAMES_RU[month]+' '+year;
+  }
+
+  function budgetCurve(start,end,t,H){
+    start=Math.max(0,Number(start)||0);
+    end=Math.max(0,Number(end)||0);
+    if(end<=0)return 0;
+    if(start<=0)return end*Math.pow(t/Math.max(1,H),2);
+    return start*Math.pow(end/start,t/Math.max(1,H));
   }
 
   function compute(){
@@ -285,6 +303,8 @@
     // повторяет логику финмодели «до декабря 2027», где деньги в каналы
     // вкладываются с первого месяца. При нулевом startMkt используем дефолт.
     var startMkt=inp.startMarketing>0?inp.startMarketing:DEFAULTS.startMarketing;
+    var startFot=inp.startFot>0?inp.startFot:DEFAULTS.startFot;
+    var startDev=inp.startDev>0?inp.startDev:DEFAULTS.startDev;
     // Экспонента корректна только при marketingEnd>0 и startMkt>0.
     var mktG=(marketingEnd>0&&startMkt>0)?Math.pow(marketingEnd/startMkt,1/H)-1:0;
 
@@ -306,13 +326,13 @@
       // маркетинга на конце горизонта. Инфляция стоимости привлечения
       // наложена сверху (заякорена на конец горизонта, чтобы marketing_H=marketingEnd).
       var marketing = startMkt*Math.pow(1+mktG,t);
-      var fotIdx = Math.pow(1+inp.fotIndex/100,(t-H)/12);
-      // ФОТ месяца = выручка × доля ФОТ × индексация окладов.
-      // Штат помесячно = ФОТ месяца / средний ФОТ (растёт вместе с выручкой),
-      // а не удерживается константой на end-point значении.
-      var fot = rev*inp.fotShare/100*fotIdx;
-      var hc  = Math.max(0,Math.round(fot/Math.max(1,inp.avgFot)));
-      var dev = rev*inp.devShare/100;
+      // ФОТ и разработка идут от явно заданных стартовых бюджетов к доле от выручки
+      // на конце горизонта. Средний ФОТ индексируется, поэтому штат считается от
+      // бюджета месяца и стоимости сотрудника в этом месяце.
+      var fot = budgetCurve(startFot,fotEnd,t,H);
+      var avgFotAtT=Math.max(1,inp.avgFot*Math.pow(1+inp.fotIndex/100,(t-H)/12));
+      var hc  = Math.max(0,Math.round(fot/avgFotAtT));
+      var dev = budgetCurve(startDev,devEnd,t,H);
       var ga  = rev*inp.gaShare/100;
       var risk= rev*inp.riskShare/100;
       var opex= marketing+fot+dev+ga+risk;
@@ -336,6 +356,7 @@
         // Объёмы воронки, выведенные из выручки месяца через конверсии сегментов.
         row.approvals=rev*funnel.apprPerRuble;
         row.applications=rev*funnel.appsPerRuble;
+        row.clicks=rev*funnel.clicksPerRuble;
         row.contacts=rev*funnel.contactsPerRuble;
         row.traffic=rev*funnel.trafficPerRuble;
       }
@@ -345,9 +366,14 @@
     var funnelEnd=funnel?{
       approvals:revEnd*funnel.apprPerRuble,
       applications:revEnd*funnel.appsPerRuble,
+      clicks:revEnd*funnel.clicksPerRuble,
       contacts:revEnd*funnel.contactsPerRuble,
       traffic:revEnd*funnel.trafficPerRuble,
-      blendedPayout:funnel.blendedPayout
+      blendedPayout:funnel.blendedPayout,
+      avgCrVc:funnel.avgCrVc,
+      avgCrCc:funnel.avgCrCc,
+      avgCrCa:funnel.avgCrCa,
+      avgCrAi:funnel.avgCrAi
     }:null;
 
     return {
@@ -355,7 +381,7 @@
       revEnd:revEnd, grossEnd:grossEnd, marketingEnd:marketingEnd, fotEnd:fotEnd,
       headcount:headcount, devEnd:devEnd, gaEnd:gaEnd, riskEnd:riskEnd,
       opexEnd:opexEnd, ebitdaEnd:ebitdaEnd, taxEnd:taxEnd, npEnd:npEnd,
-      startEff:start, startMktEff:startMkt,
+      startEff:start, startMktEff:startMkt, startFotEff:startFot, startDevEff:startDev,
       monthlyGrowth:g, horizon:H, rows:rows, funnel:funnelEnd,
       breakEvenIdx:breakEvenIdx, targetIdx:targetIdx, peakInvest:-minCum
     };
@@ -377,7 +403,7 @@
           '<button type="button" class="cjm-reset-btn" id="fin100Reset" title="Сбросить все параметры к значениям по умолчанию">Сбросить к дефолтам</button>'+
         '</div>'+
       '</div>'+
-      '<p class="fin100-lead">Модель показывает закономерность между целевой чистой прибылью, требуемой выручкой, структурой расходов, численностью штата и темпом роста. Объёмы воронки — трафик, контакты, заявки и апрувы — выводятся из требуемой выручки через конверсии из вкладок сегментов. Каждый параметр редактируется — цепочка показателей пересчитывается автоматически.</p>'+
+      '<p class="fin100-lead">Модель показывает закономерность между целевой чистой прибылью, требуемой выручкой, структурой расходов, численностью штата и темпом роста. Объёмы воронки — трафик, контакты, клики по офферам, заявки и выдачи — выводятся из требуемой выручки через средние конверсии сегментов. Каждый параметр редактируется — цепочка показателей пересчитывается автоматически.</p>'+
       '<div class="fin100-chain" id="fin100Chain"></div>'+
       '<div class="card"><div class="card-title"><div><h2>Параметры модели</h2></div></div>'+
         '<p class="fin100-note">Параметры разбиты на три группы по функциональному назначению. Каждое поле снабжено пояснением, как оно влияет на итог.</p>'+
@@ -455,8 +481,8 @@
     ];
     if(res.funnel){
       items.push(
-        {tone:'derived',formula:'Выручка / выплата за выдачу',value:qty(res.funnel.approvals)+' апр.',cap:'Апрувы (выдачи) в месяц — из показателей сегментов'},
-        {tone:'derived',formula:'Апрувы / конверсии сегментов',value:qty(res.funnel.traffic)+' виз.',cap:'Требуемый трафик в месяц'}
+        {tone:'derived',formula:'Выручка / выплата за выдачу',value:qty(res.funnel.approvals)+' выдач',cap:'Выдачи в месяц — из показателей сегментов'},
+        {tone:'derived',formula:'Выдачи / средние CR сегментов',value:qty(res.funnel.traffic)+' виз.',cap:'Требуемый трафик в месяц'}
       );
     }
     host.innerHTML=items.map(function(it){
@@ -504,12 +530,17 @@
     ];
     if(res.funnel){
       // Объёмы воронки на конце горизонта, выведенные из требуемой выручки через
-      // конверсии сегментов (Визит→Контакт→Клик→Заявка→Апрув).
+      // средние конверсии сегментов (Визит→Контакт→Клик→Заявка→Выдача).
       kpis.push(
         {tone:'violet',label:'Трафик в месяц',value:qty(res.funnel.traffic),sub:'Визиты на маркетплейс — из выручки через конверсии сегментов'},
+        {tone:'blue',label:'CR · Трафик → Контакт',value:pct(res.funnel.avgCrVc*100,1),sub:'Средняя конверсия по сегментам'},
         {tone:'violet',label:'Контакты в месяц',value:qty(res.funnel.contacts),sub:'Оставленные телефоны · Визит → Контакт'},
+        {tone:'blue',label:'CR · Контакт → Клик',value:pct(res.funnel.avgCrCc*100,1),sub:'Средняя конверсия по сегментам'},
+        {tone:'violet',label:'Клики по офферам',value:qty(res.funnel.clicks),sub:'Переходы из контакта на релевантные офферы'},
+        {tone:'blue',label:'CR · Клик → Заявка',value:pct(res.funnel.avgCrCa*100,1),sub:'Средняя конверсия по сегментам'},
         {tone:'violet',label:'Заявки в месяц',value:qty(res.funnel.applications),sub:'Оформленные заявки · Клик → Заявка'},
-        {tone:'green',label:'Апрувы (выдачи) в месяц',value:qty(res.funnel.approvals),sub:'Выручка / средняя выплата за выдачу '+rub(res.funnel.blendedPayout)}
+        {tone:'blue',label:'CR · Заявка → Выдача',value:pct(res.funnel.avgCrAi*100,1),sub:'Средняя конверсия по сегментам'},
+        {tone:'green',label:'Выдачи в месяц',value:qty(res.funnel.approvals),sub:'Выручка / средняя выплата за выдачу '+rub(res.funnel.blendedPayout)}
       );
     }
     host.innerHTML=kpis.map(function(k){
@@ -529,17 +560,17 @@
         (res.inp.startRevenue>0?'':' (стартовая выручка не задана — использовано значение по умолчанию)')+
         ' до требуемой '+millions(res.revEnd)+' за '+res.horizon+' месяцев (старт — '+monthLabel(res.inp,0)+'). '+
         'Требуемый месячный темп роста выручки: '+pct(res.monthlyGrowth*100,1)+'. '+
-        'Маркетинг стартует с '+millions(res.startMktEff)+' в месяц и по экспоненте выходит на '+millions(res.marketingEnd)+' к концу горизонта. '+
-        'ФОТ каждого месяца = выручка × доля ФОТ × индексация окладов ('+pct(res.inp.fotIndex,0)+' в год); штат растёт вместе с выручкой. '+
+        'Стартовые бюджеты: маркетинг '+millions(res.startMktEff)+', ФОТ '+millions(res.startFotEff)+', разработка '+millions(res.startDevEff)+' в месяц; дальше они растут к целевым долям от выручки на конце горизонта. '+
+        'Штат считается от бюджета ФОТ месяца и среднего ФОТ с индексацией окладов ('+pct(res.inp.fotIndex,0)+' в год). '+
         'Налог начисляется только после покрытия накопленных убытков инвестиционной фазы.'+
-        (res.funnel?' Объёмы воронки (трафик, контакты, заявки, апрувы) выведены из выручки через конверсии сегментов.':'')+
+        (res.funnel?' Объёмы воронки (трафик, контакты, клики по офферам, заявки, выдачи) выведены из выручки через средние конверсии сегментов.':'')+
         (res.ebitdaEnd<0?' Внимание: при заданной структуре OPEX превышает валовую прибыль — EBITDA отрицательна даже на конце горизонта; увеличьте валовую маржу или сократите доли расходов.':'');
     }
     var hasFunnel=!!res.funnel;
     var head='<thead><tr>'+
       '<th>Месяц</th>'+
       '<th>Выручка</th>'+
-      (hasFunnel?'<th>Трафик</th><th>Контакты</th><th>Заявки</th><th>Апрувы</th>':'')+
+      (hasFunnel?'<th>Трафик</th><th>Контакты</th><th>Клики</th><th>Заявки</th><th>Выдачи</th>':'')+
       '<th>Валовая</th>'+
       '<th>Маркетинг</th>'+
       '<th>ФОТ</th>'+
@@ -562,7 +593,7 @@
       return '<tr'+(cls.length?' class="'+cls.join(' ')+'"':'')+'>'+
         '<td>'+esc(r.label)+'</td>'+
         td(r.rev)+
-        (hasFunnel?tdq(r.traffic)+tdq(r.contacts)+tdq(r.applications)+tdq(r.approvals):'')+
+        (hasFunnel?tdq(r.traffic)+tdq(r.contacts)+tdq(r.clicks)+tdq(r.applications)+tdq(r.approvals):'')+
         td(r.gross)+td(r.marketing)+td(r.fot)+'<td>'+esc(fmt(r.headcount))+'</td>'+td(r.dev)+td(r.ga)+td(r.risk)+td(r.opex)+td(r.ebitda)+td(r.tax)+td(r.np)+td(r.cum)+
       '</tr>';
     }).join('')+'</tbody>';
