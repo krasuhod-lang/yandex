@@ -918,6 +918,7 @@
 
   // --- Finance model: state + computation -----------------------------------
   function isFinanceView(){return selectedId()==='finance';}
+  function isFinance100View(){return selectedId()==='finance100';}
   function finRaw(){
     var raw=read(FINANCE_KEY,null);
     if(raw&&typeof raw==='object')return raw;
@@ -930,78 +931,140 @@
     }
     return {};
   }
-  // Единый источник посегментных CR для финмодели: значения ВСЕГДА берутся из блока
-  // «Ручной ввод показателей» (per-segment) и глобального «Визит → Контакт».
-  //   crVc_* (Визит → Контакт)   ← глобальный visitContact (одна конверсия на все сегменты)
-  //   crCc_* (Контакт → Клик)     ← manualFor(seg).visitClick
-  //   crCa_* (Клик → Заявка)      ← manualFor(seg).clickApp
-  //   crAi_* (Заявка → Апрув)     ← manualFor(seg).appIssue
-  // Так финмодель и CJM-воронка не расходятся: правка в сегментах сразу отражается в финмодели.
-  // Возвращает { crVc_New:.., crCc_New:.., ... } для всех 5 сегментов.
-  function finSegSourcedCr(){
+  // Единый источник посегментных показателей для финмодели: значения ВСЕГДА берутся
+  // из вкладки соответствующего сегмента (блок «Ручной ввод показателей»), из
+  // глобального блока «Визит → Контакт» либо из общего распределения долей CJM.
+  //   crVc_*   (Визит → Контакт) ← глобальный visitContact (одна конверсия на все сегменты)
+  //   crCc_*   (Контакт → Клик)  ← manualFor(seg).visitClick
+  //   crCa_*   (Клик → Заявка)   ← manualFor(seg).clickApp
+  //   crAi_*   (Заявка → Апрув)  ← manualFor(seg).appIssue
+  //   payout_* (CPA / стоимость лида, ₽)     ← manualFor(seg).cpa
+  //                                             (для сегментов с lead-sale миксом cpa
+  //                                              = взвешенное среднее CPA сценариев,
+  //                                              совпадает с показателем на вкладке)
+  //   share_*  (доля сегмента в потоке, %)   ← segments[i].share × 100
+  // Так финмодель и CJM-воронка не расходятся: правка в любом месте меняет одну и
+  // ту же величину, и наоборот — правка во вкладке сегмента сразу отражается в
+  // финмодели. Возвращает объект со всеми связанными ключами.
+  function finSegSourced(){
     var g=globalStore();
     var out={};
     FIN_SEG_META.forEach(function(m){
       var id=m.key.toLowerCase();
       var man=manualFor(id)||{};
+      var seg=segmentById(id);
       out[m.crVcKey]=g.visitContact;
       out[m.crCcKey]=man.visitClick;
       out[m.crCaKey]=man.clickApp;
       out[m.crAiKey]=man.appIssue;
+      out[m.payoutKey]=man.cpa;
+      out[m.shareKey]=seg?seg.share*100:null;
     });
     return out;
   }
-  // Набор ключей посегментных CR (для быстрой проверки «это CR-поле?»).
-  var FIN_SEG_CR_KEYS=(function(){
+  // Набор ключей, связанных с посегментными источниками (CR, payout, share).
+  var FIN_SEG_LINKED_KEYS=(function(){
     var set={};
-    FIN_SEG_META.forEach(function(m){set[m.crVcKey]=1;set[m.crCcKey]=1;set[m.crCaKey]=1;set[m.crAiKey]=1;});
+    FIN_SEG_META.forEach(function(m){
+      set[m.crVcKey]=1;set[m.crCcKey]=1;set[m.crCaKey]=1;set[m.crAiKey]=1;
+      set[m.payoutKey]=1;set[m.shareKey]=1;
+    });
     return set;
   })();
-  function finSegCrBinding(key){
+  function finSegBinding(key){
     for(var i=0;i<FIN_SEG_META.length;i++){
       var m=FIN_SEG_META[i],id=m.key.toLowerCase();
       if(key===m.crVcKey)return {globalKey:'visitContact'};
       if(key===m.crCcKey)return {segId:id,manualKey:'visitClick'};
       if(key===m.crCaKey)return {segId:id,manualKey:'clickApp'};
       if(key===m.crAiKey)return {segId:id,manualKey:'appIssue'};
+      if(key===m.payoutKey)return {segId:id,manualKey:'cpa'};
+      if(key===m.shareKey)return {shareSegId:id};
     }
     return null;
   }
-  function finSegCrIsSourceEdited(key){
-    var b=finSegCrBinding(key);
+  function finSegSourceIsEdited(key){
+    var b=finSegBinding(key);
     if(!b)return false;
     if(b.globalKey)return isGlobalEdited(b.globalKey);
+    if(b.shareSegId){
+      var saved=read(SHARES_KEY,null);
+      return !!(saved&&saved[b.shareSegId]!=null);
+    }
     return isEdited(b.segId,b.manualKey);
   }
-  function setFinSegCr(key,value){
-    var b=finSegCrBinding(key);
+  function setFinSegSource(key,value){
+    var b=finSegBinding(key);
     if(!b)return false;
-    if(b.globalKey)setGlobal(b.globalKey,value);
-    else setManual(b.segId,b.manualKey,value);
+    if(b.globalKey){setGlobal(b.globalKey,value);return true;}
+    if(b.shareSegId){setShare(b.shareSegId,Number(value)/100);return true;}
+    setManual(b.segId,b.manualKey,value);
     return true;
   }
-  function unsetFinSegCr(key){
-    var b=finSegCrBinding(key);
+  function unsetFinSegSource(key){
+    var b=finSegBinding(key);
     if(!b)return false;
-    if(b.globalKey)unsetGlobal(b.globalKey);
-    else unsetManual(b.segId,b.manualKey);
+    if(b.globalKey){unsetGlobal(b.globalKey);return true;}
+    if(b.shareSegId){
+      var saved=read(SHARES_KEY,{})||{};
+      if(saved[b.shareSegId]!=null){
+        delete saved[b.shareSegId];
+        if(Object.keys(saved).length===0)write(SHARES_KEY,null);
+        else write(SHARES_KEY,saved);
+      }
+      var s=segmentById(b.shareSegId);
+      if(s)s.share=DEFAULT_SHARES[b.shareSegId];
+      return true;
+    }
+    unsetManual(b.segId,b.manualKey);
     return true;
   }
+  // Миграция legacy-значений `FINANCE_KEY`: раньше payout*/share* хранились
+  // в отдельном слое финмодели. Теперь единый источник — сегменты, поэтому
+  // переносим сохранённые правки в manualStore/SHARES_KEY и удаляем из FINANCE_KEY.
+  function finMigrateLegacyLinked(){
+    var raw=read(FINANCE_KEY,null);
+    if(!raw||typeof raw!=='object')return;
+    var changed=false;
+    FIN_SEG_META.forEach(function(m){
+      var id=m.key.toLowerCase();
+      if(raw[m.payoutKey]!=null){
+        // Пишем только если пользователь ещё не переопределил cpa в самом сегменте.
+        if(!isEdited(id,'cpa')){
+          var v=Number(raw[m.payoutKey]);
+          if(isFinite(v))setManual(id,'cpa',clamp(v,0,1000000));
+        }
+        delete raw[m.payoutKey];changed=true;
+      }
+      if(raw[m.shareKey]!=null){
+        var savedShares=read(SHARES_KEY,null);
+        var hasCustom=savedShares&&savedShares[id]!=null;
+        if(!hasCustom){
+          var sv=Number(raw[m.shareKey]);
+          if(isFinite(sv))setShare(id,clamp(sv,0,100)/100);
+        }
+        delete raw[m.shareKey];changed=true;
+      }
+    });
+    if(changed)write(FINANCE_KEY,raw);
+  }
+  finMigrateLegacyLinked();
   function finInputs(){
     var raw=finRaw();var out={};
-    var segCr=finSegSourcedCr();
+    var seg=finSegSourced();
     Object.keys(FIN_DEFAULTS).forEach(function(k){
-      // CR-поля всегда берём из сегментов/общего блока, без отдельного слоя
-      // переопределений финмодели. Так правка в любом месте меняет одну и ту же
-      // величину. Для остальных финансовых полей остаётся FINANCE_KEY.
-      var fallback=(FIN_SEG_CR_KEYS[k]&&segCr[k]!=null&&isFinite(Number(segCr[k])))?Number(segCr[k]):FIN_DEFAULTS[k];
-      out[k]=FIN_SEG_CR_KEYS[k]?fallback:(raw[k]!=null&&isFinite(Number(raw[k]))?Number(raw[k]):fallback);
+      // Связанные с сегментами поля (CR / CPA / доли) всегда берём из единого
+      // источника — вкладки сегмента / глобального блока / SHARES_KEY. Так
+      // правка в любом месте меняет одну и ту же величину. Для остальных
+      // финансовых полей остаётся FINANCE_KEY.
+      var fallback=(FIN_SEG_LINKED_KEYS[k]&&seg[k]!=null&&isFinite(Number(seg[k])))?Number(seg[k]):FIN_DEFAULTS[k];
+      out[k]=FIN_SEG_LINKED_KEYS[k]?fallback:(raw[k]!=null&&isFinite(Number(raw[k]))?Number(raw[k]):fallback);
     });
     return out;
   }
-  function finIsEdited(key){if(FIN_SEG_CR_KEYS[key])return finSegCrIsSourceEdited(key);var raw=finRaw();return raw[key]!=null;}
-  function setFin(key,value){if(FIN_SEG_CR_KEYS[key]){setFinSegCr(key,value);return;}var raw=finRaw();raw[key]=value;write(FINANCE_KEY,raw);}
-  function unsetFin(key){if(FIN_SEG_CR_KEYS[key]){unsetFinSegCr(key);return;}var raw=finRaw();if(raw[key]!=null){delete raw[key];write(FINANCE_KEY,raw);}}
+  function finIsEdited(key){if(FIN_SEG_LINKED_KEYS[key])return finSegSourceIsEdited(key);var raw=finRaw();return raw[key]!=null;}
+  function setFin(key,value){if(FIN_SEG_LINKED_KEYS[key]){setFinSegSource(key,value);return;}var raw=finRaw();raw[key]=value;write(FINANCE_KEY,raw);}
+  function unsetFin(key){if(FIN_SEG_LINKED_KEYS[key]){unsetFinSegSource(key);return;}var raw=finRaw();if(raw[key]!=null){delete raw[key];write(FINANCE_KEY,raw);}}
   function resetFin(){write(FINANCE_KEY,{});}
 
   // Нормированные доли сегментов (0..1). Порядок соответствует FIN_SEG_META.
@@ -1299,6 +1362,10 @@
       '<span>Финмодель 2027</span>'+
       '<span class="cjm-seg-share">P&amp;L</span>'+
     '</button>';
+    html+='<button class="cjm-seg-tab is-matrix'+(current==='finance100'?' active':'')+'" type="button" data-seg="finance100">'+
+      '<span>Финмодель 100 млн ₽</span>'+
+      '<span class="cjm-seg-share">цель</span>'+
+    '</button>';
     host.innerHTML=html;
     host.querySelectorAll('.cjm-seg-tab').forEach(function(btn){
       btn.addEventListener('click',function(){
@@ -1322,10 +1389,14 @@
   function applyInnerTab(){
     var matrix=isMatrixView();
     var finance=isFinanceView();
+    var finance100=isFinance100View();
     var innerNav=$('cjmInnerTabs');
     if(innerNav)innerNav.style.display='none';
     document.querySelectorAll('.cjm-panel').forEach(function(panel){panel.classList.remove('active');});
-    if(finance){
+    if(finance100){
+      if(window.Finance100&&window.Finance100.ensurePanel)window.Finance100.ensurePanel();
+      var fp100=$('cjm-tab-finance100');if(fp100)fp100.classList.add('active');
+    }else if(finance){
       var fp=$('cjm-tab-finance');if(fp)fp.classList.add('active');
     }else if(matrix){
       var m=$('cjm-tab-matrix');if(m)m.classList.add('active');
@@ -1341,7 +1412,11 @@
   function renderHero(){
     var title=$('cjmHeroTitle'),lead=$('cjmHeroLead'),eyebrow=$('cjmHeroEyebrow');
     if(!title)return;
-    if(isFinanceView()){
+    if(isFinance100View()){
+      eyebrow.textContent='Раздел сайта · Финмодель 100 млн ₽';
+      title.textContent='Финансовая модель выхода на 100 млн ₽ чистой прибыли в месяц';
+      lead.textContent='';
+    }else if(isFinanceView()){
       eyebrow.textContent='Раздел сайта · Финмодель до декабря 2027';
       title.textContent='Финмодель 2027';
       lead.textContent='';
@@ -2375,7 +2450,7 @@
     var label=opts.label!=null?opts.label:f.label;
     var hint=edited
       ?' <span class="cjm-manual-suffix" title="Изменено в едином источнике сегментов">· изменено</span>'
-      :(opts.sourceHint?' <span class="cjm-manual-suffix" title="Единый источник: блок «Ручной ввод показателей» сегмента">· из сегментов</span>':'');
+      :(opts.sourceHint?' <span class="cjm-manual-suffix" title="Единый источник: вкладка соответствующего сегмента (конверсии, CPA/стоимость лида, доля)">· из сегментов</span>':'');
     return '<label>'+
       '<span class="cjm-manual-label">'+esc(label)+' <span class="cjm-manual-suffix">'+esc(f.suffix)+'</span>'+hint+
       '</span>'+
@@ -2429,7 +2504,8 @@
       var host=$(hostId);if(!host)return;
       if(hostId==='finInputsSegCr'){renderFinSegCrTabs(host,inp);return;}
       host.innerHTML=FIN_FIELD_GROUPS[hostId].map(function(f){
-        return finFieldHtml(f,inp[f.key],finIsEdited(f.key));
+        var linked=!!FIN_SEG_LINKED_KEYS[f.key];
+        return finFieldHtml(f,inp[f.key],finIsEdited(f.key),linked?{sourceHint:true}:{});
       }).join('');
     });
     // Один делегированный обработчик на панель — переживает перерисовку значений.
@@ -2448,11 +2524,11 @@
           var val=clamp(raw,meta?meta.min:0,meta?meta.max:1000000000);
           setFin(key,val);el.classList.add('is-edited');
         }
-        if(FIN_SEG_CR_KEYS[key]){
+        if(FIN_SEG_LINKED_KEYS[key]){
           var fresh=finInputs();
           panel.querySelectorAll('input[data-fin]').forEach(function(input){
             var k=input.getAttribute('data-fin');
-            if(!FIN_SEG_CR_KEYS[k]||input===el)return;
+            if(!FIN_SEG_LINKED_KEYS[k]||input===el)return;
             input.value=fresh[k];
             input.classList.toggle('is-edited',finIsEdited(k));
           });
@@ -2711,7 +2787,9 @@
     renderSegmentTabs();
     renderHero();
     applyInnerTab();
-    if(isFinanceView()){
+    if(isFinance100View()){
+      if(window.Finance100&&window.Finance100.render)window.Finance100.render();
+    }else if(isFinanceView()){
       renderFinancePanel();
     }else if(isMatrixView()){
       renderMatrix();
