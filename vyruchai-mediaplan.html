@@ -1633,6 +1633,10 @@ button:active:not(:disabled){transform:translateY(0) scale(.97)}
 .fin-inputs-details .fin-inputs-grid{padding:0 20px}
 @media(max-width:600px){.fin-inputs-details .fin-inputs-grid{padding:0 12px}.fin-inputs-summary{padding:14px 12px}}
 .fin-table th,.fin-table td{white-space:nowrap;font-variant-numeric:tabular-nums}
+/* Липкая шапка помесячного плана: таблица скроллится внутри карточки,
+   а заголовки столбцов (position:sticky из .ue2-scn-table thead th) всегда видны. */
+.fin-table-card .ue2-table-wrap{max-height:70vh;overflow:auto}
+.fin-table-card .ue2-scn-table thead th{box-shadow:0 1px 0 var(--line)}
 .fin-table tbody tr{transition:background .15s var(--ease)}
 .fin-table tbody tr:hover{background:color-mix(in srgb,var(--blue) 6%,transparent)}
 .fin-table tr.is-target td{color:var(--green);font-weight:700}
@@ -1648,6 +1652,15 @@ button:active:not(:disabled){transform:translateY(0) scale(.97)}
 .fin-summary{font-size:15px;line-height:1.65;color:var(--text)}
 .fin-summary b{font-weight:800;font-variant-numeric:tabular-nums}
 .fin-summary .fin-summary-lead{font-size:12px;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);font-weight:800;display:block;margin-bottom:8px}
+/* Кнопка «!» и модалка с математикой финмодели */
+.fin-math-btn{width:30px;height:30px;padding:0;border-radius:50%;border:1px solid var(--line-strong);background:var(--surface);color:var(--blue);font-weight:900;font-size:15px;line-height:1;cursor:pointer;flex:none;transition:all .15s var(--ease)}
+.fin-math-btn:hover{background:var(--blue);color:#fff;border-color:var(--blue)}
+.fin-math-card{width:min(780px,100%)}
+.fin-math-body{display:flex;flex-direction:column;gap:14px;font-size:13px;line-height:1.6;color:var(--text)}
+.fin-math-body h4{margin:0;font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);font-weight:800}
+.fin-math-body p{margin:0;color:var(--text)}
+.fin-math-body ul{margin:0;padding-left:18px;display:flex;flex-direction:column;gap:6px}
+.fin-math-body code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px;background:var(--surface-2);border:1px solid var(--line);border-radius:6px;padding:1px 6px;white-space:nowrap}
 @media(prefers-reduced-motion:reduce){.fin-kpi{animation:none}.fin-progress span{transition:none}}
 </style>
 </head>
@@ -1709,7 +1722,7 @@ button:active:not(:disabled){transform:translateY(0) scale(.97)}
 
     <!-- Finance model panel: Бюджет → Прогноз продаж → Ожидаемая прибыль -->
     <section id="cjm-tab-finance" class="cjm-panel">
-      <div class="cjm-section-head"><div><h2>Финмодель до декабря 2027</h2></div><div class="cjm-head-actions"><span class="cjm-shared-state" id="cjmSharedStateStatus">Локально</span><button type="button" class="cjm-reset-btn" id="finReset" title="Сбросить все параметры к значениям по умолчанию">Сбросить к дефолтам</button></div></div>
+      <div class="cjm-section-head"><div><h2>Финмодель до декабря 2027</h2></div><div class="cjm-head-actions"><span class="cjm-shared-state" id="cjmSharedStateStatus">Локально</span><button type="button" class="fin-math-btn" id="finMathBtn" title="Вся математика модели — как считается каждая цифра" aria-label="Описание математики модели">!</button><button type="button" class="cjm-reset-btn" id="finShareLink" title="Скопировать ссылку со всеми показателями — откроется с теми же цифрами на любом ПК">Поделиться ссылкой</button><button type="button" class="cjm-reset-btn" id="finExport" title="Скачать все показатели в JSON-файл, чтобы передать другому пользователю">Экспорт в файл</button><button type="button" class="cjm-reset-btn" id="finImport" title="Загрузить показатели из файла, полученного от другого пользователя">Импорт из файла</button><input type="file" id="finImportFile" accept=".json,application/json" hidden><button type="button" class="cjm-reset-btn" id="finReset" title="Сбросить все параметры к значениям по умолчанию">Сбросить к дефолтам</button></div></div>
 
       <div class="fin-kpis" id="finKpis"></div>
 
@@ -1755,6 +1768,68 @@ button:active:not(:disabled){transform:translateY(0) scale(.97)}
   </main>
 </div>
 
+<!-- Модалка «!» — вся математика финмодели до декабря 2027 -->
+<div id="finMathModal" class="ue-modal" hidden>
+  <div class="ue-modal-backdrop" data-fin-math-close></div>
+  <div class="ue-modal-card fin-math-card" role="dialog" aria-modal="true" aria-labelledby="finMathTitle">
+    <div class="ue-modal-head">
+      <h3 id="finMathTitle">Вся математика финмодели</h3>
+      <button class="ue-modal-x" type="button" data-fin-math-close>Закрыть</button>
+    </div>
+    <div class="fin-math-body">
+      <p class="ue-modal-sub">Как из параметров на входе получается каждая цифра модели. Обозначения: <code>t</code> — номер месяца (0 = первый месяц, H = декабрь 2027), <code>g</code> — месячный темп роста, <code>p</code> — форма траектории, <code>i</code> — сегмент.</p>
+      <div>
+        <h4>1 · Рост спроса и выручки</h4>
+        <ul>
+          <li>Показатель степени нормирован на горизонт: <code>exp(t) = H × (t/H)^p</code>. При <code>p=1</code> — чистая экспонента, <code>p&gt;1</code> — медленный старт и разгон к концу, <code>p&lt;1</code> — быстрый старт и насыщение.</li>
+          <li>Множитель спроса: <code>scale(t) = (1+g)^exp(t)</code> — строго растёт из месяца в месяц; итог на конце горизонта <code>(1+g)^H</code> зависит только от g.</li>
+          <li>После мая 2027 дальнейший прирост <code>exp(t)</code> умножается на «замедление роста после мая», поэтому лето–осень растут плавнее.</li>
+        </ul>
+      </div>
+      <div>
+        <h4>2 · Контакты по источникам трафика</h4>
+        <ul>
+          <li>Стартовые контакты источника: <code>контакты₀ = бюджет / CPL</code>.</li>
+          <li>SEO получает полный накопительный эффект роста: <code>× scale(t)</code>; платные источники (контекст, PR и пр.) — только его часть: <code>× (1 + (scale(t) − 1) × доля платного спроса)</code>.</li>
+          <li>Итого контакты месяца: <code>контакты(t) = Σ контакты₀ᵢ × отклик источника</code>.</li>
+        </ul>
+      </div>
+      <div>
+        <h4>3 · Воронка по 5 сегментам</h4>
+        <ul>
+          <li>Контакты дробятся по нормированным долям: <code>контакты_i = контакты(t) × доля_i</code>.</li>
+          <li>Заявки: <code>заявки_i = контакты_i × CR(Контакт→Клик) × CR(Клик→Заявка)</code>.</li>
+          <li>Выдачи (апрувы): <code>выдачи_i = заявки_i × CR(Заявка→Апрув)</code>.</li>
+          <li>Визиты на маркетплейс: <code>визиты_i = контакты_i / CR(Визит→Контакт)</code>.</li>
+          <li>Выручка сегмента: <code>выручка_i = выдачи_i × CPA_i</code>. Конверсии и CPA — те же, что во вкладках сегментов.</li>
+        </ul>
+      </div>
+      <div>
+        <h4>4 · Центрофинанс</h4>
+        <ul>
+          <li>Клиенты: <code>клиенты ЦФ = выдачи × доля выдач в ЦФ</code>; выручка: <code>клиенты ЦФ × ставка ЦФ</code> — добавляется к общей выручке месяца.</li>
+        </ul>
+      </div>
+      <div>
+        <h4>5 · Расходы, прибыль и окупаемость</h4>
+        <ul>
+          <li>Медиа-бюджет индексируется линейно: <code>медиа(t) = Σ бюджетов × (1 + рост расходов × t)</code>.</li>
+          <li>Расходы месяца: <code>расходы(t) = медиа(t) + ФОТ + разработка</code>; прибыль: <code>выручка(t) − расходы(t)</code>.</li>
+          <li>«Нужно вложить» — пиковый кассовый разрыв: максимум накопленного убытка <code>max(−Σ прибыли)</code>.</li>
+          <li>Окупаемость — первый месяц, когда накопленная прибыль ≥ 0.</li>
+        </ul>
+      </div>
+      <div>
+        <h4>6 · CAC и удельные показатели</h4>
+        <ul>
+          <li>CAC сегмента: <code>CAC_i = медиа(t) × доля_i / выдачи_i</code> — чем ниже конверсии воронки сегмента, тем выше его CAC.</li>
+          <li>Сводный CAC: <code>медиа / выдачи</code>; «Прибыль / 1 чел»: <code>прибыль(t) / выдачи(t)</code>.</li>
+          <li>Требуемый темп роста до цели подбирается бинарным поиском: ищем g, при котором контакты на конце горизонта дают выручку ≥ цели.</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</div>
 
 <script src="chart-lib.js"></script>
 <script src="cjm-unit-dashboard.js"></script>

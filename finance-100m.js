@@ -52,7 +52,7 @@
     {key:'grossMargin', label:'Валовая маржа', suffix:'% от выручки', min:10, max:95,
       hint:'После прямой себестоимости и выплат партнёрам. База для покрытия OPEX.'},
     {key:'marketingShare', label:'Маркетинг и медиа', suffix:'% от выручки', min:0, max:60,
-      hint:'Верхняя граница на конкурентном рынке — 25–30%.'},
+      hint:'Подтягивается из финмодели «до декабря 2027» (медиа-бюджет / выручка на конце горизонта). Введите значение, чтобы переопределить.'},
     {key:'fotShare', label:'ФОТ с налогами', suffix:'% от выручки', min:0, max:40,
       hint:'При среднем ФОТ на сотрудника — задаёт численность штата.'},
     {key:'avgFot', label:'Средний ФОТ на сотрудника', suffix:'₽ в месяц, с налогами', min:30000, max:2000000,
@@ -107,16 +107,41 @@
     mem[STORAGE_KEY]=obj;
     try{localStorage.setItem(STORAGE_KEY,JSON.stringify(obj));}catch(e){}
   }
+  // «% на маркетинг» из обычной финмодели («Финмодель до декабря 2027»).
+  // Если основной модуль отдал корректное значение, оно используется вместо
+  // дефолта — обе вкладки исходят из одних показателей. Ручной ввод в поле
+  // «Маркетинг и медиа» по-прежнему переопределяет источник.
+  function bridgeMarketingShare(){
+    if(typeof window==='undefined')return null;
+    var b=window.CjmSegmentsBridge;
+    if(!b||typeof b.getMarketingSharePct!=='function')return null;
+    var v;try{v=b.getMarketingSharePct();}catch(e){return null;}
+    v=Number(v);
+    if(!isFinite(v)||v<0)return null;
+    // Уважает границы поля «Маркетинг и медиа» (0..60% от выручки).
+    v=clamp(v,0,60);
+    return Math.round(v*10)/10;
+  }
   function inputs(){
     var raw=read();var out={};
     Object.keys(DEFAULTS).forEach(function(k){
       var v=raw[k];
-      out[k]=(v==null||v===''||!isFinite(Number(v)))?DEFAULTS[k]:Number(v);
+      var fallback=DEFAULTS[k];
+      if(k==='marketingShare'){
+        var bridged=bridgeMarketingShare();
+        if(bridged!=null)fallback=bridged;
+      }
+      out[k]=(v==null||v===''||!isFinite(Number(v)))?fallback:Number(v);
     });
     return out;
   }
   function isEdited(key){
-    var raw=read();return raw[key]!=null&&raw[key]!==''&&Number(raw[key])!==DEFAULTS[key];
+    var raw=read();
+    if(raw[key]==null||raw[key]==='')return false;
+    // marketingShare берётся из обычной финмодели, поэтому любой ручной ввод —
+    // это переопределение источника, а не сравнение со статичным дефолтом.
+    if(key==='marketingShare')return true;
+    return Number(raw[key])!==DEFAULTS[key];
   }
   function setInput(key,val){
     var raw=read();raw[key]=val;write(raw);
