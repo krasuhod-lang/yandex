@@ -1032,7 +1032,7 @@
         // Пишем только если пользователь ещё не переопределил cpa в самом сегменте.
         if(!isEdited(id,'cpa')){
           var v=Number(raw[m.payoutKey]);
-          if(isFinite(v))setManual(id,'cpa',v);
+          if(isFinite(v))setManual(id,'cpa',clamp(v,0,1000000));
         }
         delete raw[m.payoutKey];changed=true;
       }
@@ -1041,7 +1041,7 @@
         var hasCustom=savedShares&&savedShares[id]!=null;
         if(!hasCustom){
           var sv=Number(raw[m.shareKey]);
-          if(isFinite(sv))setShare(id,sv/100);
+          if(isFinite(sv))setShare(id,clamp(sv,0,100)/100);
         }
         delete raw[m.shareKey];changed=true;
       }
