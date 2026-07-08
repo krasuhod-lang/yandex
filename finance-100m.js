@@ -73,8 +73,8 @@
       hint:'Офис, юридическое сопровождение, финансы, HR.'},
     {key:'riskShare', label:'Резерв на риски', suffix:'% от выручки', min:0, max:10,
       hint:'Буфер на регуляторные и рыночные колебания.'},
-    {key:'taxRate', label:'Налог на прибыль', suffix:'% от EBITDA', min:0, max:50,
-      hint:'Начисляется только с прибыли. Накопленные убытки прошлых месяцев уменьшают базу — налог появляется только после покрытия убытков инвестиционной фазы.'},
+    {key:'taxRate', label:'Налог от выручки', suffix:'% от выручки', min:0, max:50,
+      hint:'Начисляется каждый месяц от выручки, независимо от EBITDA и накопленного результата.'},
     {key:'startRevenue', label:'Стартовая выручка', suffix:'₽ в месяц', min:0, max:1000000000,
       hint:'База траектории роста. Требуемый темп выводится из соотношения цель / старт. При 0 используется значение по умолчанию.'},
     {key:'startMarketing', label:'Стартовый маркетинг', suffix:'₽ в месяц', min:0, max:100000000,
@@ -245,7 +245,7 @@
   //   резерв_end    = выручка_end × доля_резерва/100
   //   OPEX_end      = маркетинг + ФОТ + dev + G&A + резерв
   //   EBITDA_end    = валовая − OPEX
-  //   налог_end     = EBITDA × ставка/100 (при EBITDA>0)
+  //   налог_end     = выручка_end × ставка/100
   //   NP_end        = EBITDA − налог
   // Помесячная траектория: экспоненциальный рост выручки от startRevenue до
   // выручка_end за horizonMonths, темп g = (выручка_end/старт)^(1/H) − 1.
@@ -289,7 +289,7 @@
     var riskEnd = revEnd*inp.riskShare/100;
     var opexEnd = marketingEnd+fotEnd+devEnd+gaEnd+riskEnd;
     var ebitdaEnd = grossEnd-opexEnd;
-    var taxEnd = Math.max(0,ebitdaEnd)*inp.taxRate/100;
+    var taxEnd = revEnd*inp.taxRate/100;
     var npEnd = ebitdaEnd-taxEnd;
 
     var H=Math.max(1,Math.round(inp.horizonMonths));
@@ -314,11 +314,6 @@
 
     var rows=[];
     var cumProfit=0, minCum=0, breakEvenIdx=-1, targetIdx=-1;
-    // Перенос накопленных убытков: пока EBITDA<0, копим их; после выхода
-    // в плюс сначала покрываем накопленный убыток и лишь затем начисляем налог.
-    // Это стандартная логика налогового переноса убытков и объясняет, почему
-    // налог не должен появляться до полного покрытия инвестиционной фазы.
-    var lossCarry=0;
     for(var t=0;t<=H;t++){
       var rev = start*Math.pow(1+g,t);
       var gross = rev*inp.grossMargin/100;
@@ -337,15 +332,7 @@
       var risk= rev*inp.riskShare/100;
       var opex= marketing+fot+dev+ga+risk;
       var ebitda= gross-opex;
-      // Налог только с положительной прибыли и только после покрытия накопленного убытка.
-      var tax=0;
-      if(ebitda>0){
-        var taxable=Math.max(0,ebitda-lossCarry);
-        tax=taxable*inp.taxRate/100;
-        lossCarry=Math.max(0,lossCarry-ebitda);
-      }else{
-        lossCarry+=-ebitda;
-      }
+      var tax=rev*inp.taxRate/100;
       var np  = ebitda-tax;
       cumProfit += np;
       if(cumProfit<minCum)minCum=cumProfit;
@@ -516,7 +503,7 @@
     var hitTarget = res.npEnd>=res.inp.targetNetProfit;
     var kpis=[
       {tone:hitTarget?'green':'red',label:'Чистая прибыль на конце',value:millions(res.npEnd),sub:'Фактическая NP при заданной структуре'},
-      {tone:'blue',label:'Фактическая чистая маржа',value:pct(actualMargin,1),sub:'Замыкание модели: (валовая − OPEX) × (1 − налог) / выручка'},
+      {tone:'blue',label:'Фактическая чистая маржа',value:pct(actualMargin,1),sub:'Замыкание модели: (валовая − OPEX − налог от выручки) / выручка'},
       {tone:'blue',label:'Требуемая выручка',value:millions(res.revEnd),sub:'Цель / чистая маржа'},
       {tone:'blue',label:'Валовая прибыль',value:millions(res.grossEnd),sub:'Выручка × валовая маржа'},
       {tone:'orange',label:'OPEX в месяц',value:millions(res.opexEnd),sub:'Маркетинг + ФОТ + разработка + G&A + резерв'},
@@ -562,7 +549,7 @@
         'Требуемый месячный темп роста выручки: '+pct(res.monthlyGrowth*100,1)+'. '+
         'Стартовые бюджеты: маркетинг '+millions(res.startMktEff)+', ФОТ '+millions(res.startFotEff)+', разработка '+millions(res.startDevEff)+' в месяц; дальше они растут к целевым долям от выручки на конце горизонта. '+
         'Штат считается от бюджета ФОТ месяца и среднего ФОТ с индексацией окладов ('+pct(res.inp.fotIndex,0)+' в год). '+
-        'Налог начисляется только после покрытия накопленных убытков инвестиционной фазы.'+
+        'Налог считается каждый месяц от выручки, поэтому в строке налога нет нулей при положительной выручке.'+
         (res.funnel?' Объёмы воронки (трафик, контакты, клики по офферам, заявки, выдачи) выведены из выручки через средние конверсии сегментов.':'')+
         (res.ebitdaEnd<0?' Внимание: при заданной структуре OPEX превышает валовую прибыль — EBITDA отрицательна даже на конце горизонта; увеличьте валовую маржу или сократите доли расходов.':'');
     }
@@ -580,7 +567,7 @@
       '<th>Резерв</th>'+
       '<th>OPEX</th>'+
       '<th>EBITDA</th>'+
-      '<th>Налог</th>'+
+      '<th>Налог от выручки</th>'+
       '<th>Чистая прибыль</th>'+
       '<th>Накоплено</th>'+
     '</tr></thead>';
