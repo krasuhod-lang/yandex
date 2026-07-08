@@ -289,8 +289,8 @@
     var riskEnd = revEnd*inp.riskShare/100;
     var opexEnd = marketingEnd+fotEnd+devEnd+gaEnd+riskEnd;
     var ebitdaEnd = grossEnd-opexEnd;
-    var taxEnd = revEnd*inp.taxRate/100;
-    var npEnd = ebitdaEnd-taxEnd;
+    var revenueTaxEnd = revEnd*inp.taxRate/100;
+    var npEnd = ebitdaEnd-revenueTaxEnd;
 
     var H=Math.max(1,Math.round(inp.horizonMonths));
     // Нулевой (или отрицательный) старт вырождает экспоненциальную траекторию
@@ -332,13 +332,13 @@
       var risk= rev*inp.riskShare/100;
       var opex= marketing+fot+dev+ga+risk;
       var ebitda= gross-opex;
-      var tax=rev*inp.taxRate/100;
-      var np  = ebitda-tax;
+      var revenueTax=rev*inp.taxRate/100;
+      var np  = ebitda-revenueTax;
       cumProfit += np;
       if(cumProfit<minCum)minCum=cumProfit;
       if(breakEvenIdx<0&&cumProfit>=0&&t>0)breakEvenIdx=t;
       if(targetIdx<0&&np>=inp.targetNetProfit)targetIdx=t;
-      var row={t:t,label:monthLabel(inp,t),rev:rev,gross:gross,marketing:marketing,fot:fot,dev:dev,ga:ga,risk:risk,opex:opex,ebitda:ebitda,tax:tax,np:np,cum:cumProfit,headcount:hc};
+      var row={t:t,label:monthLabel(inp,t),rev:rev,gross:gross,marketing:marketing,fot:fot,dev:dev,ga:ga,risk:risk,opex:opex,ebitda:ebitda,tax:revenueTax,np:np,cum:cumProfit,headcount:hc};
       if(funnel){
         // Объёмы воронки, выведенные из выручки месяца через конверсии сегментов.
         row.approvals=rev*funnel.apprPerRuble;
@@ -367,7 +367,7 @@
       inp:inp,
       revEnd:revEnd, grossEnd:grossEnd, marketingEnd:marketingEnd, fotEnd:fotEnd,
       headcount:headcount, devEnd:devEnd, gaEnd:gaEnd, riskEnd:riskEnd,
-      opexEnd:opexEnd, ebitdaEnd:ebitdaEnd, taxEnd:taxEnd, npEnd:npEnd,
+      opexEnd:opexEnd, ebitdaEnd:ebitdaEnd, taxEnd:revenueTaxEnd, npEnd:npEnd,
       startEff:start, startMktEff:startMkt, startFotEff:startFot, startDevEff:startDev,
       monthlyGrowth:g, horizon:H, rows:rows, funnel:funnelEnd,
       breakEvenIdx:breakEvenIdx, targetIdx:targetIdx, peakInvest:-minCum
@@ -503,7 +503,7 @@
     var hitTarget = res.npEnd>=res.inp.targetNetProfit;
     var kpis=[
       {tone:hitTarget?'green':'red',label:'Чистая прибыль на конце',value:millions(res.npEnd),sub:'Фактическая NP при заданной структуре'},
-      {tone:'blue',label:'Фактическая чистая маржа',value:pct(actualMargin,1),sub:'Замыкание модели: (валовая − OPEX − налог от выручки) / выручка'},
+      {tone:'blue',label:'Фактическая чистая маржа',value:pct(actualMargin,1),sub:'Замыкание модели: ((валовая − OPEX) − налог от выручки) / выручка'},
       {tone:'blue',label:'Требуемая выручка',value:millions(res.revEnd),sub:'Цель / чистая маржа'},
       {tone:'blue',label:'Валовая прибыль',value:millions(res.grossEnd),sub:'Выручка × валовая маржа'},
       {tone:'orange',label:'OPEX в месяц',value:millions(res.opexEnd),sub:'Маркетинг + ФОТ + разработка + G&A + резерв'},
