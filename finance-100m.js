@@ -232,7 +232,7 @@
       hint:'ФОТ, аренда, инфраструктура, G&A на старте прогноза.'},
     {key:'scurveI', label:'Инфляция постоянных расходов i', suffix:'% в месяц', min:0, max:10, step:0.05,
       hint:'Ежемесячный рост FC. Именно он образует «эффект ножниц».'},
-    {key:'scurveStartYear', label:'Стартовый год', suffix:'год', min:2020, max:2030, step:1,
+    {key:'scurveStartYear', label:'Стартовый год', suffix:'год', min:2020, max:2035, step:1,
       hint:'Календарный год, соответствующий t = 0.'},
     {key:'scurveStartMonth', label:'Стартовый месяц', suffix:'1–12', min:1, max:12, step:1,
       hint:'Календарный месяц старта прогноза. Прогноз ведётся до декабря 2028 года.'}
@@ -262,7 +262,9 @@
   function scurveUnset(key){var raw=readScurve();delete raw[key];writeScurve(raw);}
   function scurveResetAll(){writeScurve({});}
 
-  // Число месяцев от (startY,startM) до декабря 2028 включительно.
+  // Число монотонных шагов от (startY,startM) до декабря 2028: t = 0 отвечает
+  // стартовому месяцу, t = H — декабрю 2028, всего H + 1 наблюдений (для
+  // Jan 2026 → Dec 2028 это 35 шагов и 36 точек).
   function scurveHorizon(sy,sm){
     var months=(SCURVE_END_YEAR-sy)*12+(SCURVE_END_MONTH-sm);
     return Math.max(1,months);
@@ -276,7 +278,7 @@
     var v=clamp(inp.scurveV,0,100)/100;
     var fc0=Math.max(0,inp.scurveFC0);
     var iRate=Math.max(0,inp.scurveI)/100;
-    var sy=Math.round(clamp(inp.scurveStartYear,1900,3000));
+    var sy=Math.round(clamp(inp.scurveStartYear,2020,2035));
     var sm=Math.round(clamp(inp.scurveStartMonth,1,12));
     var H=scurveHorizon(sy,sm);
 
