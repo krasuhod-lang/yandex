@@ -710,6 +710,72 @@
     });
   }
 
+  // --- Обмен финмоделью между ПК: ссылка / экспорт / импорт файла ----------
+  // Экспорт скачивает JSON со всеми ключами состояния (сегменты, доли,
+  // финмодель); импорт применяет такой файл через write(), поэтому данные
+  // сохраняются локально и уходят в /api/cjm-state, если он доступен.
+  function exportStateToFile(){
+    var payload=collectShareState();
+    var blob=new Blob([JSON.stringify(payload,null,2)],{type:'application/json'});
+    var a=document.createElement('a');
+    a.href=URL.createObjectURL(blob);
+    a.download='vyruchai-finmodel-'+new Date().toISOString().slice(0,10)+'.json';
+    document.body.appendChild(a);a.click();a.remove();
+    setTimeout(function(){try{URL.revokeObjectURL(a.href);}catch(e){}},1000);
+    showToast('Файл с показателями скачан — передайте его другому пользователю');
+  }
+  function importStateFromJson(json){
+    var data;try{data=JSON.parse(json);}catch(e){return false;}
+    if(!data||typeof data!=='object')return false;
+    var applied=false;
+    SHARED_STATE_KEYS.forEach(function(k){
+      if(data[k]!=null){write(k,data[k]);applied=true;}
+    });
+    return applied;
+  }
+  function initFinShareTools(){
+    var share=$('finShareLink');
+    if(share)share.addEventListener('click',function(){
+      var url=buildShareUrl();
+      try{history.replaceState(null,'',url);}catch(e){}
+      copyToClipboard(url).then(function(){
+        showToast('Ссылка скопирована — откройте её на любом ПК, показатели подтянутся');
+      }).catch(function(){
+        showToast('Скопируйте ссылку из адресной строки');
+      });
+    });
+    var exp=$('finExport');
+    if(exp)exp.addEventListener('click',exportStateToFile);
+    var imp=$('finImport'),file=$('finImportFile');
+    if(imp&&file){
+      imp.addEventListener('click',function(){file.value='';file.click();});
+      file.addEventListener('change',function(){
+        var f=file.files&&file.files[0];if(!f)return;
+        var reader=new FileReader();
+        reader.onload=function(){
+          if(importStateFromJson(String(reader.result||''))){
+            applyStoredShares();renderAll();
+            showToast('Показатели загружены из файла');
+          }else{
+            showToast('Не удалось прочитать файл — нужен JSON из кнопки «Экспорт в файл»');
+          }
+        };
+        reader.readAsText(f);
+      });
+    }
+    var mbtn=$('finMathBtn'),modal=$('finMathModal');
+    if(mbtn&&modal){
+      mbtn.addEventListener('click',function(){modal.hidden=false;});
+      modal.addEventListener('click',function(ev){
+        var close=ev.target&&ev.target.closest?ev.target.closest('[data-fin-math-close]'):null;
+        if(close)modal.hidden=true;
+      });
+      document.addEventListener('keydown',function(ev){
+        if(ev.key==='Escape'&&!modal.hidden)modal.hidden=true;
+      });
+    }
+  }
+
   // Импортируем состояние из #s=... до первого рендера, чтобы сторонний
   // пользователь, открывший ссылку, увидел ровно те же данные.
   applyStateFromUrl();
@@ -1102,9 +1168,23 @@
     return {segments:segments};
   }
   // Публичный доступ для finance-100m.js (он загружается тем же документом).
+  // getMarketingSharePct — «% на маркетинг» из обычной финмодели («Финмодель
+  // до декабря 2027»): медиа-бюджет / выручка на конце горизонта, в процентах.
+  // Финмодель 100 млн использует его как источник доли маркетинга, чтобы обе
+  // вкладки исходили из одних и тех же показателей.
+  function finMarketingSharePct(){
+    var res=computeFinance();
+    var n=res.months.length;
+    if(!n)return null;
+    var mediaLast=res.cost[n-1]-res.fixedMonthly;
+    var revLast=res.revenue[n-1];
+    if(!isFinite(mediaLast)||!isFinite(revLast)||revLast<=0)return null;
+    return clamp(mediaLast/revLast*100,0,100);
+  }
   if(typeof window!=='undefined'){
     window.CjmSegmentsBridge=window.CjmSegmentsBridge||{};
     window.CjmSegmentsBridge.getFunnel=finSegmentFunnel;
+    window.CjmSegmentsBridge.getMarketingSharePct=finMarketingSharePct;
   }
 
   // Считает контакты (оставленные телефоны) по каждому источнику для стартового месяца.
@@ -2853,6 +2933,7 @@
     initInnerTabs();
     initTheme();
     initShareLink();
+    initFinShareTools();
     renderAll();
     loadSharedState(function(changed){
       if(changed){applyStoredShares();renderAll();}
