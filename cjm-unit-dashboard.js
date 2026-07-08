@@ -918,6 +918,7 @@
 
   // --- Finance model: state + computation -----------------------------------
   function isFinanceView(){return selectedId()==='finance';}
+  function isFinance100View(){return selectedId()==='finance100';}
   function finRaw(){
     var raw=read(FINANCE_KEY,null);
     if(raw&&typeof raw==='object')return raw;
@@ -1299,6 +1300,10 @@
       '<span>Финмодель 2027</span>'+
       '<span class="cjm-seg-share">P&amp;L</span>'+
     '</button>';
+    html+='<button class="cjm-seg-tab is-matrix'+(current==='finance100'?' active':'')+'" type="button" data-seg="finance100">'+
+      '<span>Финмодель 100 млн ₽</span>'+
+      '<span class="cjm-seg-share">цель</span>'+
+    '</button>';
     host.innerHTML=html;
     host.querySelectorAll('.cjm-seg-tab').forEach(function(btn){
       btn.addEventListener('click',function(){
@@ -1322,10 +1327,14 @@
   function applyInnerTab(){
     var matrix=isMatrixView();
     var finance=isFinanceView();
+    var finance100=isFinance100View();
     var innerNav=$('cjmInnerTabs');
     if(innerNav)innerNav.style.display='none';
     document.querySelectorAll('.cjm-panel').forEach(function(panel){panel.classList.remove('active');});
-    if(finance){
+    if(finance100){
+      if(window.Finance100&&window.Finance100.ensurePanel)window.Finance100.ensurePanel();
+      var fp100=$('cjm-tab-finance100');if(fp100)fp100.classList.add('active');
+    }else if(finance){
       var fp=$('cjm-tab-finance');if(fp)fp.classList.add('active');
     }else if(matrix){
       var m=$('cjm-tab-matrix');if(m)m.classList.add('active');
@@ -1341,7 +1350,11 @@
   function renderHero(){
     var title=$('cjmHeroTitle'),lead=$('cjmHeroLead'),eyebrow=$('cjmHeroEyebrow');
     if(!title)return;
-    if(isFinanceView()){
+    if(isFinance100View()){
+      eyebrow.textContent='Раздел сайта · Финмодель 100 млн ₽';
+      title.textContent='Финансовая модель выхода на 100 млн ₽ чистой прибыли в месяц';
+      lead.textContent='';
+    }else if(isFinanceView()){
       eyebrow.textContent='Раздел сайта · Финмодель до декабря 2027';
       title.textContent='Финмодель 2027';
       lead.textContent='';
@@ -2711,7 +2724,9 @@
     renderSegmentTabs();
     renderHero();
     applyInnerTab();
-    if(isFinanceView()){
+    if(isFinance100View()){
+      if(window.Finance100&&window.Finance100.render)window.Finance100.render();
+    }else if(isFinanceView()){
       renderFinancePanel();
     }else if(isMatrixView()){
       renderMatrix();
