@@ -167,7 +167,7 @@
         usableShare+=share;
       }
     }
-    if(blendedPayout<=0||usableShare<=0)return null;
+    if(!isFinite(blendedPayout)||blendedPayout<=0||usableShare<=0)return null;
     // Апрувов на 1 ₽ выручки = 1 / средняя выплата за апрув.
     var apprPerRuble=1/blendedPayout;
     return {
