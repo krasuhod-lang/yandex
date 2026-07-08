@@ -16,7 +16,9 @@
   // ==========================================================================
 
   var STORAGE_KEY='fin100_inputs_v1';
+  var SCURVE_STORAGE_KEY='fin100_scurve_v1';
   var HTML_ESCAPE_MAP={'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;','/':'&#x2F;','`':'&#96;'};
+  var MONTH_NAMES_RU=['янв','фев','мар','апр','май','июн','июл','авг','сен','окт','ноя','дек'];
 
   // --- Дефолты. Отражают устойчивую конфигурацию высококонкурентного
   //     лидогенерационного бизнеса на масштабе 500 млн ₽/мес выручки. Все
@@ -194,7 +196,136 @@
     };
   }
 
-  // --- Разметка HTML вкладки -----------------------------------------------
+  // --- Реалистичная модель: S-кривая × маржа − инфляционные постоянные -----
+  // P(t) = (L / (1 + e^(-k·(t − t₀)))) · (1 − v) − FC₀ · (1 + i)^t
+  //   L    — потолок выручки (насыщение рынка), ₽/мес
+  //   k    — крутизна S-кривой, доля/мес (характерное время выхода на плато)
+  //   t₀   — месяц перегиба S-кривой (когда достигается L/2)
+  //   v    — доля переменных расходов в выручке; (1 − v) — валовая маржа
+  //   FC₀  — стартовые постоянные расходы, ₽/мес (январь стартового года)
+  //   i    — месячная инфляция постоянных расходов
+  // t считается в месяцах от 1 января стартового года. Прогноз ведётся до
+  // декабря 2028 года включительно — 36 точек при старте с января 2026.
+  var SCURVE_DEFAULTS={
+    scurveL: 550000000,
+    scurveK: 0.30,
+    scurveT0: 12,
+    scurveV: 40,
+    scurveFC0: 35000000,
+    scurveI: 2.0,
+    scurveStartYear: 2026,
+    scurveStartMonth: 1
+  };
+  var SCURVE_END_YEAR=2028;
+  var SCURVE_END_MONTH=12;
+
+  var SCURVE_FIELDS=[
+    {key:'scurveL', label:'Потолок выручки L', suffix:'₽ в месяц', min:1000000, max:100000000000, step:1000000,
+      hint:'Насыщение рынка. Асимптота, к которой стремится выручка при t → ∞.'},
+    {key:'scurveK', label:'Крутизна k', suffix:'доля в месяц', min:0.01, max:2, step:0.01,
+      hint:'Скорость выхода на плато. Больше k — короче фаза бурного роста.'},
+    {key:'scurveT0', label:'Месяц перегиба t₀', suffix:'мес. от старта', min:0, max:120, step:1,
+      hint:'Момент достижения половины потолка (L/2). Центр S-кривой.'},
+    {key:'scurveV', label:'Доля переменных расходов v', suffix:'% от выручки', min:0, max:95, step:0.5,
+      hint:'Себестоимость и партнёрские выплаты. Валовая маржа = 1 − v.'},
+    {key:'scurveFC0', label:'Стартовые постоянные расходы FC₀', suffix:'₽ в месяц', min:0, max:10000000000, step:100000,
+      hint:'ФОТ, аренда, инфраструктура, G&A на старте прогноза.'},
+    {key:'scurveI', label:'Инфляция постоянных расходов i', suffix:'% в месяц', min:0, max:10, step:0.05,
+      hint:'Ежемесячный рост FC. Именно он образует «эффект ножниц».'},
+    {key:'scurveStartYear', label:'Стартовый год', suffix:'год', min:2020, max:2030, step:1,
+      hint:'Календарный год, соответствующий t = 0.'},
+    {key:'scurveStartMonth', label:'Стартовый месяц', suffix:'1–12', min:1, max:12, step:1,
+      hint:'Календарный месяц старта прогноза. Прогноз ведётся до декабря 2028 года.'}
+  ];
+
+  function readScurve(){
+    try{var raw=localStorage.getItem(SCURVE_STORAGE_KEY);if(raw!=null)return JSON.parse(raw)||{};}
+    catch(e){}
+    return mem[SCURVE_STORAGE_KEY]||{};
+  }
+  function writeScurve(obj){
+    mem[SCURVE_STORAGE_KEY]=obj;
+    try{localStorage.setItem(SCURVE_STORAGE_KEY,JSON.stringify(obj));}catch(e){}
+  }
+  function scurveInputs(){
+    var raw=readScurve();var out={};
+    Object.keys(SCURVE_DEFAULTS).forEach(function(k){
+      var v=raw[k];
+      out[k]=(v==null||v===''||!isFinite(Number(v)))?SCURVE_DEFAULTS[k]:Number(v);
+    });
+    return out;
+  }
+  function scurveIsEdited(key){
+    var raw=readScurve();return raw[key]!=null&&raw[key]!==''&&Number(raw[key])!==SCURVE_DEFAULTS[key];
+  }
+  function scurveSet(key,val){var raw=readScurve();raw[key]=val;writeScurve(raw);}
+  function scurveUnset(key){var raw=readScurve();delete raw[key];writeScurve(raw);}
+  function scurveResetAll(){writeScurve({});}
+
+  // Число месяцев от (startY,startM) до декабря 2028 включительно.
+  function scurveHorizon(sy,sm){
+    var months=(SCURVE_END_YEAR-sy)*12+(SCURVE_END_MONTH-sm);
+    return Math.max(1,months);
+  }
+
+  function computeScurve(){
+    var inp=scurveInputs();
+    var L=Math.max(0,inp.scurveL);
+    var k=Math.max(0.0001,inp.scurveK);
+    var t0=inp.scurveT0;
+    var v=clamp(inp.scurveV,0,100)/100;
+    var fc0=Math.max(0,inp.scurveFC0);
+    var iRate=Math.max(0,inp.scurveI)/100;
+    var sy=Math.round(clamp(inp.scurveStartYear,1900,3000));
+    var sm=Math.round(clamp(inp.scurveStartMonth,1,12));
+    var H=scurveHorizon(sy,sm);
+
+    var rows=[], cum=0, peak={t:-1,P:-Infinity}, prevP=null, scissorsIdx=-1, plateauIdx=-1, negIdx=-1;
+    for(var t=0;t<=H;t++){
+      var rev = L/(1+Math.exp(-k*(t-t0)));
+      var gross = rev*(1-v);
+      var fc = fc0*Math.pow(1+iRate,t);
+      var P = gross-fc;
+      cum += P;
+      // Календарная метка.
+      var totalMonth=(sm-1)+t;
+      var year=sy+Math.floor(totalMonth/12);
+      var mIdx=totalMonth%12;
+      var label=MONTH_NAMES_RU[mIdx]+' '+year;
+      // Приросты и обнаружение «эффекта ножниц»: месяц, начиная с которого
+      // прирост валовой прибыли впервые уступает приросту постоянных издержек.
+      var dGross=null,dFC=null,dP=null;
+      if(rows.length){
+        var prev=rows[rows.length-1];
+        dGross=gross-prev.gross;
+        dFC=fc-prev.fc;
+        dP=P-prev.P;
+        if(scissorsIdx<0&&dGross>=0&&dFC>dGross)scissorsIdx=t;
+      }
+      if(P>peak.P){peak={t:t,P:P,label:label};}
+      if(plateauIdx<0&&rev/L>=0.95)plateauIdx=t;
+      if(negIdx<0&&P<0)negIdx=t;
+      prevP=P;
+      rows.push({t:t,label:label,year:year,mIdx:mIdx,rev:rev,gross:gross,fc:fc,P:P,cum:cum,dGross:dGross,dFC:dFC,dP:dP});
+    }
+
+    // Замедление к концу горизонта: сравнение прироста прибыли в первой и во
+    // второй половине окна. Показывает, «работают ли ножницы» уже сейчас.
+    var mid=Math.floor(rows.length/2);
+    var firstHalfDP=rows[mid].P-rows[0].P;
+    var secondHalfDP=rows[rows.length-1].P-rows[mid].P;
+
+    return {
+      inp:inp, L:L, k:k, t0:t0, v:v, fc0:fc0, iRate:iRate,
+      startYear:sy, startMonth:sm, horizon:H,
+      rows:rows, cumProfit:cum, peak:peak,
+      scissorsIdx:scissorsIdx, plateauIdx:plateauIdx, negIdx:negIdx,
+      firstHalfDP:firstHalfDP, secondHalfDP:secondHalfDP,
+      endRow:rows[rows.length-1], startRow:rows[0]
+    };
+  }
+
+
   function ensurePanel(){
     // Панель вставляется рядом с остальными cjm-panel внутри <main>.
     if($('cjm-tab-finance100'))return $('cjm-tab-finance100');
@@ -222,6 +353,23 @@
       '<div class="card"><div class="card-title"><div><h2>Помесячный план</h2></div></div>'+
         '<p class="fin100-note" id="fin100TableNote"></p>'+
         '<div class="fin100-table-wrap"><table class="fin100-table" id="fin100Table"></table></div>'+
+      '</div>'+
+      '<div class="card fin100-scurve-card"><div class="card-title">'+
+          '<div><h2>Реалистичная модель: S-кривая × маржа − инфляционные постоянные расходы</h2></div>'+
+          '<div class="cjm-head-actions">'+
+            '<button type="button" class="cjm-reset-btn" id="fin100ScurveReset" title="Сбросить параметры реалистичной модели к дефолтам">Сбросить параметры</button>'+
+          '</div>'+
+        '</div>'+
+        '<p class="fin100-lead">Прогноз чистой прибыли до декабря 2028 года по формуле '+
+          '<code class="fin100-formula">P(t) = (L / (1 + e<sup>−k·(t − t₀)</sup>)) · (1 − v) − FC₀ · (1 + i)<sup>t</sup></code>. '+
+          'Первая часть — S-кривая выручки, умноженная на валовую маржу, вторая — постоянные расходы с инфляционным удорожанием. '+
+          'Как только выручка выходит на плато L, а расходы продолжают расти, возникает «эффект ножниц»: прибыль сокращается, даже если план по продажам выполняется на 100%.</p>'+
+        '<p class="fin100-note">Формула дополняет цепочку 100 млн ₽ выше: там задан пункт назначения, здесь — реалистичная траектория, где ускоряющийся рост выручки постепенно упирается в потолок рынка.</p>'+
+        '<div class="fin100-inputs" id="fin100ScurveInputs"></div>'+
+        '<div class="fin100-kpis" id="fin100ScurveKpis" style="margin-top:14px"></div>'+
+        '<div class="fin100-scurve-chart-wrap"><svg id="fin100ScurveChart" class="fin100-scurve-chart" viewBox="0 0 900 340" preserveAspectRatio="xMidYMid meet" aria-label="График S-кривой выручки, валовой прибыли и постоянных расходов"></svg></div>'+
+        '<p class="fin100-note" id="fin100ScurveInsight"></p>'+
+        '<div class="fin100-table-wrap"><table class="fin100-table" id="fin100ScurveTable"></table></div>'+
       '</div>';
     main.appendChild(section);
     return section;
@@ -270,6 +418,24 @@
       '.fin100-table tbody tr.is-target td{color:var(--green);font-weight:700}'+
       '.fin100-table tbody tr.is-breakeven{background:color-mix(in srgb,var(--blue) 8%,var(--surface))}'+
       '.fin100-table td.neg{color:var(--red)}'+
+      '.fin100-scurve-card .fin100-formula{display:inline-block;padding:2px 8px;background:var(--surface-2);border:1px solid var(--line);border-radius:6px;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:12.5px;color:var(--text);font-weight:600}'+
+      '.fin100-scurve-chart-wrap{margin:18px 0 10px;padding:12px;background:var(--surface-2);border:1px solid var(--line);border-radius:var(--radius-xs)}'+
+      '.fin100-scurve-chart{display:block;width:100%;height:auto;max-height:420px}'+
+      '.fin100-scurve-chart .grid{stroke:var(--line);stroke-width:1}'+
+      '.fin100-scurve-chart .axis{stroke:var(--line-strong);stroke-width:1}'+
+      '.fin100-scurve-chart .tick-label{fill:var(--muted);font-size:10.5px;font-weight:600;font-variant-numeric:tabular-nums}'+
+      '.fin100-scurve-chart .axis-label{fill:var(--muted);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.05em}'+
+      '.fin100-scurve-chart .line-rev{fill:none;stroke:var(--blue);stroke-width:2.2}'+
+      '.fin100-scurve-chart .line-gross{fill:none;stroke:var(--green);stroke-width:2.2;stroke-dasharray:0}'+
+      '.fin100-scurve-chart .line-fc{fill:none;stroke:var(--red);stroke-width:2.2}'+
+      '.fin100-scurve-chart .line-p{fill:none;stroke:var(--violet);stroke-width:2.4}'+
+      '.fin100-scurve-chart .area-p{fill:color-mix(in srgb,var(--violet) 15%,transparent);stroke:none}'+
+      '.fin100-scurve-chart .zero{stroke:var(--muted);stroke-width:1;stroke-dasharray:3 3;opacity:.6}'+
+      '.fin100-scurve-chart .marker-scissors{stroke:var(--orange);stroke-width:1.5;stroke-dasharray:4 3}'+
+      '.fin100-scurve-chart .marker-peak{stroke:var(--green);stroke-width:1.5;stroke-dasharray:4 3}'+
+      '.fin100-scurve-chart .marker-label{fill:var(--text);font-size:10.5px;font-weight:700}'+
+      '.fin100-scurve-chart .legend text{fill:var(--text);font-size:11px;font-weight:600}'+
+      '.fin100-scurve-chart .legend rect{stroke:var(--line);stroke-width:0}'+
       '';
     var style=document.createElement('style');style.id='fin100-styles';style.textContent=css;
     document.head.appendChild(style);
@@ -376,6 +542,197 @@
     host.innerHTML=head+body;
   }
 
+  function renderScurveInputs(){
+    var host=$('fin100ScurveInputs');if(!host)return;
+    var inp=scurveInputs();
+    host.innerHTML=SCURVE_FIELDS.map(function(f){
+      var val=inp[f.key];
+      var edited=scurveIsEdited(f.key)?' is-edited':'';
+      return '<label class="fin100-input">'+
+        '<span class="fin100-input-label">'+esc(f.label)+
+          '<span class="fin100-input-suffix">'+esc(f.suffix)+'</span>'+
+        '</span>'+
+        '<input type="number" data-fin100-scurve="'+esc(f.key)+'" value="'+esc(val)+'" min="'+esc(f.min)+'" max="'+esc(f.max)+'" step="'+esc(f.step||'any')+'" class="'+edited.trim()+'">'+
+        '<span class="fin100-input-hint">'+esc(f.hint)+'</span>'+
+      '</label>';
+    }).join('');
+  }
+
+  function renderScurveKpis(res){
+    var host=$('fin100ScurveKpis');if(!host)return;
+    var end=res.endRow, start=res.startRow;
+    var plateauLbl=res.plateauIdx>=0?res.rows[res.plateauIdx].label:'за горизонтом';
+    var scissorsLbl=res.scissorsIdx>=0?res.rows[res.scissorsIdx].label:'не наступает до 2028';
+    var peakLbl=res.peak.label||'—';
+    var decel=(res.firstHalfDP>0&&res.secondHalfDP<res.firstHalfDP);
+    var kpis=[
+      {tone:'blue', label:'Выручка на конец 2028', value:millions(end.rev), sub:'S-кривая при '+pct(end.rev/res.L*100,1)+' от потолка L'},
+      {tone:'green', label:'Валовая прибыль на конец 2028', value:millions(end.gross), sub:'(1 − v) · выручка при валовой марже '+pct((1-res.v)*100,1)},
+      {tone:'red', label:'Постоянные расходы на конец 2028', value:millions(end.fc), sub:'FC₀ вырос в '+(end.fc/Math.max(1,res.fc0)).toLocaleString('ru-RU',{maximumFractionDigits:2})+' раза за '+res.horizon+' мес'},
+      {tone:end.P>=0?'green':'red', label:'Чистая прибыль в декабре 2028', value:millions(end.P), sub:'P(t) по формуле реалистичной модели'},
+      {tone:'violet', label:'Пик месячной прибыли', value:millions(res.peak.P), sub:peakLbl+' (мес. '+res.peak.t+' от старта)'},
+      {tone:decel?'orange':'green', label:'Прирост прибыли: 2-я половина / 1-я', value:(res.firstHalfDP>0?pct(res.secondHalfDP/res.firstHalfDP*100,0):'—'), sub:decel?'Замедление уже видно: ножницы работают':'Замедления пока нет: рост доминирует над FC'},
+      {tone:'blue', label:'Выход на плато выручки (≥95% L)', value:plateauLbl, sub:res.plateauIdx>=0?('мес. '+res.plateauIdx+' от старта'):'не достигается до декабря 2028'},
+      {tone:'orange', label:'Точка ножниц (ΔFC > Δваловой)', value:scissorsLbl, sub:res.scissorsIdx>=0?('мес. '+res.scissorsIdx+' от старта'):'наступит за пределами горизонта'},
+      {tone:'green', label:'Совокупная прибыль за горизонт', value:millions(res.cumProfit), sub:'Сумма P(t) от старта до декабря 2028'},
+      {tone:res.negIdx>=0?'red':'green', label:'Убыточные месяцы', value:res.negIdx>=0?('до '+res.rows[res.negIdx].label):'нет', sub:res.negIdx>=0?('P(t) < 0 в стартовой фазе'):'модель прибыльна с первого месяца'}
+    ];
+    host.innerHTML=kpis.map(function(k){
+      return '<div class="fin100-kpi tone-'+k.tone+'">'+
+        '<span class="fin100-kpi-label">'+esc(k.label)+'</span>'+
+        '<span class="fin100-kpi-value">'+esc(k.value)+'</span>'+
+        '<span class="fin100-kpi-sub">'+esc(k.sub)+'</span>'+
+      '</div>';
+    }).join('');
+  }
+
+  function renderScurveInsight(res){
+    var host=$('fin100ScurveInsight');if(!host)return;
+    var end=res.endRow;
+    var revGrowthEnd = end.dGross!=null?end.dGross:0;
+    var fcGrowthEnd = end.dFC!=null?end.dFC:0;
+    var ratio = revGrowthEnd>0?(fcGrowthEnd/revGrowthEnd*100):null;
+    var scissors=res.scissorsIdx>=0
+      ? ('«Эффект ножниц» математически включается в '+res.rows[res.scissorsIdx].label+' (месяц '+res.scissorsIdx+' от старта): начиная с этого месяца прирост постоянных расходов впервые превышает прирост валовой прибыли. Даже при выполнении плана по продажам чистая прибыль перестаёт ускоряться и после пика начинает сокращаться.')
+      : ('До декабря 2028 года «эффект ножниц» ещё не наступает: прирост выручки на S-кривой опережает инфляционный рост постоянных расходов. Однако к концу горизонта прирост FC уже составляет '+ (ratio!=null?pct(ratio,0):'—') +' от прироста валовой прибыли — тенденция схлопывания видна.');
+    var peakTxt='Пик месячной прибыли '+millions(res.peak.P)+' приходится на '+res.peak.label+' (месяц '+res.peak.t+' от старта). ';
+    host.innerHTML=esc(peakTxt+scissors);
+  }
+
+  function renderScurveTable(res){
+    var host=$('fin100ScurveTable');if(!host)return;
+    var head='<thead><tr>'+
+      '<th>Месяц</th><th>t</th>'+
+      '<th>Выручка</th><th>Валовая (1−v)·R</th>'+
+      '<th>FC₀·(1+i)<sup>t</sup></th>'+
+      '<th>ΔВаловая</th><th>ΔFC</th>'+
+      '<th>Прибыль P(t)</th>'+
+      '<th>Накоплено</th>'+
+    '</tr></thead>';
+    function td(v){var neg=(Number(v)||0)<0?' class="neg"':'';return '<td'+neg+'>'+esc(millions(v))+'</td>';}
+    function tdOpt(v){if(v==null)return '<td>—</td>';return td(v);}
+    var body='<tbody>'+res.rows.map(function(r){
+      var cls=[];
+      if(res.scissorsIdx===r.t)cls.push('is-target');
+      else if(res.peak.t===r.t)cls.push('is-breakeven');
+      return '<tr'+(cls.length?' class="'+cls.join(' ')+'"':'')+'>'+
+        '<td>'+esc(r.label)+'</td>'+
+        '<td>'+r.t+'</td>'+
+        td(r.rev)+td(r.gross)+td(r.fc)+
+        tdOpt(r.dGross)+tdOpt(r.dFC)+
+        td(r.P)+td(r.cum)+
+      '</tr>';
+    }).join('')+'</tbody>';
+    host.innerHTML=head+body;
+  }
+
+  function renderScurveChart(res){
+    var svg=$('fin100ScurveChart');if(!svg)return;
+    var W=900, H=340, padL=64, padR=180, padT=24, padB=44;
+    var plotW=W-padL-padR, plotH=H-padT-padB;
+    var rows=res.rows;
+    // Диапазон Y: включает выручку, FC и прибыль (может быть отрицательной).
+    var maxY=-Infinity, minY=Infinity;
+    rows.forEach(function(r){
+      maxY=Math.max(maxY,r.rev,r.gross,r.fc,r.P);
+      minY=Math.min(minY,r.P,0);
+    });
+    if(!isFinite(maxY)||maxY<=0)maxY=1;
+    if(!isFinite(minY))minY=0;
+    // Красивая верхняя граница по кратному 100 млн.
+    var step100=100000000;
+    var yTop=Math.ceil(maxY/step100)*step100;
+    if(yTop===0)yTop=step100;
+    var yBot=Math.floor(minY/step100)*step100;
+    var xOf=function(t){return padL + (rows.length<=1?0:(t/(rows.length-1))*plotW);};
+    var yOf=function(v){return padT + plotH*(1-(v-yBot)/(yTop-yBot));};
+
+    // Сетка по Y (шаг 100 млн).
+    var grid=[];
+    var yTicks=[];
+    for(var y=yBot;y<=yTop+1;y+=step100){
+      var yy=yOf(y);
+      grid.push('<line class="grid" x1="'+padL+'" x2="'+(padL+plotW)+'" y1="'+yy.toFixed(1)+'" y2="'+yy.toFixed(1)+'"/>');
+      yTicks.push('<text class="tick-label" x="'+(padL-8)+'" y="'+(yy+3.5).toFixed(1)+'" text-anchor="end">'+esc(millions(y))+'</text>');
+    }
+    // Нулевая линия.
+    var zeroY=yOf(0);
+    var zeroLine='<line class="zero" x1="'+padL+'" x2="'+(padL+plotW)+'" y1="'+zeroY.toFixed(1)+'" y2="'+zeroY.toFixed(1)+'"/>';
+
+    // Метки по X — начала лет + декабрь 2028.
+    var xTicks=[];
+    rows.forEach(function(r){
+      if(r.mIdx===0||r.t===0||r.t===rows.length-1){
+        var x=xOf(r.t);
+        xTicks.push('<line class="grid" x1="'+x.toFixed(1)+'" x2="'+x.toFixed(1)+'" y1="'+padT+'" y2="'+(padT+plotH)+'"/>');
+        xTicks.push('<text class="tick-label" x="'+x.toFixed(1)+'" y="'+(padT+plotH+18)+'" text-anchor="middle">'+esc(r.label)+'</text>');
+      }
+    });
+
+    function polyline(key,cls){
+      var pts=rows.map(function(r){return xOf(r.t).toFixed(1)+','+yOf(r[key]).toFixed(1);}).join(' ');
+      return '<polyline class="'+cls+'" points="'+pts+'"/>';
+    }
+    // Область прибыли (полигон между линией P и осью 0).
+    var areaPts=[];
+    rows.forEach(function(r){areaPts.push(xOf(r.t).toFixed(1)+','+yOf(r.P).toFixed(1));});
+    for(var i=rows.length-1;i>=0;i--){areaPts.push(xOf(rows[i].t).toFixed(1)+','+zeroY.toFixed(1));}
+    var area='<polygon class="area-p" points="'+areaPts.join(' ')+'"/>';
+
+    // Маркеры: пик прибыли и точка ножниц.
+    var markers=[];
+    if(res.peak && res.peak.t>=0){
+      var px=xOf(res.peak.t), py=yOf(res.peak.P);
+      markers.push('<line class="marker-peak" x1="'+px.toFixed(1)+'" x2="'+px.toFixed(1)+'" y1="'+padT+'" y2="'+(padT+plotH)+'"/>');
+      markers.push('<circle cx="'+px.toFixed(1)+'" cy="'+py.toFixed(1)+'" r="4" fill="var(--green)"/>');
+      markers.push('<text class="marker-label" x="'+(px+6).toFixed(1)+'" y="'+(padT+14)+'" fill="var(--green)">Пик прибыли: '+esc(res.peak.label)+'</text>');
+    }
+    if(res.scissorsIdx>=0){
+      var sx=xOf(res.scissorsIdx);
+      markers.push('<line class="marker-scissors" x1="'+sx.toFixed(1)+'" x2="'+sx.toFixed(1)+'" y1="'+padT+'" y2="'+(padT+plotH)+'"/>');
+      markers.push('<text class="marker-label" x="'+(sx+6).toFixed(1)+'" y="'+(padT+30)+'" fill="var(--orange)">Ножницы: '+esc(res.rows[res.scissorsIdx].label)+'</text>');
+    }
+
+    // Легенда справа.
+    var legendX=padL+plotW+18, legendY=padT+8;
+    var legendItems=[
+      {c:'var(--blue)', t:'Выручка (S-кривая)'},
+      {c:'var(--green)', t:'Валовая прибыль (1−v)·R'},
+      {c:'var(--red)', t:'Постоянные расходы FC(t)'},
+      {c:'var(--violet)', t:'Чистая прибыль P(t)'}
+    ];
+    var legend='<g class="legend">'+legendItems.map(function(it,idx){
+      var y=legendY+idx*22;
+      return '<rect x="'+legendX+'" y="'+y+'" width="14" height="10" fill="'+it.c+'"/>'+
+             '<text x="'+(legendX+20)+'" y="'+(y+9)+'">'+esc(it.t)+'</text>';
+    }).join('')+'</g>';
+
+    // Подписи осей.
+    var yAxisLabel='<text class="axis-label" x="'+(padL)+'" y="'+(padT-8)+'" text-anchor="start">₽ / мес</text>';
+    var xAxisLabel='<text class="axis-label" x="'+(padL+plotW)+'" y="'+(H-6)+'" text-anchor="end">Календарный месяц</text>';
+
+    svg.innerHTML=
+      yAxisLabel+xAxisLabel+
+      grid.join('')+xTicks.join('')+zeroLine+
+      area+
+      polyline('rev','line-rev')+
+      polyline('gross','line-gross')+
+      polyline('fc','line-fc')+
+      polyline('P','line-p')+
+      markers.join('')+
+      yTicks.join('')+
+      legend;
+  }
+
+  function renderScurve(){
+    renderScurveInputs();
+    var res=computeScurve();
+    renderScurveKpis(res);
+    renderScurveInsight(res);
+    renderScurveChart(res);
+    renderScurveTable(res);
+  }
+
   function bindEvents(){
     var section=$('cjm-tab-finance100');
     if(!section||section._fin100Wired)return;
@@ -383,22 +740,45 @@
     section.addEventListener('input',function(ev){
       var el=ev.target;
       var key=el&&el.getAttribute&&el.getAttribute('data-fin100');
-      if(!key)return;
-      var meta=FIELDS.filter(function(f){return f.key===key;})[0];
-      if(!meta)return;
-      var raw=el.value;
-      if(raw===''){unsetInput(key);el.classList.remove('is-edited');}
-      else{
-        var val=clamp(raw,meta.min,meta.max);
-        setInput(key,val);
-        el.classList.add('is-edited');
+      if(key){
+        var meta=FIELDS.filter(function(f){return f.key===key;})[0];
+        if(!meta)return;
+        var raw=el.value;
+        if(raw===''){unsetInput(key);el.classList.remove('is-edited');}
+        else{
+          var val=clamp(raw,meta.min,meta.max);
+          setInput(key,val);
+          el.classList.add('is-edited');
+        }
+        var res=compute();
+        renderChain(res);renderKpis(res);renderTable(res);
+        return;
       }
-      var res=compute();
-      renderChain(res);renderKpis(res);renderTable(res);
+      var skey=el&&el.getAttribute&&el.getAttribute('data-fin100-scurve');
+      if(skey){
+        var smeta=SCURVE_FIELDS.filter(function(f){return f.key===skey;})[0];
+        if(!smeta)return;
+        var sraw=el.value;
+        if(sraw===''){scurveUnset(skey);el.classList.remove('is-edited');}
+        else{
+          var sval=clamp(sraw,smeta.min,smeta.max);
+          scurveSet(skey,sval);
+          el.classList.add('is-edited');
+        }
+        var sres=computeScurve();
+        renderScurveKpis(sres);
+        renderScurveInsight(sres);
+        renderScurveChart(sres);
+        renderScurveTable(sres);
+      }
     });
     var reset=$('fin100Reset');
     if(reset)reset.addEventListener('click',function(){
       resetAll();render();
+    });
+    var sreset=$('fin100ScurveReset');
+    if(sreset)sreset.addEventListener('click',function(){
+      scurveResetAll();renderScurve();
     });
   }
 
@@ -411,6 +791,7 @@
     renderChain(res);
     renderKpis(res);
     renderTable(res);
+    renderScurve();
     bindEvents();
   }
 
