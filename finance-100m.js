@@ -87,6 +87,14 @@
     var m=(Number(v)||0)/1000000;
     return m.toLocaleString('ru-RU',{maximumFractionDigits:m>=100?0:m>=10?1:2})+' млн ₽';
   }
+  // Формат количества (штук): абсолютное значение с абревиатурой тыс/млн для крупных чисел.
+  function qty(v){
+    var a=Math.abs(Number(v)||0);
+    if(a<10000)return fmt(v);
+    if(a<1000000){var k=(Number(v)||0)/1000;return k.toLocaleString('ru-RU',{maximumFractionDigits:k>=100?0:1})+' тыс';}
+    var m=(Number(v)||0)/1000000;
+    return m.toLocaleString('ru-RU',{maximumFractionDigits:m>=100?0:m>=10?1:2})+' млн';
+  }
   function clamp(v,min,max){v=Number(v);if(!isFinite(v))v=min;return Math.max(min,Math.min(max,v));}
 
   var mem={};
@@ -117,6 +125,60 @@
     var raw=read();delete raw[key];write(raw);
   }
   function resetAll(){write({});}
+
+  // --- Воронка объёмов из показателей сегментов ------------------------------
+  // Финмодель top-down даёт требуемую выручку. Из неё, используя посегментные
+  // конверсии (Визит→Контакт→Клик→Заявка→Апрув) и выплату за выдачу из вкладок
+  // сегментов CJM, выводим необходимые объёмы: апрувы, заявки, контакты, трафик.
+  // Связь: выручка = Σ апрувы_i × выплата_i; апрувы распределяются по долям сегментов.
+  //   апрувы_i     = апрувы_всего × доля_i
+  //   заявки_i     = апрувы_i / crAi_i           (Заявка → Апрув)
+  //   контакты_i   = заявки_i / (crCc_i × crCa_i) (Контакт → Клик → Заявка)
+  //   трафик_i     = контакты_i / crVc_i          (Визит → Контакт)
+  // Так как конверсии постоянны во времени, объёмы линейно масштабируются с выручкой,
+  // поэтому считаем множители «на 1 ₽ выручки» и применяем их к каждому месяцу.
+  function segmentFunnel(){
+    if(typeof window==='undefined')return null;
+    var bridge=window.CjmSegmentsBridge;
+    if(!bridge||typeof bridge.getFunnel!=='function')return null;
+    var data;
+    try{data=bridge.getFunnel();}catch(e){return null;}
+    if(!data||!data.segments||!data.segments.length)return null;
+    var segs=data.segments;
+    var blendedPayout=0; // Σ доля_i × выплата_i — средняя выручка на один апрув
+    // Множители «на один апрув»: сколько заявок/контактов/визитов приходится на
+    // один апрув с учётом распределения апрувов по долям сегментов.
+    var appsPerAppr=0,contPerAppr=0,visPerAppr=0;
+    var usableShare=0;
+    for(var i=0;i<segs.length;i++){
+      var s=segs[i];
+      var share=Number(s.share)||0;
+      if(share<=0)continue;
+      blendedPayout+=share*s.payout;
+      // Пропускаем сегмент в объёмной воронке, если какая-то конверсия равна 0
+      // (бесконечный объём) — чтобы не ломать расчёт делением на ноль.
+      if(s.crAi>0&&s.crCa>0&&s.crCc>0&&s.crVc>0){
+        var apps=share/s.crAi;
+        var cont=apps/(s.crCc*s.crCa);
+        var vis=cont/s.crVc;
+        appsPerAppr+=apps;
+        contPerAppr+=cont;
+        visPerAppr+=vis;
+        usableShare+=share;
+      }
+    }
+    if(blendedPayout<=0||usableShare<=0)return null;
+    // Апрувов на 1 ₽ выручки = 1 / средняя выплата за апрув.
+    var apprPerRuble=1/blendedPayout;
+    return {
+      segments:segs,
+      blendedPayout:blendedPayout,
+      apprPerRuble:apprPerRuble,
+      appsPerRuble:apprPerRuble*appsPerAppr,
+      contactsPerRuble:apprPerRuble*contPerAppr,
+      trafficPerRuble:apprPerRuble*visPerAppr
+    };
+  }
 
   // --- Модель ---------------------------------------------------------------
   // Замкнутая цепочка расчётов на конце горизонта:
@@ -158,6 +220,10 @@
     var start=Math.max(1,inp.startRevenue);
     var g = Math.pow(revEnd/start,1/H)-1;
 
+    // Объёмная воронка из показателей сегментов (может отсутствовать, если модуль
+    // сегментов не загружен — тогда funnel===null и объёмы просто не показываются).
+    var funnel=segmentFunnel();
+
     var rows=[];
     var cumProfit=0, minCum=0, breakEvenIdx=-1, targetIdx=-1;
     for(var t=0;t<=H;t++){
@@ -182,15 +248,31 @@
       if(cumProfit<minCum)minCum=cumProfit;
       if(breakEvenIdx<0&&cumProfit>=0&&t>0)breakEvenIdx=t;
       if(targetIdx<0&&np>=inp.targetNetProfit)targetIdx=t;
-      rows.push({t:t,rev:rev,gross:gross,marketing:marketing,fot:fot,dev:dev,ga:ga,risk:risk,opex:opex,ebitda:ebitda,tax:tax,np:np,cum:cumProfit,headcount:headcount});
+      var row={t:t,rev:rev,gross:gross,marketing:marketing,fot:fot,dev:dev,ga:ga,risk:risk,opex:opex,ebitda:ebitda,tax:tax,np:np,cum:cumProfit,headcount:headcount};
+      if(funnel){
+        // Объёмы воронки, выведенные из выручки месяца через конверсии сегментов.
+        row.approvals=rev*funnel.apprPerRuble;
+        row.applications=rev*funnel.appsPerRuble;
+        row.contacts=rev*funnel.contactsPerRuble;
+        row.traffic=rev*funnel.trafficPerRuble;
+      }
+      rows.push(row);
     }
+
+    var funnelEnd=funnel?{
+      approvals:revEnd*funnel.apprPerRuble,
+      applications:revEnd*funnel.appsPerRuble,
+      contacts:revEnd*funnel.contactsPerRuble,
+      traffic:revEnd*funnel.trafficPerRuble,
+      blendedPayout:funnel.blendedPayout
+    }:null;
 
     return {
       inp:inp,
       revEnd:revEnd, grossEnd:grossEnd, marketingEnd:marketingEnd, fotEnd:fotEnd,
       headcount:headcount, devEnd:devEnd, gaEnd:gaEnd, riskEnd:riskEnd,
       opexEnd:opexEnd, ebitdaEnd:ebitdaEnd, taxEnd:taxEnd, npEnd:npEnd,
-      monthlyGrowth:g, horizon:H, rows:rows,
+      monthlyGrowth:g, horizon:H, rows:rows, funnel:funnelEnd,
       breakEvenIdx:breakEvenIdx, targetIdx:targetIdx, peakInvest:-minCum
     };
   }
@@ -211,7 +293,7 @@
           '<button type="button" class="cjm-reset-btn" id="fin100Reset" title="Сбросить все параметры к значениям по умолчанию">Сбросить к дефолтам</button>'+
         '</div>'+
       '</div>'+
-      '<p class="fin100-lead">Модель показывает закономерность между целевой чистой прибылью, требуемой выручкой, структурой расходов, численностью штата и темпом роста. Каждый параметр редактируется — цепочка показателей пересчитывается автоматически.</p>'+
+      '<p class="fin100-lead">Модель показывает закономерность между целевой чистой прибылью, требуемой выручкой, структурой расходов, численностью штата и темпом роста. Объёмы воронки — трафик, контакты, заявки и апрувы — выводятся из требуемой выручки через конверсии из вкладок сегментов. Каждый параметр редактируется — цепочка показателей пересчитывается автоматически.</p>'+
       '<div class="fin100-chain" id="fin100Chain"></div>'+
       '<div class="card"><div class="card-title"><div><h2>Параметры модели</h2></div></div>'+
         '<p class="fin100-note">Параметры разбиты на три группы по функциональному назначению. Каждое поле снабжено пояснением, как оно влияет на итог.</p>'+
@@ -287,6 +369,12 @@
       {tone:'derived',formula:'Выручка × доля ФОТ / средний ФОТ',value:fmt(res.headcount)+' чел',cap:'Численность штата'},
       {tone:'derived',formula:'Валовая − OPEX − налог',value:millions(res.npEnd),cap:'Чистая прибыль на конце горизонта'}
     ];
+    if(res.funnel){
+      items.push(
+        {tone:'derived',formula:'Выручка / выплата за выдачу',value:qty(res.funnel.approvals)+' апр.',cap:'Апрувы (выдачи) в месяц — из показателей сегментов'},
+        {tone:'derived',formula:'Апрувы / конверсии сегментов',value:qty(res.funnel.traffic)+' виз.',cap:'Требуемый трафик в месяц'}
+      );
+    }
     host.innerHTML=items.map(function(it){
       return '<div class="fin100-chain-item is-'+it.tone+'">'+
         '<span class="fin100-chain-formula">'+esc(it.formula)+'</span>'+
@@ -330,6 +418,16 @@
       {tone:'green',label:'Месяц выхода в накопленный плюс',value:res.breakEvenIdx>=0?('м. '+res.breakEvenIdx):'за горизонтом',sub:'Кумулятивная прибыль ≥ 0'},
       {tone:hitTarget?'green':'red',label:'Месяц достижения цели',value:res.targetIdx>=0?('м. '+res.targetIdx):'за горизонтом',sub:'Месячная NP ≥ '+millions(res.inp.targetNetProfit)}
     ];
+    if(res.funnel){
+      // Объёмы воронки на конце горизонта, выведенные из требуемой выручки через
+      // конверсии сегментов (Визит→Контакт→Клик→Заявка→Апрув).
+      kpis.push(
+        {tone:'violet',label:'Трафик в месяц',value:qty(res.funnel.traffic),sub:'Визиты на маркетплейс — из выручки через конверсии сегментов'},
+        {tone:'violet',label:'Контакты в месяц',value:qty(res.funnel.contacts),sub:'Оставленные телефоны · Визит → Контакт'},
+        {tone:'violet',label:'Заявки в месяц',value:qty(res.funnel.applications),sub:'Оформленные заявки · Клик → Заявка'},
+        {tone:'green',label:'Апрувы (выдачи) в месяц',value:qty(res.funnel.approvals),sub:'Выручка / средняя выплата за выдачу '+rub(res.funnel.blendedPayout)}
+      );
+    }
     host.innerHTML=kpis.map(function(k){
       return '<div class="fin100-kpi tone-'+k.tone+'">'+
         '<span class="fin100-kpi-label">'+esc(k.label)+'</span>'+
@@ -347,11 +445,14 @@
         ' до требуемой '+millions(res.revEnd)+' за '+res.horizon+' месяцев. '+
         'Требуемый месячный темп роста выручки: '+pct(res.monthlyGrowth*100,1)+'. '+
         'Маркетинг индексируется на инфляцию стоимости привлечения ('+pct(res.inp.cacInflation,1)+' в месяц), '+
-        'ФОТ — на годовую индексацию окладов ('+pct(res.inp.fotIndex,0)+' в год).';
+        'ФОТ — на годовую индексацию окладов ('+pct(res.inp.fotIndex,0)+' в год).'+
+        (res.funnel?' Объёмы воронки (трафик, контакты, заявки, апрувы) выведены из выручки через конверсии сегментов.':'');
     }
+    var hasFunnel=!!res.funnel;
     var head='<thead><tr>'+
       '<th>Месяц</th>'+
       '<th>Выручка</th>'+
+      (hasFunnel?'<th>Трафик</th><th>Контакты</th><th>Заявки</th><th>Апрувы</th>':'')+
       '<th>Валовая</th>'+
       '<th>Маркетинг</th>'+
       '<th>ФОТ</th>'+
@@ -365,13 +466,16 @@
       '<th>Накоплено</th>'+
     '</tr></thead>';
     function td(v){var neg=v<0?' class="neg"':'';return '<td'+neg+'>'+esc(millions(v))+'</td>';}
+    function tdq(v){return '<td>'+esc(qty(v))+'</td>';}
     var body='<tbody>'+res.rows.map(function(r){
       var cls=[];
       if(res.targetIdx===r.t)cls.push('is-target');
       else if(res.breakEvenIdx===r.t)cls.push('is-breakeven');
       return '<tr'+(cls.length?' class="'+cls.join(' ')+'"':'')+'>'+
         '<td>м. '+r.t+'</td>'+
-        td(r.rev)+td(r.gross)+td(r.marketing)+td(r.fot)+td(r.dev)+td(r.ga)+td(r.risk)+td(r.opex)+td(r.ebitda)+td(r.tax)+td(r.np)+td(r.cum)+
+        td(r.rev)+
+        (hasFunnel?tdq(r.traffic)+tdq(r.contacts)+tdq(r.applications)+tdq(r.approvals):'')+
+        td(r.gross)+td(r.marketing)+td(r.fot)+td(r.dev)+td(r.ga)+td(r.risk)+td(r.opex)+td(r.ebitda)+td(r.tax)+td(r.np)+td(r.cum)+
       '</tr>';
     }).join('')+'</tbody>';
     host.innerHTML=head+body;

@@ -1074,6 +1074,39 @@
     return raw.map(function(v){return v/sum;});
   }
 
+  // Мост для финмодели «100 млн ₽» (finance-100m.js). Отдаёт посегментные показатели
+  // воронки ровно в том виде, в каком их видят вкладки сегментов CJM:
+  //   crVc  — Визит → Контакт (оставленный телефон)
+  //   crCc  — Контакт → Клик по офферу
+  //   crCa  — Клик → Заявка
+  //   crAi  — Заявка → Апрув (выдача)
+  //   payout — выплата за выдачу (₽), share — доля сегмента (0..1, нормирована).
+  // Финмодель 100 млн использует эти конверсии, чтобы из требуемой выручки вывести
+  // необходимые объёмы трафика, контактов, заявок и апрувов. Единый источник значений —
+  // те же вкладки сегментов, поэтому правка конверсии в сегменте сразу отражается в модели.
+  function finSegmentFunnel(){
+    var inp=finInputs();
+    var shares=finSharesNormalized(inp);
+    var segments=FIN_SEG_META.map(function(m,i){
+      return {
+        key:m.key,
+        name:m.name,
+        share:shares[i],
+        crVc:clamp(inp[m.crVcKey],0,100)/100,
+        crCc:clamp(inp[m.crCcKey],0,100)/100,
+        crCa:clamp(inp[m.crCaKey],0,100)/100,
+        crAi:clamp(inp[m.crAiKey],0,100)/100,
+        payout:Math.max(0,Number(inp[m.payoutKey])||0)
+      };
+    });
+    return {segments:segments};
+  }
+  // Публичный доступ для finance-100m.js (он загружается тем же документом).
+  if(typeof window!=='undefined'){
+    window.CjmSegmentsBridge=window.CjmSegmentsBridge||{};
+    window.CjmSegmentsBridge.getFunnel=finSegmentFunnel;
+  }
+
   // Считает контакты (оставленные телефоны) по каждому источнику для стартового месяца.
   //   contacts_i = budget_i / cpl_i (при cpl>0)
   //   средний CPL = Σ budget_i / Σ contacts_i (арифм. средневзвешенный)
