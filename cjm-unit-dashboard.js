@@ -708,7 +708,7 @@
     t.className='cjm-toast';t.textContent=text;
     document.body.appendChild(t);
     requestAnimationFrame(function(){t.classList.add('show');});
-    setTimeout(function(){t.classList.remove('show');setTimeout(function(){t.remove();},250);},1800);
+    setTimeout(function(){t.classList.remove('show');setTimeout(function(){t.remove();},250);},SAVE_FEEDBACK_MS);
   }
   function copyToClipboard(text){
     if(navigator&&navigator.clipboard&&navigator.clipboard.writeText){
@@ -727,13 +727,13 @@
     var btn=$('cjmShareLink');if(!btn)return;
     btn.addEventListener('click',function(){
       var prev=btn.textContent;btn.disabled=true;btn.textContent='Сохраняем…';
-      saveCurrentSharedState().then(function(){
+      saveCurrentSharedState().then(function(ok){
         var url=buildShareUrl();
         try{history.replaceState(null,'',url);}catch(e){}
         return copyToClipboard(url).then(function(){
           btn.classList.add('copied');
           btn.textContent='Ссылка скопирована';
-          showToast('Ссылка скопирована — отправьте её любому пользователю');
+          showToast(ok?'Ссылка скопирована — отправьте её любому пользователю':'База недоступна — скопирована ссылка с данными внутри');
           setTimeout(function(){btn.classList.remove('copied');btn.textContent=prev;btn.disabled=false;},SAVE_FEEDBACK_MS);
         }).catch(function(){
           btn.textContent=prev;btn.disabled=false;
@@ -779,11 +779,11 @@
     var share=$('finShareLink');
     if(share)share.addEventListener('click',function(){
       var prev=share.textContent;share.disabled=true;share.textContent='Сохраняем…';
-      saveCurrentSharedState().then(function(){
+      saveCurrentSharedState().then(function(ok){
         var url=buildShareUrl();
         try{history.replaceState(null,'',url);}catch(e){}
         return copyToClipboard(url).then(function(){
-          showToast('Ссылка скопирована — откройте её на любом ПК, показатели подтянутся');
+          showToast(ok?'Ссылка скопирована — откройте её на любом ПК, показатели подтянутся':'База недоступна — скопирована ссылка с данными внутри');
         }).catch(function(){
           showToast('Скопируйте ссылку из адресной строки');
         }).finally(function(){share.textContent=prev;share.disabled=false;});
