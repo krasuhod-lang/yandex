@@ -236,7 +236,7 @@ function approx(a,b,relTol){
   assert(b.rows[mid].rev/b.rows[0].rev>a.rows[mid].rev/a.rows[0].rev,
     'относительный рост выручки к середине горизонта быстрее при большем стартовом штате');
   assert(approx(b.rows[b.targetIdx].np,b.inp.targetNetProfit),'цель по прибыли всё равно достигается на targetIdx');
-  fin.setInput('hcGrowthCoef',0);
+  fin.setInput('hcGrowthElasticity',0);
   var c=fin.compute();
   assert(approx(c.teamSpeed,1,1e-9),'при коэффициенте 0 штат не влияет на скорость роста');
 })();

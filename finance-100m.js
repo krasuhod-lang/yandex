@@ -45,8 +45,8 @@
     startHeadcount: 3,
     targetHeadcount: 26,
     // Эластичность влияния стартового штата на темп роста выручки:
-    // скорость роста = (стартовый штат / базовый штат)^hcGrowthCoef.
-    hcGrowthCoef: 0.35,
+    // скорость роста = (стартовый штат / базовый штат)^hcGrowthElasticity.
+    hcGrowthElasticity: 0.35,
     devShare: 4,
     gaShare: 2,
     riskShare: 1,
@@ -96,7 +96,7 @@
       hint:'ФОТ месяца = штат месяца × средний ФОТ с индексацией окладов.'},
     {key:'startHeadcount', label:'Стартовый штат', suffix:'чел', min:1, max:1000,
       hint:'Численность команды на старте (t=0). Чем больше сотрудников на старте, тем быстрее растёт выручка (см. коэффициент влияния штата).'},
-    {key:'hcGrowthCoef', label:'Коэффициент влияния штата на рост', suffix:'0–1', min:0, max:1,
+    {key:'hcGrowthElasticity', label:'Коэффициент влияния штата на рост', suffix:'0–1', min:0, max:1,
       hint:'Эластичность роста от стартового штата: скорость роста = (стартовый штат / '+DEFAULTS.startHeadcount+')^коэффициент. При 0 штат не влияет; чем ближе к 1, тем сильнее лишние люди на старте ускоряют выручку.'},
     {key:'targetHeadcount', label:'Целевой штат', suffix:'чел', min:1, max:10000,
       hint:'Численность команды при выходе на целевую выручку.'},
@@ -418,10 +418,14 @@
     // функция от отношения штатов; коэффициент задаёт эластичность (0 — нет
     // влияния, 1 — пропорционально штату). Ограничена диапазоном ×0.5…×3,
     // чтобы экстремальный штат не ломал модель.
-    var teamSpeed=clamp(Math.pow(startHc/Math.max(1,DEFAULTS.startHeadcount),clamp(inp.hcGrowthCoef,0,1)),0.5,3);
+    var teamSpeed=clamp(Math.pow(startHc/Math.max(1,DEFAULTS.startHeadcount),clamp(inp.hcGrowthElasticity,0,1)),0.5,3);
 
     function revenueAt(t){
       if(t===0)return start;
+      // teamSpeed «сжимает» время: при коэффициенте >1 выручка проходит ту же
+      // кривую быстрее и на целевой дате превышает revEnd — solver в ответ
+      // подбирает меньший revEnd, так что прибыль на целевой дате всё равно
+      // сходится ровно в цель, а рост в ранних месяцах становится быстрее.
       return start*Math.pow(revEnd/start,easedProgress(t*teamSpeed,targetIdx));
     }
     // Штат растёт синхронно с темпом роста выручки (не линейно по времени):
@@ -594,7 +598,7 @@
       startEff:start, startMktEff:startMkt, startFotEff:rows[0].fot, startDevEff:startDev,
       monthlyGrowth:g, horizon:H, rows:rows, funnel:funnelEnd, teamSpeed:series.teamSpeed,
       breakEvenIdx:breakEvenIdx, targetIdx:targetIdx, hitIdx:hitIdx, peakInvest:-minCum,
-      targetRow:targetRow, solvedRevEnd:revEnd, marginFactor:marginFactor
+      targetRow:targetRow, solvedRevEnd:targetRow.rev, marginFactor:marginFactor
     };
   }
 
@@ -773,7 +777,7 @@
       {tone:'orange',label:'ФОТ с налогами',value:millions(res.fotEnd),sub:'Штат × средний ФОТ с индексацией'},
       {tone:'blue',label:'Доля ФОТ в выручке',value:pct(endRow.fotShare,1),sub:'Справочный KPI: ФОТ / выручка, не входной параметр'},
       {tone:'blue',label:'Темп роста выручки',value:pct(res.monthlyGrowth*100,1)+' в месяц',sub:'Между стартом и целевой датой'},
-      {tone:'violet',label:'Ускорение роста от штата',value:'×'+(res.teamSpeed||1).toLocaleString('ru-RU',{maximumFractionDigits:2}),sub:'(стартовый штат / '+fmt(DEFAULTS.startHeadcount)+')^коэффициент — больше людей на старте, быстрее рост выручки'},
+      {tone:'violet',label:'Ускорение роста от штата',value:'×'+res.teamSpeed.toLocaleString('ru-RU',{maximumFractionDigits:2}),sub:'(стартовый штат / '+fmt(DEFAULTS.startHeadcount)+')^коэффициент — больше людей на старте, быстрее рост выручки'},
       {tone:burning?'red':'green',label:'Burn Rate (текущий)',value:burning?millions(burnRow.burn)+' в мес':'устойчиво',sub:'Касса[t−1] − Касса[t] на инвестиционной фазе'},
       {tone:burning?'orange':'green',label:'Runway',value:burning?(isFinite(burnRow.runway)?fmt(burnRow.runway)+' мес':'∞'):'∞ / устойчиво',sub:'Кассовый резерв / месячный burn при burn > 0'},
       {tone:res.peakInvest>0?'red':'green',label:'Пиковый кассовый разрыв',value:millions(res.peakInvest),sub:'Максимум накопленного убытка на инвестиционной фазе'},
