@@ -539,8 +539,7 @@
       '}'+
       '.fin100-table thead th:first-child{z-index:3;background:var(--surface-3)}'+
       '.fin100-table tbody tr{--fin100-sticky-bg:var(--surface)}'+
-      '.fin100-table tbody tr:nth-child(even){background:var(--surface-2)}'+
-      '.fin100-table tbody tr:nth-child(even){--fin100-sticky-bg:var(--surface-2)}'+
+      '.fin100-table tbody tr:nth-child(even){background:var(--surface-2);--fin100-sticky-bg:var(--surface-2)}'+
       '.fin100-table tbody tr.is-target{--fin100-sticky-bg:color-mix(in srgb,var(--green) 12%,var(--surface));background:var(--fin100-sticky-bg)}'+
       '.fin100-table tbody tr.is-target td{color:var(--green);font-weight:700}'+
       '.fin100-table tbody tr.is-milestone{--fin100-sticky-bg:color-mix(in srgb,var(--blue) 10%,var(--surface));background:var(--fin100-sticky-bg)}'+
