@@ -223,5 +223,23 @@ function approx(a,b,relTol){
   assert(approx(r.fotShare,r.fot/r.rev*100,1e-9),'fotShare[t] = fot/rev × 100 (справочно)');
 })();
 
+// --- 12. Больше сотрудников на старте → быстрее рост выручки ---------------
+(function(){
+  var fin=loadModule(null);
+  fin.resetAll();
+  var a=fin.compute();
+  assert(approx(a.teamSpeed,1,1e-9),'при дефолтном штате скорость роста ×1 (модель не меняется)');
+  fin.setInput('startHeadcount',12);
+  var b=fin.compute();
+  assert(b.teamSpeed>1,'штат 12 вместо 3 даёт коэффициент ускорения > 1 (×'+b.teamSpeed.toFixed(2)+')');
+  var mid=Math.floor(a.targetIdx/2);
+  assert(b.rows[mid].rev/b.rows[0].rev>a.rows[mid].rev/a.rows[0].rev,
+    'относительный рост выручки к середине горизонта быстрее при большем стартовом штате');
+  assert(approx(b.rows[b.targetIdx].np,b.inp.targetNetProfit),'цель по прибыли всё равно достигается на targetIdx');
+  fin.setInput('hcGrowthCoef',0);
+  var c=fin.compute();
+  assert(approx(c.teamSpeed,1,1e-9),'при коэффициенте 0 штат не влияет на скорость роста');
+})();
+
 console.log('\n'+(checks-failures)+'/'+checks+' проверок пройдено');
 process.exit(failures?1:0);
