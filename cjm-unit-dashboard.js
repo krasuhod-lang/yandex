@@ -2789,6 +2789,7 @@
         '<div class="fin-target-item"><span class="fin-target-num">'+esc(millions(res.target))+'</span><span class="fin-target-cap">Цель прибыли · декабрь 2027</span></div>'+
         statusItem+
         '<div class="fin-target-item"><span class="fin-target-num">'+esc(pct(inp.taxRate,1))+'</span><span class="fin-target-cap">Налог от общей выручки</span></div>'+
+        '<div class="fin-target-item"><span class="fin-target-num">'+esc(pct(inp.costGrowthMonthly,1))+'</span><span class="fin-target-cap">Расходы: линейный прирост в месяц</span></div>'+
         '<div class="fin-progress"><span style="width:'+progress.toFixed(1)+'%"></span></div>';
     }
     // Источники трафика — таблица (контакты, доли, бюджет, CPL).
