@@ -241,5 +241,43 @@ function approx(a,b,relTol){
   assert(approx(c.teamSpeed,1,1e-9),'при коэффициенте 0 штат не влияет на скорость роста');
 })();
 
+// --- 13. Логистическая S-кривая: рост плавно замедляется у потолка --------
+(function(){
+  var fin=loadModule(null);
+  fin.resetAll();
+  var res=fin.compute();
+  var rows=res.rows,ti=res.targetIdx;
+  // Выручка строго монотонна на всём горизонте.
+  var mono=true;
+  for(var t=1;t<rows.length;t++){if(rows[t].rev<rows[t-1].rev)mono=false;}
+  assert(mono,'выручка растёт монотонно на всём горизонте');
+  // Месячный темп сначала растёт, затем снижается (единственный горб) —
+  // рост не бесконечно-ускоряющийся, а замедляется у потолка.
+  var mom=[];for(var i=1;i<rows.length;i++)mom.push(rows[i].rev/rows[i-1].rev-1);
+  var peak=-Infinity,peakIdx=0;
+  for(var j=0;j<mom.length;j++){if(mom[j]>peak){peak=mom[j];peakIdx=j;}}
+  // Пик темпа должен быть не у самых краёв (запас 3 мес.): у начала это значило
+  // бы отсутствие разгона, у конца — отсутствие замедления, т.е. не S-кривую.
+  assert(peakIdx>3&&peakIdx<mom.length-3,'пик месячного темпа лежит внутри горизонта (t='+(peakIdx+1)+')');
+  var lateIdx=Math.min(mom.length-1,ti-3);
+  assert(mom[lateIdx]<peak,'месячный темп у целевой даты ниже пикового (замедление)');
+  // Эндпойнт (revEnd) и целевая прибыль не зависят от формы кривой.
+  assert(approx(rows[ti].np,res.inp.targetNetProfit),'цель по прибыли достигается при S-кривой');
+})();
+
+// --- 14. Усиление роста первого года: лифт есть, эндпойнт неизменен --------
+(function(){
+  var fin=loadModule(null);
+  fin.resetAll();
+  fin.setInput('firstYearGrowthBoost',0);
+  var off=fin.compute();
+  fin.setInput('firstYearGrowthBoost',10);
+  var on=fin.compute();
+  assert(on.rows[12].rev>off.rows[12].rev,'выручка 12-го месяца выше при усилении роста первого года');
+  assert(approx(on.rows[12].rev/off.rows[12].rev,1.10,0.01),'лифт на пике (12 мес.) ≈ +10% при boost=10');
+  assert(approx(on.rows[on.targetIdx].rev,off.rows[off.targetIdx].rev,1e-9),'конечная выручка не смещается лифтом первого года');
+  assert(approx(on.rows[24].rev,off.rows[24].rev,1e-9),'к 24-му месяцу лифт затухает (эффект только в первый год)');
+})();
+
 console.log('\n'+(checks-failures)+'/'+checks+' проверок пройдено');
 process.exit(failures?1:0);
