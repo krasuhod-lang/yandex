@@ -21,6 +21,16 @@
   var DEC_2028_MIN_NET_PROFIT=50000000;
   var NET_PROFIT_EASING_EXPONENT=1.28;
   var DEFAULT_PROFIT_GROWTH_STEPS=12;
+  var TEAM_ROLES=[
+    'Разработчик',
+    'SEO midle',
+    'SEO junior',
+    'Директолог',
+    'Таргетолог',
+    'Проджект менеджер',
+    'Делопроизводитель',
+    'Владелец проекта'
+  ];
 
   // --- Дефолты. Отражают устойчивую конфигурацию высококонкурентного
   //     лидогенерационного бизнеса с фокусом на чистую прибыль. Период старта
@@ -175,6 +185,27 @@
     var raw=read();delete raw[key];write(raw);
   }
   function resetAll(){write({});}
+  function teamInputKey(i,field){return 'team_'+i+'_'+field;}
+  function teamRows(){
+    var raw=read();
+    var rows=TEAM_ROLES.map(function(role,i){
+      var salary=Math.max(0,Number(raw[teamInputKey(i,'salary')])||0);
+      var count=Math.max(0,Math.round(Number(raw[teamInputKey(i,'count')])||0));
+      return {i:i,role:role,salary:salary,count:count,fot:salary*count};
+    });
+    var totalCount=0,totalFot=0;
+    rows.forEach(function(r){totalCount+=r.count;totalFot+=r.fot;});
+    return {rows:rows,totalCount:totalCount,totalFot:totalFot};
+  }
+  function setTeamValue(i,field,val){
+    var raw=read();
+    var n=Number(val);
+    if(!isFinite(n)||n<0)n=0;
+    if(field==='count')n=Math.round(n);
+    raw[teamInputKey(i,field)]=n;
+    write(raw);
+    return n;
+  }
 
   // --- Воронка объёмов из показателей сегментов ------------------------------
   // Финмодель top-down даёт требуемую выручку. Из неё, используя посегментные
@@ -486,6 +517,10 @@
       '<div class="card"><div class="card-title"><div><h2>Помесячный план</h2></div></div>'+
         '<p class="fin100-note" id="fin100TableNote"></p>'+
         '<div class="fin100-table-wrap"><table class="fin100-table" id="fin100Table"></table></div>'+
+      '</div>'+
+      '<div class="card"><div class="card-title"><div><h2>Команда</h2></div></div>'+
+        '<p class="fin100-note">Задайте зарплату и количество сотрудников по каждой должности вручную. Итоги показывают общую численность команды и общий ФОТ в месяц.</p>'+
+        '<div class="fin100-table-wrap fin100-team-wrap"><table class="fin100-table fin100-team-table" id="fin100TeamTable"></table></div>'+
       '</div>';
     main.appendChild(section);
     return section;
@@ -546,6 +581,11 @@
       '.fin100-table tbody tr.is-milestone td{color:var(--blue);font-weight:700}'+
       '.fin100-table tbody tr.is-breakeven{--fin-sticky-row-bg:color-mix(in srgb,var(--blue) 8%,var(--surface));background:var(--fin-sticky-row-bg)}'+
       '.fin100-table td.neg{color:var(--red)}'+
+      '.fin100-team-wrap{max-height:none}'+
+      '.fin100-team-table{min-width:640px}'+
+      '.fin100-team-table input{width:150px;max-width:100%;border:1px solid var(--line-strong);border-radius:8px;padding:8px 10px;background:var(--surface-2);font:inherit;font-size:12.5px;font-weight:600;color:var(--text);text-align:right;font-variant-numeric:tabular-nums;box-sizing:border-box}'+
+      '.fin100-team-table input:focus{outline:2px solid var(--blue);outline-offset:1px}'+
+      '.fin100-team-table tfoot td{position:sticky;bottom:0;background:var(--surface-3);font-weight:800;color:var(--text);border-top:1px solid var(--line-strong)}'+
       '';
     var style=document.createElement('style');style.id='fin100-styles';style.textContent=css;
     document.head.appendChild(style);
@@ -680,6 +720,44 @@
     host.innerHTML=head+body;
   }
 
+  function renderTeam(){
+    var host=$('fin100TeamTable');if(!host)return;
+    var data=teamRows();
+    var head='<thead><tr>'+
+      '<th>Должность</th>'+
+      '<th>Зарплата</th>'+
+      '<th>Кол-во сотрудников</th>'+
+      '<th>ФОТ по должности</th>'+
+    '</tr></thead>';
+    var body='<tbody>'+data.rows.map(function(r){
+      return '<tr>'+
+        '<td>'+esc(r.role)+'</td>'+
+        '<td><input type="number" min="0" step="1000" data-fin100-team="'+r.i+'" data-fin100-team-field="salary" value="'+esc(r.salary)+'" aria-label="Зарплата: '+esc(r.role)+'"></td>'+
+        '<td><input type="number" min="0" step="1" data-fin100-team="'+r.i+'" data-fin100-team-field="count" value="'+esc(r.count)+'" aria-label="Количество сотрудников: '+esc(r.role)+'"></td>'+
+        '<td data-fin100-team-total="'+r.i+'">'+esc(millions(r.fot))+'</td>'+
+      '</tr>';
+    }).join('')+'</tbody>';
+    var foot='<tfoot><tr>'+
+      '<td>Итого</td>'+
+      '<td></td>'+
+      '<td id="fin100TeamTotalCount">'+esc(fmt(data.totalCount))+'</td>'+
+      '<td id="fin100TeamTotalFot">'+esc(millions(data.totalFot))+'</td>'+
+    '</tr></tfoot>';
+    host.innerHTML=head+body+foot;
+  }
+
+  function refreshTeamTotals(){
+    var data=teamRows();
+    data.rows.forEach(function(r){
+      var cell=document.querySelector('[data-fin100-team-total="'+r.i+'"]');
+      if(cell)cell.textContent=millions(r.fot);
+    });
+    var totalCount=$('fin100TeamTotalCount');
+    var totalFot=$('fin100TeamTotalFot');
+    if(totalCount)totalCount.textContent=fmt(data.totalCount);
+    if(totalFot)totalFot.textContent=millions(data.totalFot);
+  }
+
   function bindEvents(){
     var section=$('cjm-tab-finance100');
     if(!section||section._fin100Wired)return;
@@ -701,6 +779,15 @@
         renderChain(res);renderKpis(res);renderTable(res);
         return;
       }
+      var teamIdx=el&&el.getAttribute&&el.getAttribute('data-fin100-team');
+      if(teamIdx!=null){
+        var field=el.getAttribute('data-fin100-team-field');
+        if(field==='salary'||field==='count'){
+          var normalized=setTeamValue(teamIdx,field,el.value);
+          if(field==='count'&&String(normalized)!==el.value)el.value=normalized;
+          refreshTeamTotals();
+        }
+      }
     });
     var reset=$('fin100Reset');
     if(reset)reset.addEventListener('click',function(){
@@ -717,6 +804,7 @@
     renderChain(res);
     renderKpis(res);
     renderTable(res);
+    renderTeam();
     bindEvents();
   }
 
