@@ -1635,14 +1635,15 @@ button:active:not(:disabled){transform:translateY(0) scale(.97)}
 .fin-table th,.fin-table td{white-space:nowrap;font-variant-numeric:tabular-nums}
 /* Липкая шапка и закреплённая колонка месяца помесячного плана:
    таблица скроллится внутри карточки, а колонка месяца остаётся видимой при горизонтальном скролле. */
-.fin-table-card{--fin-sticky-toggle-width:52px;--fin-row-hover-bg:color-mix(in srgb,var(--blue) 6%,var(--surface));--fin-row-target-bg:color-mix(in srgb,var(--green) 12%,var(--surface))}
+.fin-table-card{
+  --fin-sticky-toggle-width:52px;
+  --fin-row-hover-bg:color-mix(in srgb,var(--blue) 6%,var(--surface));
+  --fin-row-target-bg:color-mix(in srgb,var(--green) 12%,var(--surface));
+}
 .fin-table-card .ue2-table-wrap{max-height:70vh;overflow:auto}
 .fin-table-card .ue2-scn-table{border-collapse:separate;border-spacing:0}
 .fin-table-card .ue2-scn-table thead th{box-shadow:0 1px 0 var(--line)}
-.fin-table-card .fin-table th:first-child,
-.fin-table-card .fin-table td:first-child,
-.fin-table-card .fin-table th:nth-child(2),
-.fin-table-card .fin-table td:nth-child(2){position:sticky;background:var(--surface);z-index:2}
+.fin-table-card .fin-table :is(th,td):is(:first-child,:nth-child(2)){position:sticky;background:var(--surface);z-index:2}
 .fin-table-card .fin-table th:first-child,
 .fin-table-card .fin-table td:first-child{left:0}
 .fin-table-card .fin-table th:nth-child(2),

@@ -528,7 +528,15 @@
       '.fin100-table{width:100%;border-collapse:separate;border-spacing:0;font-size:12.5px;min-width:1000px;font-variant-numeric:tabular-nums}'+
       '.fin100-table th,.fin100-table td{padding:8px 11px;text-align:right;border-bottom:1px solid var(--line);white-space:nowrap}'+
       '.fin100-table thead th{position:sticky;top:0;background:var(--surface-3);font-size:10.5px;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);font-weight:800;z-index:2;box-shadow:inset 0 -1px 0 var(--line)}'+
-      '.fin100-table td:first-child,.fin100-table th:first-child{text-align:left;font-weight:600;position:sticky;left:0;background:var(--fin100-sticky-bg,var(--surface));z-index:1;box-shadow:1px 0 0 var(--line)}'+
+      '.fin100-table td:first-child,.fin100-table th:first-child{'+
+        'text-align:left;'+
+        'font-weight:600;'+
+        'position:sticky;'+
+        'left:0;'+
+        'background:var(--fin100-sticky-bg,var(--surface));'+
+        'z-index:1;'+
+        'box-shadow:1px 0 0 var(--line)'+
+      '}'+
       '.fin100-table thead th:first-child{z-index:3;background:var(--surface-3)}'+
       '.fin100-table tbody tr{--fin100-sticky-bg:var(--surface)}'+
       '.fin100-table tbody tr:nth-child(even){background:var(--surface-2)}'+
