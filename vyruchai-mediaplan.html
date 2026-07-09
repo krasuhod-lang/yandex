@@ -1636,7 +1636,7 @@ button:active:not(:disabled){transform:translateY(0) scale(.97)}
 /* Липкая шапка и закреплённая колонка месяца помесячного плана:
    таблица скроллится внутри карточки, а колонка месяца остаётся видимой при горизонтальном скролле. */
 .fin-table-card{
-  /* Ширина первой sticky-колонки с кнопкой раскрытия: от неё начинается колонка месяца. */
+  /* 52px = ширина первой колонки с кнопкой раскрытия (28px + горизонтальные отступы ячейки). */
   --fin-sticky-toggle-width:52px;
   --fin-row-hover-bg:color-mix(in srgb,var(--blue) 6%,var(--surface));
   --fin-row-target-bg:color-mix(in srgb,var(--green) 12%,var(--surface));
@@ -1645,7 +1645,7 @@ button:active:not(:disabled){transform:translateY(0) scale(.97)}
 /* separate нужен, чтобы sticky-колонки не теряли границы при горизонтальном скролле. */
 .fin-table-card .ue2-scn-table{border-collapse:separate;border-spacing:0}
 .fin-table-card .ue2-scn-table thead th{box-shadow:0 1px 0 var(--line)}
-.fin-table-card .fin-table :is(th:first-child,th:nth-child(2),td:first-child,td:nth-child(2)){position:sticky;background:var(--surface);z-index:2}
+.fin-table-card .fin-table :is(th:first-child,th:nth-child(2),td:first-child,td:nth-child(2)){position:sticky;background:var(--surface);z-index:2;transition:background .15s var(--ease)}
 .fin-table-card .fin-table th:first-child,
 .fin-table-card .fin-table td:first-child{left:0}
 .fin-table-card .fin-table th:nth-child(2),
