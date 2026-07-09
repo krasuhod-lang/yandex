@@ -384,10 +384,17 @@
   }
   function persistSharedStateNow(){
     var endpoint=sharedStateEndpoint();
-    if(!endpoint||typeof fetch!=='function'){updateSharedStatus();return Promise.resolve(false);}
+    var canSync=endpoint&&typeof fetch==='function';
+    if(!canSync){
+      updateSharedStatus();
+      return Promise.resolve(false);
+    }
     var values=sharedState.pending;
     sharedState.pending={};
-    if(!Object.keys(values).length){updateSharedStatus();return Promise.resolve(false);}
+    if(Object.keys(values).length===0){
+      updateSharedStatus();
+      return Promise.resolve(false);
+    }
     sharedState.saving=true;sharedState.error=false;updateSharedStatus();
     return fetch(endpoint,{
       method:'PUT',
@@ -654,8 +661,10 @@
     if(sharedState.timer){clearTimeout(sharedState.timer);sharedState.timer=null;}
     return persistSharedStateNow();
   }
+  var SAVE_OK_MESSAGE='Показатели сохранены — ссылка откроется с текущими данными';
+  var SAVE_ERROR_MESSAGE='Не удалось сохранить в базу — показатели остались только локально';
   function showSaveResult(ok){
-    showToast(ok?'Показатели сохранены — ссылка откроется с текущими данными':'База недоступна, показатели сохранены локально');
+    showToast(ok?SAVE_OK_MESSAGE:SAVE_ERROR_MESSAGE);
   }
   function buildShareUrl(){
     var payload=collectShareState();
@@ -736,7 +745,7 @@
       var prev=save.textContent;save.disabled=true;save.textContent='Сохраняем…';
       saveCurrentSharedState().then(function(ok){
         showSaveResult(ok);
-        save.textContent=ok?'Сохранено':'Локально';
+        save.textContent=ok?'Сохранено':'Ошибка';
         setTimeout(function(){save.textContent=prev;save.disabled=false;},1400);
       });
     });
@@ -784,7 +793,7 @@
       var prev=save.textContent;save.disabled=true;save.textContent='Сохраняем…';
       saveCurrentSharedState().then(function(ok){
         showSaveResult(ok);
-        save.textContent=ok?'Сохранено':'Локально';
+        save.textContent=ok?'Сохранено':'Ошибка';
         setTimeout(function(){save.textContent=prev;save.disabled=false;},1400);
       });
     });
