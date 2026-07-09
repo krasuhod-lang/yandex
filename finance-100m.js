@@ -18,9 +18,9 @@
   var STORAGE_KEY='fin100_inputs_v1';
   var HTML_ESCAPE_MAP={'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;','/':'&#x2F;','`':'&#96;'};
   var MONTH_NAMES_RU=['янв','фев','мар','апр','май','июн','июл','авг','сен','окт','ноя','дек'];
-  var DEC_2028_MIN_NET_PROFIT=50000000;
   var NET_PROFIT_EASING_EXPONENT=1.28;
-  var DEFAULT_PROFIT_GROWTH_STEPS=12;
+  var SOLVER_ITERATIONS=40;
+  var SEASONALITY_KEY_PREFIX='seasonality_';
   var TEAM_ROLES=[
     'Разработчик',
     'SEO midle',
@@ -32,19 +32,18 @@
     'Владелец проекта'
   ];
 
-  // --- Дефолты. Отражают устойчивую конфигурацию высококонкурентного
-  //     лидогенерационного бизнеса с фокусом на чистую прибыль. Период старта
-  //     совпадает с вкладкой «Финмодель 2027»: июль 2026 → декабрь 2027.
-  //     Далее модель строит реалистичную траекторию к 50 млн ₽ чистыми в
-  //     декабре 2028 и к 100 млн ₽ чистыми на конце горизонта.
+  // --- Дефолты. Единственные «якоря» модели — стартовая выручка (t=0) и
+  //     целевая чистая прибыль на целевую дату {targetMonth, targetYear}.
+  //     Все промежуточные точки — производные от формул (solver подбирает
+  //     конечную выручку так, чтобы прибыль на целевой дате сошлась ровно
+  //     в targetNetProfit). Никаких зашитых значений на конкретные месяцы.
   var DEFAULTS={
     targetNetProfit: 100000000,
-    minNetProfitDec2028: DEC_2028_MIN_NET_PROFIT,
-    netMargin: 20,
     grossMargin: 65,
     marketingShare: 22,
-    fotShare: 10,
     avgFot: 250000,
+    startHeadcount: 3,
+    targetHeadcount: 26,
     devShare: 4,
     gaShare: 2,
     riskShare: 1,
@@ -61,7 +60,19 @@
     fotIndex: 7,
     // Начальный месяц горизонта. По умолчанию — июль 2026, как в финмодели 2027.
     startMonth: 7,
-    startYear: 2026
+    startYear: 2026,
+    // Целевая дата достижения targetNetProfit. По умолчанию — конец горизонта
+    // (декабрь 2029 при старте с июля 2026 и горизонте 41 мес.).
+    targetMonth: 12,
+    targetYear: 2029,
+    // Эластичность маркетингового бюджета в нелинейной модели прибыли.
+    alpha: 0.7,
+    // Стартовый кассовый резерв для расчёта Burn Rate / Runway.
+    startCashReserve: 10000000,
+    // Доля бесплатного SEO-трафика в общем миксе: растёт от старта к концу
+    // горизонта и снижает эффективный CAC во времени.
+    seoShareStart: 5,
+    seoShareEnd: 35
   };
 
   // Метаданные полей: подпись, единица, min/max, пояснение связи с
@@ -69,21 +80,23 @@
   // одноаспектным предложением, в строгом деловом тоне.
   var FIELDS=[
     {key:'targetNetProfit', label:'Целевая чистая прибыль', suffix:'₽ в месяц', min:0, max:10000000000,
-      hint:'Финальная цель модели: месячная чистая прибыль на конце горизонта.'},
-    {key:'minNetProfitDec2028', label:'Минимум чистыми — декабрь 2028', suffix:'₽ в месяц', min:DEC_2028_MIN_NET_PROFIT, max:10000000000,
-      hint:'Контрольная точка: в декабре 2028 модель держит не меньше этого уровня чистой прибыли.'},
-    {key:'netMargin', label:'Расчётная чистая маржа', suffix:'%', min:1, max:60,
-      hint:'Внутренний коэффициент для масштаба бизнеса на конце горизонта; в интерфейсе фокус остаётся на чистой прибыли.'},
+      hint:'Главный якорь модели: месячная чистая прибыль на целевую дату. Solver подбирает выручку так, чтобы прибыль сошлась ровно в цель.'},
+    {key:'targetMonth', label:'Месяц достижения цели', suffix:'1–12', min:1, max:12,
+      hint:'Месяц целевой даты. При изменении вся кривая роста между стартом и целью перестраивается.'},
+    {key:'targetYear', label:'Год достижения цели', suffix:'год', min:2020, max:2100,
+      hint:'Год целевой даты. Вместе с месяцем задаёт targetIdx — точку, в которой прибыль равна цели.'},
     {key:'grossMargin', label:'Маржинальность после выплат', suffix:'%', min:10, max:95,
       hint:'Внутренний коэффициент после прямой себестоимости и партнёрских выплат.'},
     {key:'marketingShare', label:'Маркетинг и медиа', suffix:'% от выручки', min:0, max:60,
-      hint:'Доля маркетинга от выручки на конце горизонта. Подтягивается из финмодели «до декабря 2027», если не переопределено. От стартового маркетинга до этой доли — экспоненциальный рост.'},
-    {key:'fotShare', label:'ФОТ с налогами', suffix:'% от выручки', min:0, max:40,
-      hint:'Целевая доля ФОТ на конце горизонта. До неё модель растит стартовый ФОТ.'},
+      hint:'Доля маркетинга от выручки на целевой дате. Подтягивается из финмодели «до декабря 2027», если не переопределено. От стартового маркетинга до этой доли — экспоненциальный рост.'},
     {key:'avgFot', label:'Средний ФОТ на сотрудника', suffix:'₽ в месяц, с налогами', min:30000, max:2000000,
-      hint:'Штат текущего месяца = ФОТ месяца / средний ФОТ.'},
+      hint:'ФОТ месяца = штат месяца × средний ФОТ с индексацией окладов.'},
+    {key:'startHeadcount', label:'Стартовый штат', suffix:'чел', min:1, max:1000,
+      hint:'Численность команды на старте (t=0). Штат растёт к целевому синхронно с темпом роста выручки.'},
+    {key:'targetHeadcount', label:'Целевой штат', suffix:'чел', min:1, max:10000,
+      hint:'Численность команды при выходе на целевую выручку.'},
     {key:'devShare', label:'Разработка и продукт', suffix:'% от выручки', min:0, max:20,
-      hint:'Инженерия, продукт, аналитика, данные.'},
+      hint:'Инженерия, продукт, аналитика, данные. Рост доли увеличивает расходы каждого месяца, и solver требует больше выручки для той же цели.'},
     {key:'gaShare', label:'Административные расходы', suffix:'% от выручки', min:0, max:15,
       hint:'Офис, юридическое сопровождение, финансы, HR.'},
     {key:'riskShare', label:'Резерв на риски', suffix:'% от выручки', min:0, max:10,
@@ -91,23 +104,31 @@
     {key:'taxRate', label:'Налог от выручки', suffix:'% от выручки', min:0, max:50,
       hint:'Упрощённый налог от общей выручки, а не от прибыли; вычитается при расчёте чистой прибыли.'},
     {key:'startRevenue', label:'Стартовая выручка', suffix:'₽ в месяц', min:0, max:1000000000,
-      hint:'База траектории роста. Требуемый темп выводится из соотношения цель / старт. При 0 используется значение по умолчанию.'},
+      hint:'Жёсткая точка старта t=0: весь ряд выручки строится вперёд от неё. При 0 используется значение по умолчанию.'},
     {key:'startMarketing', label:'Стартовый маркетинг', suffix:'₽ в месяц', min:0, max:100000000,
-      hint:'Инвестиции в маркетинг с первого месяца, до появления выручки. Растут по экспоненте до маркетинга на конце горизонта (выручка × доля маркетинга).'},
+      hint:'Инвестиции в маркетинг с первого месяца, до появления выручки. Растут по экспоненте до маркетинга на целевой дате (выручка × доля маркетинга).'},
     {key:'startFot', label:'Стартовый ФОТ', suffix:'₽ в месяц', min:0, max:100000000,
-      hint:'Команда на старте инвестиционной фазы. Растёт до ФОТ на конце горизонта (выручка × доля ФОТ).'},
+      hint:'Справочный бюджет команды на старте: участвует в калибровке нелинейной модели. Сам ФОТ считается как штат × средний ФОТ.'},
     {key:'startDev', label:'Стартовая разработка', suffix:'₽ в месяц', min:0, max:100000000,
-      hint:'Бюджет разработки и продукта на старте. Растёт до бюджета на конце горизонта (выручка × доля разработки).'},
+      hint:'Бюджет разработки и продукта на старте. Растёт до бюджета на целевой дате (выручка × доля разработки).'},
     {key:'startMonth', label:'Стартовый месяц', suffix:'1–12', min:1, max:12,
       hint:'Номер месяца начала горизонта (1 — январь, 12 — декабрь). По умолчанию 7 (июль).'},
     {key:'startYear', label:'Стартовый год', suffix:'год', min:2020, max:2100,
       hint:'Год начала горизонта. По умолчанию 2026 — старт с июля 2026 года и далее.'},
-    {key:'horizonMonths', label:'Горизонт', suffix:'месяцев до цели', min:6, max:120,
-      hint:'Задаёт конец горизонта: при старте в июле 2026 значение 41 соответствует декабрю 2029.'},
+    {key:'horizonMonths', label:'Горизонт', suffix:'месяцев', min:6, max:120,
+      hint:'Длина таблицы. Целевая дата должна лежать внутри горизонта; иначе целью считается конец горизонта.'},
+    {key:'alpha', label:'Эластичность маркетинга (α)', suffix:'0.5–0.9', min:0.5, max:0.9,
+      hint:'Коэффициент эластичности бюджета в нелинейной модели прибыли: PR = R·S·k·B^α − B − FC.'},
+    {key:'startCashReserve', label:'Стартовый кассовый резерв', suffix:'₽', min:0, max:10000000000,
+      hint:'Начальный остаток кассы для расчёта Burn Rate и Runway.'},
+    {key:'seoShareStart', label:'Доля SEO-трафика на старте', suffix:'%', min:0, max:100,
+      hint:'Доля бесплатного трафика в миксе на t=0. SEO не расходует маркетинговый бюджет, но даёт заявки.'},
+    {key:'seoShareEnd', label:'Доля SEO-трафика на конце', suffix:'%', min:0, max:100,
+      hint:'Целевая доля SEO к концу горизонта. Рост доли снижает эффективный CAC и частично компенсирует инфляцию привлечения.'},
     {key:'cacInflation', label:'Инфляция стоимости привлечения', suffix:'% в месяц', min:0, max:10,
-      hint:'Ориентир аукционного давления. Траектория маркетинга задаётся связкой «стартовый маркетинг → маркетинг на конце горизонта», поэтому параметр носит справочный характер.'},
+      hint:'Ориентир аукционного давления. Частично компенсируется ростом доли SEO-трафика.'},
     {key:'fotIndex', label:'Индексация ФОТ', suffix:'% в год', min:0, max:30,
-      hint:'Ежегодное повышение окладов при удержании штата.'}
+      hint:'Ежегодное повышение окладов при удержании штата: средний ФОТ месяца t = базовый × (1+индекс)^(t/12).'}
   ];
 
   // --- Утилиты --------------------------------------------------------------
@@ -206,6 +227,24 @@
     write(raw);
     return n;
   }
+  // --- Сезонность: массив из 12 месячных коэффициентов (default 1.0) --------
+  function seasonality(){
+    var raw=read();
+    var out=[];
+    for(var i=0;i<12;i++){
+      var v=Number(raw[SEASONALITY_KEY_PREFIX+i]);
+      out.push(isFinite(v)&&v>0?v:1);
+    }
+    return out;
+  }
+  function setSeasonality(i,val){
+    var raw=read();
+    var n=Number(val);
+    if(!isFinite(n)||n<=0)n=1;
+    raw[SEASONALITY_KEY_PREFIX+i]=n;
+    write(raw);
+    return n;
+  }
 
   // --- Воронка объёмов из показателей сегментов ------------------------------
   // Финмодель top-down даёт требуемую выручку. Из неё, используя посегментные
@@ -270,28 +309,20 @@
   }
 
   // --- Модель ---------------------------------------------------------------
-  // Замкнутая цепочка расчётов на конце горизонта:
-  //   выручка_end   = цель / (чистая_маржа/100)
-  //   валовая_end   = выручка_end × валовая_маржа/100
-  //   маркетинг_end = выручка_end × доля_маркетинга/100
-  //   ФОТ_end       = выручка_end × доля_ФОТ/100
-  //   штат_end      = ФОТ_end / средний_ФОТ
-  //   dev_end       = выручка_end × доля_разработки/100
-  //   G&A_end       = выручка_end × доля_G&A/100
-  //   резерв_end    = выручка_end × доля_резерва/100
-  //   OPEX_end      = маркетинг + ФОТ + dev + G&A + резерв
-  //   налог_end     = выручка_end × ставка_налога/100 (от выручки)
-  //   NP_end        = валовая − OPEX − налог
-  // Помесячная траектория: экспоненциальный рост выручки от startRevenue до
-  // выручка_end за horizonMonths, темп g = (выручка_end/старт)^(1/H) − 1.
-  // Стартовая выручка 0 вырождает экспоненту, поэтому трактуется как «не задано»
-  // и заменяется значением по умолчанию.
-  // Маркетинг, ФОТ и разработка идут от явно заданных стартовых бюджетов до
-  // целевых долей от выручки на конце горизонта. ФОТ-индексация применяется
-  // к средней стоимости сотрудника при расчёте штата.
-  // Такая структура делает видимой закономерность: цель по прибыли жёстко
-  // детерминирует выручку и штат, а темп роста и время выхода на масштаб —
-  // расстояние от старта.
+  // Якоря модели ровно два: стартовая выручка (t=0) и целевая чистая прибыль
+  // на целевую дату targetIdx (из targetMonth/targetYear). Всё остальное —
+  // производные:
+  //   rev[t]  = startRevenue × (revEnd/startRevenue)^eased(t/targetIdx)
+  //   hc[t]   = startHeadcount + (targetHeadcount − startHeadcount) × прогресс
+  //             роста выручки (нормированный к [0..1])
+  //   fot[t]  = hc[t] × avgFot × (1+fotIndex/100)^(t/12)
+  //   mkt[t]  = экспонента от startMarketing до revEnd × marketingShare
+  //   dev[t]  = экспонента от startDev до revEnd × devShare
+  //   np[t]   = rev[t] × marginFactor − mkt[t] − fot[t] − dev[t],
+  //             где marginFactor = (grossMargin − gaShare − riskShare − taxRate)/100
+  // revEnd подбирается численно (бисекция), чтобы np[targetIdx] === targetNetProfit.
+  // При изменении любого входа (цель, дата цели, доли расходов, старт) весь ряд
+  // пересчитывается от startRevenue заново — фиксированных месяцев нет.
   // Метка «мес год» для строки таблицы. При некорректном стартовом месяце
   // или годе — возвращаем короткий индекс, чтобы не ломать разметку.
   function monthLabel(inp,t){
@@ -327,22 +358,6 @@
     return start*Math.pow(end/start,t/Math.max(1,H));
   }
 
-  function bridgeFinancePlan(){
-    if(typeof window==='undefined')return null;
-    var bridge=window.CjmSegmentsBridge;
-    if(!bridge||typeof bridge.getFinancePlan!=='function')return null;
-    try{return bridge.getFinancePlan();}catch(e){return null;}
-  }
-
-  function bridgeProfitMap(plan){
-    var out={};
-    if(!plan||!Array.isArray(plan.months))return out;
-    plan.months.forEach(function(m){
-      if(m&&m.key&&isFinite(Number(m.netProfit)))out[m.key]=Number(m.netProfit);
-    });
-    return out;
-  }
-
   function easedValue(from,to,fromT,toT,t){
     if(toT<=fromT)return to;
     var p=(t-fromT)/(toT-fromT);
@@ -354,117 +369,195 @@
     return from+(to-from)*p;
   }
 
+  // Прогресс роста [0..1] с easing-кривой: единственные опорные точки —
+  // старт (t=0) и цель (t=targetIdx). После цели рост продолжается тем же
+  // экспоненциальным темпом (без плато выручки), но цель уже достигнута.
+  function easedProgress(t,targetIdx){
+    if(targetIdx<=0)return 1;
+    if(t>=targetIdx)return t/targetIdx; // равномерное продолжение после цели
+    return Math.pow(t/targetIdx,NET_PROFIT_EASING_EXPONENT);
+  }
+
+  // Целевая точка t (targetIdx) из явных targetMonth/targetYear. Если дата вне
+  // горизонта или совпадает со стартом — целью считается конец горизонта.
+  function resolveTargetIdx(inp,H){
+    var m=Math.round(Number(inp.targetMonth));
+    var y=Math.round(Number(inp.targetYear));
+    if(m>=1&&m<=12&&y>=1900&&y<=9999){
+      var idx=monthIndexForKey(inp,y+'-'+String(m).padStart(2,'0'),H);
+      if(idx>0)return idx;
+    }
+    return H;
+  }
+
+  // Построение помесячного ряда при заданной конечной выручке revEnd.
+  // Используется и solver-ом (только столбец np), и финальным compute().
+  function computeSeries(params){
+    var inp=params.inp,H=params.H,targetIdx=params.targetIdx;
+    var start=params.start,revEnd=Math.max(start,params.revEnd);
+    var marginFactor=params.marginFactor;
+    var marketingEnd=revEnd*inp.marketingShare/100;
+    var devEnd=revEnd*inp.devShare/100;
+    var startHc=Math.max(1,Math.round(inp.startHeadcount));
+    var targetHc=Math.max(startHc,Math.round(inp.targetHeadcount));
+
+    function revenueAt(t){
+      if(t===0)return start;
+      return start*Math.pow(revEnd/start,easedProgress(t,targetIdx));
+    }
+    // Штат растёт синхронно с темпом роста выручки (не линейно по времени):
+    // прогресс = (rev[t] − старт) / (revEnd − старт), обрезанный к [0..1].
+    function headcountAt(t){
+      var span=revEnd-start;
+      var progress=span>0?clamp((revenueAt(t)-start)/span,0,1):1;
+      return Math.round(startHc+(targetHc-startHc)*progress);
+    }
+    function avgFotAt(t){
+      return Math.max(1,inp.avgFot*Math.pow(1+inp.fotIndex/100,t/12));
+    }
+    function fotAt(t){
+      return headcountAt(t)*avgFotAt(t);
+    }
+
+    var rows=[];
+    for(var t=0;t<=H;t++){
+      var rev=revenueAt(t);
+      var marketing=budgetCurve(params.startMkt,marketingEnd,t,targetIdx);
+      var fot=fotAt(t);
+      var dev=budgetCurve(params.startDev,devEnd,t,targetIdx);
+      var gross=rev*inp.grossMargin/100;
+      var ga=rev*inp.gaShare/100;
+      var risk=rev*inp.riskShare/100;
+      var opex=marketing+fot+dev+ga+risk;
+      var revenueTax=rev*inp.taxRate/100;
+      // np = rev×marginFactor − mkt − fot − dev; grossMargin и все %-доли
+      // напрямую влияют на каждый месяц, а не только на конечную точку.
+      var np=gross-opex-revenueTax;
+      var ebitda=rev-(marketing+fot+dev+ga+risk);
+      rows.push({t:t,rev:rev,gross:gross,marketing:marketing,fot:fot,dev:dev,ga:ga,risk:risk,
+        opex:opex,tax:revenueTax,np:np,ebitda:ebitda,headcount:headcountAt(t)});
+    }
+    return {rows:rows,revEnd:revEnd,marketingEnd:marketingEnd,devEnd:devEnd};
+  }
+
+  // Solver: бисекция по revEnd, чтобы np[targetIdx] === targetNetProfit.
+  // np(targetIdx) монотонно растёт по revEnd (маржинальный фактор выше суммы
+  // долей маркетинга и разработки), поэтому бисекция сходится за 40 итераций.
+  function solveForTarget(params,targetNetProfit){
+    var lo=params.start,hi=Math.max(params.start*1000,targetNetProfit*100);
+    for(var i=0;i<SOLVER_ITERATIONS;i++){
+      var mid=(lo+hi)/2;
+      params.revEnd=mid;
+      var npAtTarget=computeSeries(params).rows[params.targetIdx].np;
+      if(npAtTarget<targetNetProfit)lo=mid;else hi=mid;
+    }
+    return (lo+hi)/2;
+  }
+
+  // Растущая доля SEO-трафика: снижает эффективный CAC во времени.
+  function seoShareAt(inp,t,H){
+    var s0=clamp(inp.seoShareStart,0,100)/100;
+    var s1=clamp(inp.seoShareEnd,0,100)/100;
+    var lo=Math.min(s0,s1),hi=Math.max(s0,s1);
+    return clamp(s0+(s1-s0)*(t/Math.max(1,H)),lo,hi);
+  }
+
   function compute(){
     var inp=inputs();
-    var revEnd = inp.targetNetProfit/(inp.netMargin/100);
-    var marketingEnd = revEnd*inp.marketingShare/100;
-    var fotEnd = revEnd*inp.fotShare/100;
-    var devEnd = revEnd*inp.devShare/100;
-
+    var season=seasonality();
     var H=Math.max(1,Math.round(inp.horizonMonths));
     var monthKeys=[];
     for(var kt=0;kt<=H;kt++)monthKeys.push(monthKey(inp,kt));
+    var targetIdx=resolveTargetIdx(inp,H);
     var start=inp.startRevenue>0?inp.startRevenue:DEFAULTS.startRevenue;
     var startMkt=inp.startMarketing>0?inp.startMarketing:DEFAULTS.startMarketing;
     var startFot=inp.startFot>0?inp.startFot:DEFAULTS.startFot;
     var startDev=inp.startDev>0?inp.startDev:DEFAULTS.startDev;
-    var mktG=(marketingEnd>0&&startMkt>0)?Math.pow(marketingEnd/startMkt,1/H)-1:0;
     // Доля внутреннего масштаба, из которой после переменных G&A/резерва/налога
     // покрываются маркетинг, ФОТ, разработка и целевая чистая прибыль.
     var marginFactor=(inp.grossMargin-inp.gaShare-inp.riskShare-inp.taxRate)/100;
     marginFactor=Math.max(0.01,marginFactor);
 
-    var bridgePlan=bridgeFinancePlan();
-    var bridgeMap=bridgeProfitMap(bridgePlan);
-    var dec2027Idx=monthIndexForKey(inp,'2027-12',H);
-    var dec2028Idx=monthIndexForKey(inp,'2028-12',H);
-    var dec2028Target=Math.max(Number(inp.minNetProfitDec2028)||0,DEC_2028_MIN_NET_PROFIT);
-    var lastBridgeIdx=-1,lastBridgeProfit=null;
-    for(var bt=0;bt<=H;bt++){
-      var bk=monthKeys[bt];
-      if(bridgeMap[bk]!=null){lastBridgeIdx=bt;lastBridgeProfit=bridgeMap[bk];}
-    }
-    var startNetApprox=start*marginFactor-startMkt-startFot-startDev;
-    var anchorIdx=lastBridgeIdx>=0?lastBridgeIdx:0;
-    var anchorProfit=lastBridgeProfit!=null?lastBridgeProfit:startNetApprox;
-    function targetNetForMonth(t){
-      var key=monthKeys[t];
-      if(Object.prototype.hasOwnProperty.call(bridgeMap,key))return bridgeMap[key];
-      if(t<=anchorIdx)return anchorProfit;
-      if(dec2028Idx>=0&&t<=dec2028Idx){
-        return easedValue(anchorProfit,Math.max(dec2028Target,anchorProfit),anchorIdx,dec2028Idx,t);
-      }
-      var hasDec2028Anchor=dec2028Idx>=0&&dec2028Idx>anchorIdx;
-      var fromIdx=anchorIdx;
-      var fromVal=anchorProfit;
-      if(hasDec2028Anchor){
-        fromIdx=dec2028Idx;
-        fromVal=Math.max(dec2028Target,anchorProfit);
-      }
-      return easedValue(fromVal,inp.targetNetProfit,fromIdx,H,t);
-    }
+    var params={inp:inp,H:H,targetIdx:targetIdx,start:start,startMkt:startMkt,
+      startDev:startDev,marginFactor:marginFactor,revEnd:start};
+    params.revEnd=solveForTarget(params,inp.targetNetProfit);
+    var series=computeSeries(params);
+    var revEnd=series.revEnd;
+    var marketingEnd=series.marketingEnd;
+    var devEnd=series.devEnd;
 
     // Объёмная воронка из показателей сегментов (может отсутствовать, если модуль
     // сегментов не загружен — тогда funnel===null и объёмы просто не показываются).
     var funnel=segmentFunnel();
 
+    // Калибровка ёмкости маркетингового канала k на t=0 через воронку:
+    // R·S₀·k·B₀^α должно равняться стартовой валовой отдаче
+    // (startNp + startMarketing + startFot + startDev = start×marginFactor).
+    var alpha=clamp(inp.alpha,0.5,0.9);
+    var kChannel=null;
+    if(funnel&&funnel.blendedPayout>0&&startMkt>0){
+      var startNp=start*marginFactor-startMkt-series.rows[0].fot-startDev;
+      kChannel=(startNp+startMkt+series.rows[0].fot+startDev)/
+        (funnel.blendedPayout*season[0]*Math.pow(startMkt,alpha));
+    }
+
     var rows=[];
-    var cumProfit=0, minCum=0, breakEvenIdx=-1, targetIdx=-1;
+    var cumProfit=0, minCum=0, breakEvenIdx=-1, hitIdx=-1;
+    var cash=Math.max(0,inp.startCashReserve);
+    var prevCash=cash;
     for(var t=0;t<=H;t++){
-      var marketing = startMkt*Math.pow(1+mktG,t);
-      var fot = budgetCurve(startFot,fotEnd,t,H);
-      var avgFotAtT=Math.max(1,inp.avgFot*Math.pow(1+inp.fotIndex/100,(t-H)/12));
-      var hc  = Math.max(0,Math.round(fot/avgFotAtT));
-      var dev = budgetCurve(startDev,devEnd,t,H);
-      var targetNp=targetNetForMonth(t);
-      // Первый месяц фиксируем на стартовой выручке; дальше выручка выводится
-      // из целевой чистой прибыли месяца, расходов и налога от общей выручки.
-      var rev = t===0?start:Math.max(0,(targetNp+marketing+fot+dev)/marginFactor);
-      var gross = rev*inp.grossMargin/100;
-      var ga  = rev*inp.gaShare/100;
-      var risk= rev*inp.riskShare/100;
-      var opex= marketing+fot+dev+ga+risk;
-      var revenueTax=rev*inp.taxRate/100;
-      var np  = gross-opex-revenueTax;
-      cumProfit += np;
+      var s=series.rows[t];
+      cumProfit+=s.np;
       if(cumProfit<minCum)minCum=cumProfit;
       if(breakEvenIdx<0&&cumProfit>=0&&t>0)breakEvenIdx=t;
-      if(targetIdx<0&&np>=inp.targetNetProfit)targetIdx=t;
-      var row={t:t,label:monthLabel(inp,t),key:monthKeys[t],rev:rev,gross:gross,marketing:marketing,fot:fot,dev:dev,ga:ga,risk:risk,opex:opex,tax:revenueTax,np:np,cum:cumProfit,headcount:hc,bridgeProfit:bridgeMap[monthKeys[t]]!=null};
+      if(hitIdx<0&&s.np>=inp.targetNetProfit)hitIdx=t;
+      // Касса, Burn Rate и Runway (§8): cash[t] = cash[t−1] + np[t].
+      prevCash=cash;
+      cash=cash+s.np;
+      var burn=prevCash-cash; // >0 — компания тратит больше, чем зарабатывает
+      var runway=burn>0?Math.max(0,cash)/burn:Infinity;
+      var row={t:t,label:monthLabel(inp,t),key:monthKeys[t],rev:s.rev,gross:s.gross,
+        marketing:s.marketing,fot:s.fot,dev:s.dev,ga:s.ga,risk:s.risk,opex:s.opex,
+        tax:s.tax,np:s.np,ebitda:s.ebitda,cum:cumProfit,headcount:s.headcount,
+        cash:cash,burn:burn,runway:runway,
+        // Справочный KPI: доля ФОТ в выручке (не входной параметр).
+        fotShare:s.rev>0?s.fot/s.rev*100:0,
+        seoShare:seoShareAt(inp,t,H)};
       if(funnel){
         // Объёмы воронки, выведенные из выручки месяца через конверсии сегментов.
-        row.approvals=rev*funnel.apprPerRuble;
-        row.applications=rev*funnel.appsPerRuble;
-        row.clicks=rev*funnel.clicksPerRuble;
-        row.contacts=rev*funnel.contactsPerRuble;
-        row.traffic=rev*funnel.trafficPerRuble;
+        row.approvals=s.rev*funnel.apprPerRuble;
+        row.applications=s.rev*funnel.appsPerRuble;
+        row.clicks=s.rev*funnel.clicksPerRuble;
+        row.contacts=s.rev*funnel.contactsPerRuble;
+        row.traffic=s.rev*funnel.trafficPerRuble;
+        // SEO-трафик не расходует маркетинговый бюджет: эффективный CAC
+        // считается только от платной части бюджета и снижается с ростом SEO.
+        var paidShare=1-row.seoShare;
+        row.effectiveMarketingCost=s.marketing*paidShare;
+        row.effectiveCac=row.approvals>0?row.effectiveMarketingCost/row.approvals:0;
+        // BEP (точка безубыточности, ₽): TFC / (1 − VC/P),
+        // TFC = fot+dev, VC = маркетинг на 1 выдачу, P = средняя выплата.
+        var vcPerUnit=row.approvals>0?s.marketing/row.approvals:0;
+        var bepDenom=1-vcPerUnit/funnel.blendedPayout;
+        row.bep=bepDenom>0?(s.fot+s.dev)/bepDenom:null;
+        // Нелинейная прибыль маркетингового канала: PR = R·S·k·B^α − B − FC.
+        if(kChannel!=null){
+          row.marketingProfit=funnel.blendedPayout*season[t%12]*kChannel*
+            Math.pow(s.marketing,alpha)-s.marketing-(s.fot+s.dev);
+        }
       }
       rows.push(row);
     }
 
-    var endRow=rows[rows.length-1]||{rev:0,gross:0,marketing:0,fot:0,dev:0,ga:0,risk:0,opex:0,tax:0,np:0,headcount:0};
-    revEnd=endRow.rev;
-    var grossEnd=endRow.gross;
-    var headcount=endRow.headcount;
-    var gaEnd=endRow.ga;
-    var riskEnd=endRow.risk;
-    var opexEnd=endRow.opex;
-    var revenueTaxEnd=endRow.tax;
-    var npEnd=endRow.np;
-    var dec2027Profit=dec2027Idx>=0&&rows[dec2027Idx]?rows[dec2027Idx].np:null;
-    var dec2028Profit=dec2028Idx>=0&&rows[dec2028Idx]?rows[dec2028Idx].np:null;
-    var growthBase=(dec2027Profit!=null&&dec2027Profit>0)?dec2027Profit:Math.max(1,anchorProfit);
-    // Если пользователь убрал одну из контрольных дат за горизонт, считаем темп
-    // на стандартном годовом окне планирования.
-    var growthSteps=(dec2028Idx>=0&&dec2027Idx>=0&&dec2028Idx>dec2027Idx)?(dec2028Idx-dec2027Idx):DEFAULT_PROFIT_GROWTH_STEPS;
-    var g = growthBase>0?Math.pow(Math.max(dec2028Target,growthBase)/growthBase,1/Math.max(1,growthSteps))-1:0;
+    var endRow=rows[rows.length-1];
+    var targetRow=rows[targetIdx];
 
     var funnelEnd=funnel?{
-      approvals:endRow.rev*funnel.apprPerRuble,
-      applications:endRow.rev*funnel.appsPerRuble,
-      clicks:endRow.rev*funnel.clicksPerRuble,
-      contacts:endRow.rev*funnel.contactsPerRuble,
-      traffic:endRow.rev*funnel.trafficPerRuble,
+      approvals:endRow.approvals,
+      applications:endRow.applications,
+      clicks:endRow.clicks,
+      contacts:endRow.contacts,
+      traffic:endRow.traffic,
       blendedPayout:funnel.blendedPayout,
       avgCrVc:funnel.avgCrVc,
       avgCrCc:funnel.avgCrCc,
@@ -472,16 +565,17 @@
       avgCrAi:funnel.avgCrAi
     }:null;
 
+    var g=targetIdx>0&&start>0?Math.pow(revEnd/start,1/targetIdx)-1:0;
+
     return {
-      inp:inp,
-      revEnd:revEnd, grossEnd:grossEnd, marketingEnd:marketingEnd, fotEnd:fotEnd,
-      headcount:headcount, devEnd:devEnd, gaEnd:gaEnd, riskEnd:riskEnd,
-      opexEnd:opexEnd, taxEnd:revenueTaxEnd, npEnd:npEnd,
-      startEff:start, startMktEff:startMkt, startFotEff:startFot, startDevEff:startDev,
+      inp:inp, seasonality:season, alpha:alpha, kChannel:kChannel,
+      revEnd:endRow.rev, grossEnd:endRow.gross, marketingEnd:endRow.marketing, fotEnd:endRow.fot,
+      headcount:endRow.headcount, devEnd:endRow.dev, gaEnd:endRow.ga, riskEnd:endRow.risk,
+      opexEnd:endRow.opex, taxEnd:endRow.tax, npEnd:endRow.np,
+      startEff:start, startMktEff:startMkt, startFotEff:rows[0].fot, startDevEff:startDev,
       monthlyGrowth:g, horizon:H, rows:rows, funnel:funnelEnd,
-      breakEvenIdx:breakEvenIdx, targetIdx:targetIdx, peakInvest:-minCum,
-      dec2027Idx:dec2027Idx, dec2028Idx:dec2028Idx, dec2027Profit:dec2027Profit,
-      dec2028Profit:dec2028Profit, dec2028Target:dec2028Target, bridgeUsed:lastBridgeIdx>=0
+      breakEvenIdx:breakEvenIdx, targetIdx:targetIdx, hitIdx:hitIdx, peakInvest:-minCum,
+      targetRow:targetRow, solvedRevEnd:revEnd, marginFactor:marginFactor
     };
   }
 
@@ -501,14 +595,17 @@
           '<button type="button" class="cjm-reset-btn" id="fin100Reset" title="Сбросить все параметры к значениям по умолчанию">Сбросить к дефолтам</button>'+
         '</div>'+
       '</div>'+
-      '<p class="fin100-lead">Модель сфокусирована на чистой прибыли: декабрь 2027 берётся из вкладки «Финмодель 2027», '+
-        'декабрь 2028 закреплён на уровне не ниже '+esc(millions(DEFAULTS.minNetProfitDec2028))+' чистыми в месяц, '+
-        'финальная цель — '+esc(millions(DEFAULTS.targetNetProfit))+' чистыми. '+
-        'Внутренние расчёты автоматически подбирают масштаб, расходы, штат и объёмы воронки.</p>'+
+      '<p class="fin100-lead">Модель сфокусирована на чистой прибыли: единственные якоря — стартовая выручка (t=0) '+
+        'и целевая чистая прибыль на выбранную дату. Solver автоматически подбирает конечную выручку, '+
+        'а масштаб, расходы, штат и объёмы воронки выводятся из формул — фиксированных месяцев в таблице нет.</p>'+
       '<div class="fin100-chain" id="fin100Chain"></div>'+
       '<div class="card"><div class="card-title"><div><h2>Параметры модели</h2></div></div>'+
         '<p class="fin100-note">Параметры разбиты на три группы по функциональному назначению. Каждое поле снабжено пояснением, как оно влияет на итог.</p>'+
         '<div class="fin100-inputs" id="fin100Inputs"></div>'+
+      '</div>'+
+      '<div class="card"><div class="card-title"><div><h2>Сезонность по месяцам</h2></div></div>'+
+        '<p class="fin100-note">Коэффициенты сезонности S (по умолчанию 1.0) применяются в нелинейной модели прибыли маркетингового канала: PR = R·S·k·B^α − B − FC.</p>'+
+        '<div class="fin100-seasonality" id="fin100Seasonality"></div>'+
       '</div>'+
       '<div class="card"><div class="card-title"><div><h2>Ключевые показатели по чистой прибыли</h2></div></div>'+
         '<div class="fin100-kpis" id="fin100Kpis"></div>'+
@@ -539,6 +636,11 @@
       '.fin100-chain-item.is-target .fin100-chain-value{color:var(--green)}'+
       '.fin100-chain-item.is-derived{border-left:3px solid var(--blue)}'+
       '.fin100-inputs{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:12px}'+
+      '.fin100-seasonality{display:grid;grid-template-columns:repeat(auto-fill,minmax(90px,1fr));gap:8px}'+
+      '.fin100-season-item{display:flex;flex-direction:column;gap:4px}'+
+      '.fin100-season-item span{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--muted)}'+
+      '.fin100-season-item input{border:1px solid var(--line-strong);border-radius:var(--radius-xs);padding:8px 10px;background:var(--surface-2);font:inherit;font-size:13px;font-weight:600;color:var(--text);font-variant-numeric:tabular-nums;width:100%;box-sizing:border-box}'+
+      '.fin100-season-item input:focus{outline:2px solid var(--blue);outline-offset:1px}'+
       '.fin100-input{display:flex;flex-direction:column;gap:5px}'+
       '.fin100-input-label{font-size:11.5px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);line-height:1.3}'+
       '.fin100-input-suffix{display:block;font-size:11px;font-weight:600;color:var(--muted);text-transform:none;letter-spacing:0;margin-top:2px}'+
@@ -594,15 +696,15 @@
   function renderChain(res){
     var host=$('fin100Chain');if(!host)return;
     var items=[
-      {tone:'target',formula:'Из финмодели 2027',value:res.dec2027Profit!=null?millions(res.dec2027Profit):'—',cap:'Чистая прибыль · декабрь 2027'},
-      {tone:'target',formula:'Контрольная точка',value:res.dec2028Profit!=null?millions(res.dec2028Profit):'—',cap:'Чистая прибыль · декабрь 2028, минимум '+millions(res.dec2028Target)},
-      {tone:'target',formula:'Финальная цель',value:millions(res.npEnd),cap:'Чистая прибыль на конце горизонта'},
+      {tone:'target',formula:'Якорь t=0',value:millions(res.startEff),cap:'Стартовая выручка — точка старта всего ряда'},
+      {tone:'target',formula:'Якорь цели',value:res.targetRow?millions(res.targetRow.np):'—',cap:'Чистая прибыль · '+monthLabel(res.inp,res.targetIdx)+' (цель '+millions(res.inp.targetNetProfit)+')'},
+      {tone:'derived',formula:'Solver',value:millions(res.solvedRevEnd),cap:'Подобранная выручка на целевой дате'},
       {tone:'derived',formula:'Расходы + команда',value:millions(res.opexEnd),cap:'OPEX в месяц на конце горизонта'},
-      {tone:'derived',formula:'ФОТ / средний ФОТ',value:fmt(res.headcount)+' чел',cap:'Численность штата'}
+      {tone:'derived',formula:'Штат × средний ФОТ',value:fmt(res.headcount)+' чел',cap:'Численность штата на конце горизонта'}
     ];
     if(res.funnel){
       items.push(
-        {tone:'derived',formula:'Внутренний масштаб / выплата',value:qty(res.funnel.approvals)+' выдач',cap:'Выдачи в месяц — из показателей сегментов'},
+        {tone:'derived',formula:'Выручка / выплата',value:qty(res.funnel.approvals)+' выдач',cap:'Выдачи в месяц — из показателей сегментов'},
         {tone:'derived',formula:'Выдачи / средние CR сегментов',value:qty(res.funnel.traffic)+' виз.',cap:'Требуемый трафик в месяц'}
       );
     }
@@ -634,23 +736,37 @@
   function renderKpis(res){
     var host=$('fin100Kpis');if(!host)return;
     var actualMargin = res.revEnd>0?(res.npEnd/res.revEnd*100):0;
-    var hitTarget = res.npEnd>=res.inp.targetNetProfit;
-    var hit2028 = res.dec2028Profit!=null&&res.dec2028Profit>=res.dec2028Target;
+    var targetNp=res.targetRow?res.targetRow.np:0;
+    var hitTarget = targetNp>=res.inp.targetNetProfit*0.999;
+    // Burn Rate / Runway — по первому месяцу после старта (текущее состояние кассы).
+    var burnRow=res.rows[1]||res.rows[0];
+    var burning=burnRow.burn>0;
+    var startRow=res.rows[0];
+    var endRow=res.rows[res.rows.length-1];
     var kpis=[
-      {tone:res.bridgeUsed?'green':'orange',label:'Чистая прибыль · декабрь 2027',value:res.dec2027Profit!=null?millions(res.dec2027Profit):'—',sub:res.bridgeUsed?'Совпадает с вкладкой «Финмодель 2027»':'Нет данных моста — используется расчётная траектория'},
-      {tone:hit2028?'green':'red',label:'Чистая прибыль · декабрь 2028',value:res.dec2028Profit!=null?millions(res.dec2028Profit):'—',sub:'Минимум '+millions(res.dec2028Target)+' в месяц'},
-      {tone:hitTarget?'green':'red',label:'Чистая прибыль на конце',value:millions(res.npEnd),sub:'Финальная цель '+millions(res.inp.targetNetProfit)+' в месяц'},
-      {tone:'blue',label:'Фактическая чистая маржа',value:pct(actualMargin,1),sub:'Справочно: чистая прибыль / внутренний масштаб бизнеса'},
+      {tone:hitTarget?'green':'red',label:'Чистая прибыль на целевой дате',value:res.targetRow?millions(res.targetRow.np):'—',sub:'Цель '+millions(res.inp.targetNetProfit)+' · '+monthLabel(res.inp,res.targetIdx)},
+      {tone:'blue',label:'Выручка на целевой дате',value:millions(res.solvedRevEnd),sub:'Подобрана solver-ом под целевую прибыль'},
+      {tone:'green',label:'Чистая прибыль на конце',value:millions(res.npEnd),sub:'Рост продолжается тем же темпом после цели'},
+      {tone:'blue',label:'Фактическая чистая маржа',value:pct(actualMargin,1),sub:'Справочно: чистая прибыль / выручка на конце'},
       {tone:'orange',label:'OPEX в месяц',value:millions(res.opexEnd),sub:'Маркетинг + ФОТ + разработка + G&A + резерв'},
-      {tone:'violet',label:'Штат',value:fmt(res.headcount)+' чел',sub:'ФОТ / средний ФОТ на сотрудника'},
+      {tone:'violet',label:'Штат',value:fmt(res.headcount)+' чел',sub:'Растёт от '+fmt(res.inp.startHeadcount)+' до '+fmt(res.inp.targetHeadcount)+' синхронно с выручкой'},
       {tone:'orange',label:'Маркетинг в месяц',value:millions(res.marketingEnd),sub:'На высококонкурентном рынке'},
-      {tone:'orange',label:'ФОТ с налогами',value:millions(res.fotEnd),sub:'При штате и среднем ФОТ'},
-      {tone:'blue',label:'Темп роста чистой прибыли',value:pct(res.monthlyGrowth*100,1)+' в месяц',sub:'Между декабрём 2027 и контрольной точкой 2028'},
+      {tone:'orange',label:'ФОТ с налогами',value:millions(res.fotEnd),sub:'Штат × средний ФОТ с индексацией'},
+      {tone:'blue',label:'Доля ФОТ в выручке',value:pct(endRow.fotShare,1),sub:'Справочный KPI: ФОТ / выручка, не входной параметр'},
+      {tone:'blue',label:'Темп роста выручки',value:pct(res.monthlyGrowth*100,1)+' в месяц',sub:'Между стартом и целевой датой'},
+      {tone:'blue',label:'EBITDA на конце',value:millions(endRow.ebitda),sub:'Выручка − (маркетинг + ФОТ + разработка + G&A + резерв)'},
+      {tone:burning?'red':'green',label:'Burn Rate (текущий)',value:burning?millions(burnRow.burn)+' в мес':'устойчиво',sub:'Касса[t−1] − Касса[t] на инвестиционной фазе'},
+      {tone:burning?'orange':'green',label:'Runway',value:burning?(isFinite(burnRow.runway)?fmt(burnRow.runway)+' мес':'∞'):'∞ / устойчиво',sub:'Кассовый резерв / месячный burn при burn > 0'},
       {tone:res.peakInvest>0?'red':'green',label:'Пиковый кассовый разрыв',value:millions(res.peakInvest),sub:'Максимум накопленного убытка на инвестиционной фазе'},
       {tone:'green',label:'Месяц выхода в накопленный плюс',value:res.breakEvenIdx>=0?monthLabel(res.inp,res.breakEvenIdx):'за горизонтом',sub:'Кумулятивная прибыль ≥ 0'},
-      {tone:hitTarget?'green':'red',label:'Месяц достижения цели',value:res.targetIdx>=0?monthLabel(res.inp,res.targetIdx):'за горизонтом',sub:'Месячная NP ≥ '+millions(res.inp.targetNetProfit)}
+      {tone:res.hitIdx>=0?'green':'red',label:'Месяц достижения цели',value:res.hitIdx>=0?monthLabel(res.inp,res.hitIdx):'за горизонтом',sub:'Месячная NP ≥ '+millions(res.inp.targetNetProfit)},
+      {tone:'violet',label:'Доля SEO-трафика',value:pct(startRow.seoShare*100,0)+' → '+pct(endRow.seoShare*100,0),sub:'Рост доли бесплатного трафика снижает эффективный CAC'}
     ];
     if(res.funnel){
+      var tRow=res.targetRow||endRow;
+      if(tRow.bep!=null)kpis.push({tone:'orange',label:'BEP (точка безубыточности)',value:millions(tRow.bep),sub:'TFC / (1 − VC/P) на целевой дате'});
+      if(tRow.marketingProfit!=null)kpis.push({tone:'violet',label:'Нелинейная прибыль маркетинга',value:millions(tRow.marketingProfit),sub:'PR = R·S·k·B^α − B − FC · α = '+res.alpha});
+      if(tRow.effectiveCac!=null)kpis.push({tone:'blue',label:'Эффективный CAC на выдачу',value:rub(tRow.effectiveCac),sub:'Платная часть маркетинга / выдачи, с учётом доли SEO'});
       // Объёмы воронки на конце горизонта, выведенные из требуемой выручки через
       // средние конверсии сегментов (Визит→Контакт→Клик→Заявка→Выдача).
       kpis.push(
@@ -678,12 +794,12 @@
     var host=$('fin100Table');if(!host)return;
     var note=$('fin100TableNote');
     if(note){
-      note.textContent='Траектория чистой прибыли построена от периода '+monthLabel(res.inp,0)+' до '+monthLabel(res.inp,res.horizon)+'. '+
-        (res.bridgeUsed?'Месяцы до декабря 2027 берутся из вкладки «Финмодель 2027», поэтому декабрь 2027 совпадает с базовой моделью. ':'')+
-        'Декабрь 2028 закреплён на уровне '+millions(res.dec2028Target)+' чистыми в месяц, финальная цель — '+millions(res.inp.targetNetProfit)+'. '+
-        'Стартовые бюджеты: маркетинг '+millions(res.startMktEff)+', ФОТ '+millions(res.startFotEff)+', разработка '+millions(res.startDevEff)+' в месяц; дальше они растут к целевым долям масштаба на конце горизонта. '+
-        'Штат считается от бюджета ФОТ месяца и среднего ФОТ с индексацией окладов ('+pct(res.inp.fotIndex,0)+' в год). '+
-        'Общая выручка выводится в таблице, а налог каждый месяц считается от этой суммы: чистая прибыль = выручка × маржинальность после выплат − OPEX − налог от выручки. ' +
+      note.textContent='План построен от периода '+monthLabel(res.inp,0)+' до '+monthLabel(res.inp,res.horizon)+'. '+
+        'Старт таблицы жёстко равен стартовой выручке '+millions(res.startEff)+'; целевая точка — '+monthLabel(res.inp,res.targetIdx)+
+        ', где чистая прибыль сходится в '+millions(res.inp.targetNetProfit)+' (выручку подбирает solver). '+
+        'ФОТ = штат месяца × средний ФОТ с индексацией окладов ('+pct(res.inp.fotIndex,0)+' в год); штат растёт от '+
+        fmt(res.inp.startHeadcount)+' до '+fmt(res.inp.targetHeadcount)+' человек синхронно с темпом роста выручки. '+
+        'Чистая прибыль = выручка × маржинальность после выплат − OPEX − налог от выручки; изменение любой %-доли меняет все месяцы.'+
         (res.funnel?' Объёмы воронки (трафик, контакты, клики по офферам, заявки, выдачи) выведены из общей выручки через средние конверсии сегментов.':'');
     }
     var hasFunnel=!!res.funnel;
@@ -694,28 +810,43 @@
       '<th>Маркетинг</th>'+
       '<th>ФОТ</th>'+
       '<th>Штат</th>'+
+      '<th>Доля ФОТ</th>'+
       '<th>Разработка</th>'+
       '<th>G&amp;A</th>'+
       '<th>Резерв</th>'+
       '<th>OPEX</th>'+
       '<th>Налог от выручки</th>'+
+      '<th>EBITDA</th>'+
       '<th>Чистая прибыль</th>'+
       '<th>Накоплено</th>'+
+      '<th>Касса</th>'+
     '</tr></thead>';
     function td(v){var neg=v<0?' class="neg"':'';return '<td'+neg+'>'+esc(millions(v))+'</td>';}
     function tdq(v){return '<td>'+esc(qty(v))+'</td>';}
     var body='<tbody>'+res.rows.map(function(r){
       var cls=[];
       if(res.targetIdx===r.t)cls.push('is-target');
-      else if(res.dec2028Idx===r.t)cls.push('is-milestone');
       else if(res.breakEvenIdx===r.t)cls.push('is-breakeven');
       return '<tr'+(cls.length?' class="'+cls.join(' ')+'"':'')+'>'+
         '<td>'+esc(r.label)+'</td>'+
         (hasFunnel?tdq(r.traffic)+tdq(r.contacts)+tdq(r.clicks)+tdq(r.applications)+tdq(r.approvals):'')+
-        td(r.rev)+td(r.marketing)+td(r.fot)+'<td>'+esc(fmt(r.headcount))+'</td>'+td(r.dev)+td(r.ga)+td(r.risk)+td(r.opex)+td(r.tax)+td(r.np)+td(r.cum)+
+        td(r.rev)+td(r.marketing)+td(r.fot)+'<td>'+esc(fmt(r.headcount))+'</td>'+
+        '<td>'+esc(pct(r.fotShare,1))+'</td>'+
+        td(r.dev)+td(r.ga)+td(r.risk)+td(r.opex)+td(r.tax)+td(r.ebitda)+td(r.np)+td(r.cum)+td(r.cash)+
       '</tr>';
     }).join('')+'</tbody>';
     host.innerHTML=head+body;
+  }
+
+  function renderSeasonality(){
+    var host=$('fin100Seasonality');if(!host)return;
+    var season=seasonality();
+    host.innerHTML=season.map(function(v,i){
+      return '<label class="fin100-season-item">'+
+        '<span>'+esc(MONTH_NAMES_RU[i])+'</span>'+
+        '<input type="number" min="0.1" max="5" step="0.05" data-fin100-season="'+i+'" value="'+esc(v)+'" aria-label="Сезонность: '+esc(MONTH_NAMES_RU[i])+'">'+
+      '</label>';
+    }).join('');
   }
 
   function renderTeam(){
@@ -777,6 +908,14 @@
         renderChain(res);renderKpis(res);renderTable(res);
         return;
       }
+      var seasonIdx=el&&el.getAttribute&&el.getAttribute('data-fin100-season');
+      if(seasonIdx!=null){
+        var normalizedSeason=setSeasonality(seasonIdx,el.value);
+        if(el.value===''||Number(el.value)<=0)el.value=normalizedSeason;
+        var res2=compute();
+        renderChain(res2);renderKpis(res2);renderTable(res2);
+        return;
+      }
       var teamIdx=el&&el.getAttribute&&el.getAttribute('data-fin100-team');
       if(teamIdx!=null){
         var field=el.getAttribute('data-fin100-team-field');
@@ -798,6 +937,7 @@
     var section=ensurePanel();
     if(!section)return;
     renderInputs();
+    renderSeasonality();
     var res=compute();
     renderChain(res);
     renderKpis(res);
@@ -811,7 +951,13 @@
     id:'finance100',
     label:'Финмодель 100 млн ₽',
     render:render,
-    ensurePanel:ensurePanel
+    ensurePanel:ensurePanel,
+    // Расчётное ядро экспортируется для unit-тестов (node): compute строит
+    // полный план, setInput/resetAll управляют входами без UI.
+    compute:compute,
+    setInput:setInput,
+    resetAll:resetAll,
+    defaults:DEFAULTS
   };
 
   // Автоинициализация панели (скрытая до активации таба).
