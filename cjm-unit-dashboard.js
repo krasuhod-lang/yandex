@@ -632,18 +632,19 @@
     };
   })();
   function collectShareState(){
-    var out={};
-    SHARED_STATE_KEYS.forEach(function(k){
-      var v=read(k,null);
-      if(v!=null)out[k]=v;
-    });
-    return out;
+    return {
+      [STORAGE_KEY]:read(STORAGE_KEY,{segment:segments[0].id})||{segment:segments[0].id},
+      [MANUAL_KEY]:read(MANUAL_KEY,{})||{},
+      [GLOBAL_KEY]:read(GLOBAL_KEY,{})||{},
+      [SHARES_KEY]:read(SHARES_KEY,{})||{},
+      [DESC_KEY]:read(DESC_KEY,{})||{},
+      [FINANCE_KEY]:read(FINANCE_KEY,{})||{}
+    };
   }
   function buildShareUrl(){
     var payload=collectShareState();
     var json=JSON.stringify(payload);
     var base=location.origin+location.pathname+location.search;
-    if(json==='{}')return base;
     // Короткий формат #z= (сжатый). При сбое сжатия — откат на #s= (base64),
     // чтобы ссылка всё равно работала.
     var compressed='';
@@ -670,8 +671,7 @@
     var applied=false;
     SHARED_STATE_KEYS.forEach(function(k){
       if(data[k]!=null){
-        memStore[k]=data[k];
-        try{localStorage.setItem(k,JSON.stringify(data[k]));}catch(e){}
+        write(k,data[k]);
         applied=true;
       }
     });
@@ -781,7 +781,7 @@
 
   // Импортируем состояние из #s=... до первого рендера, чтобы сторонний
   // пользователь, открывший ссылку, увидел ровно те же данные.
-  applyStateFromUrl();
+  var urlStateApplied=applyStateFromUrl();
 
   function fmt(v){return Math.round(Number(v)||0).toLocaleString('ru-RU');}
   function rub(v){return fmt(v)+' ₽';}
@@ -2964,10 +2964,14 @@
     initShareLink();
     initFinShareTools();
     renderAll();
-    loadSharedState(function(changed){
-      if(changed){applyStoredShares();renderAll();}
-      else updateSharedStatus();
-    });
+    if(urlStateApplied){
+      updateSharedStatus();
+    }else{
+      loadSharedState(function(changed){
+        if(changed){applyStoredShares();renderAll();}
+        else updateSharedStatus();
+      });
+    }
   }
 
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init);
