@@ -3072,6 +3072,19 @@
         else updateSharedStatus();
       });
     }
+    // Если пользователь открывает/вставляет ссылку с данными (#z=/#s=) в уже
+    // открытой вкладке, обычная навигация не выполняется — меняется только hash.
+    // Без этого обработчика данные из ссылки молча игнорировались бы (частая
+    // причина «перешёл по ссылке на другом ПК, а данные не подтянулись»).
+    window.addEventListener('hashchange',function(){
+      if(!/[#&](?:z|s)=/.test(String(location.hash||'')))return;
+      if(!applyStateFromUrl())return;
+      try{history.replaceState(null,'',location.origin+location.pathname+location.search);}catch(e){}
+      applyStoredShares();
+      renderAll();
+      updateSharedStatus();
+      showToast('Данные из ссылки загружены');
+    });
   }
 
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init);
