@@ -364,8 +364,13 @@
       if(dec2028Idx>=0&&t<=dec2028Idx){
         return easedValue(anchorProfit,Math.max(dec2028Target,anchorProfit),anchorIdx,dec2028Idx,t);
       }
-      var fromIdx=(dec2028Idx>=0&&dec2028Idx>anchorIdx)?dec2028Idx:anchorIdx;
-      var fromVal=(dec2028Idx>=0&&dec2028Idx>anchorIdx)?Math.max(dec2028Target,anchorProfit):anchorProfit;
+      var hasDec2028Anchor=dec2028Idx>=0&&dec2028Idx>anchorIdx;
+      var fromIdx=anchorIdx;
+      var fromVal=anchorProfit;
+      if(hasDec2028Anchor){
+        fromIdx=dec2028Idx;
+        fromVal=Math.max(dec2028Target,anchorProfit);
+      }
       return easedValue(fromVal,inp.targetNetProfit,fromIdx,H,t);
     }
 
