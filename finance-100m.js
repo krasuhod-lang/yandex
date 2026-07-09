@@ -359,7 +359,7 @@
     var anchorProfit=lastBridgeProfit!=null?lastBridgeProfit:startNetApprox;
     function targetNetForMonth(t){
       var key=monthKeys[t];
-      if(bridgeMap[key]!=null)return bridgeMap[key];
+      if(Object.prototype.hasOwnProperty.call(bridgeMap,key))return bridgeMap[key];
       if(t<=anchorIdx)return anchorProfit;
       if(dec2028Idx>=0&&t<=dec2028Idx){
         return easedValue(anchorProfit,Math.max(dec2028Target,anchorProfit),anchorIdx,dec2028Idx,t);
@@ -471,7 +471,10 @@
           '<button type="button" class="cjm-reset-btn" id="fin100Reset" title="Сбросить все параметры к значениям по умолчанию">Сбросить к дефолтам</button>'+
         '</div>'+
       '</div>'+
-      '<p class="fin100-lead">Модель сфокусирована на чистой прибыли: декабрь 2027 берётся из вкладки «Финмодель 2027», декабрь 2028 закреплён на уровне не ниже '+esc(millions(DEFAULTS.minNetProfitDec2028))+' чистыми в месяц, финальная цель — '+esc(millions(DEFAULTS.targetNetProfit))+' чистыми. Внутренние расчёты автоматически подбирают масштаб, расходы, штат и объёмы воронки.</p>'+
+      '<p class="fin100-lead">Модель сфокусирована на чистой прибыли: декабрь 2027 берётся из вкладки «Финмодель 2027», '+
+        'декабрь 2028 закреплён на уровне не ниже '+esc(millions(DEFAULTS.minNetProfitDec2028))+' чистыми в месяц, '+
+        'финальная цель — '+esc(millions(DEFAULTS.targetNetProfit))+' чистыми. '+
+        'Внутренние расчёты автоматически подбирают масштаб, расходы, штат и объёмы воронки.</p>'+
       '<div class="fin100-chain" id="fin100Chain"></div>'+
       '<div class="card"><div class="card-title"><div><h2>Параметры модели</h2></div></div>'+
         '<p class="fin100-note">Параметры разбиты на три группы по функциональному назначению. Каждое поле снабжено пояснением, как оно влияет на итог.</p>'+
@@ -529,6 +532,8 @@
       '.fin100-table tbody tr:nth-child(even){background:var(--surface-2)}'+
       '.fin100-table tbody tr.is-target{background:color-mix(in srgb,var(--green) 12%,var(--surface))}'+
       '.fin100-table tbody tr.is-target td{color:var(--green);font-weight:700}'+
+      '.fin100-table tbody tr.is-milestone{background:color-mix(in srgb,var(--blue) 10%,var(--surface))}'+
+      '.fin100-table tbody tr.is-milestone td{color:var(--blue);font-weight:700}'+
       '.fin100-table tbody tr.is-breakeven{background:color-mix(in srgb,var(--blue) 8%,var(--surface))}'+
       '.fin100-table td.neg{color:var(--red)}'+
       '';
@@ -654,7 +659,7 @@
     var body='<tbody>'+res.rows.map(function(r){
       var cls=[];
       if(res.targetIdx===r.t)cls.push('is-target');
-      else if(res.dec2028Idx===r.t)cls.push('is-target');
+      else if(res.dec2028Idx===r.t)cls.push('is-milestone');
       else if(res.breakEvenIdx===r.t)cls.push('is-breakeven');
       return '<tr'+(cls.length?' class="'+cls.join(' ')+'"':'')+'>'+
         '<td>'+esc(r.label)+'</td>'+
