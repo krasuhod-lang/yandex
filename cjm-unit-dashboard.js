@@ -32,6 +32,7 @@
   var FIN_MONTHS=['Июль 2026','Август 2026','Сентябрь 2026','Октябрь 2026','Ноябрь 2026','Декабрь 2026','Январь 2027','Февраль 2027','Март 2027','Апрель 2027','Май 2027','Июнь 2027','Июль 2027','Август 2027','Сентябрь 2027','Октябрь 2027','Ноябрь 2027','Декабрь 2027'];
   var FIN_MONTHS_SHORT=['Июл26','Авг26','Сен26','Окт26','Ноя26','Дек26','Янв27','Фев27','Мар27','Апр27','Май27','Июн27','Июл27','Авг27','Сен27','Окт27','Ноя27','Дек27'];
   var FIN_MONTH_KEYS=['2026-07','2026-08','2026-09','2026-10','2026-11','2026-12','2027-01','2027-02','2027-03','2027-04','2027-05','2027-06','2027-07','2027-08','2027-09','2027-10','2027-11','2027-12'];
+  var FIN_TARGET_NET_PROFIT_DEC_2027=16728855;
   // Модель драйвится не визитами/CPC, а бюджетами по источникам трафика и
   // «стоимостью оставленного номера» (CPL): бюджет_i / CPL_i = контакты_i.
   // Контакты → Заявки → Выдачи. Доли и CPA — по 5 сегментам, редактируются вручную.
@@ -47,7 +48,8 @@
     // т.е. через 1,5 года от старта в Июле 2026). Первые месяцы дают слабый рост,
     // затем эффект накопленных вложений ускоряется. После мая 2027 включается
     // отдельное замедление, чтобы большие месячные объёмы не разгонялись слишком резко.
-    monthlyGrowth:37,
+    monthlyGrowth:42.39615324764201,
+    startRevenue:250000,
     // «Степень» роста управляет ФОРМОЙ траектории, а не её масштабом.
     // Модель роста (нормирована на горизонт, без «двойной экспоненты»):
     //   exp(t)  = horizon · (t / horizon)^growthPower
@@ -101,10 +103,11 @@
     // Фикс. расходы. devMonthly=100 тыс. ₽ — сниженный стартовый бюджет на
     // разработку/интеграции (вместо прежних 500 тыс. ₽), FOT не менялся.
     fotMonthly:325000, devMonthly:100000,
+    taxRate:6,
     // Центрофинанс как трекер лида (не источник объёма)
     cfApprovalShare:30, cfPayout:0,
     // Цель
-    targetRevenue:12500000
+    targetNetProfit:FIN_TARGET_NET_PROFIT_DEC_2027
   };
   var FIN_SEG_META=[
     {key:'New',name:'Новый',color:'var(--yellow)',shareKey:'shareNew',payoutKey:'payoutNew',
@@ -1350,10 +1353,16 @@
     var costGrowth=clamp(inp.costGrowthMonthly,0,200)/100;
     var paidShare=clamp(inp.paidDemandShare,0,100)/100;
     var postMayGrowthFactor=clamp(inp.postMayGrowthFactor,0,100)/100;
+    var taxRate=clamp(inp.taxRate,0,99.9)/100;
     var postMayStart=FIN_MONTHS.indexOf('Май 2027');
     var n=FIN_MONTHS.length;
     var horizon=n-1; // длина горизонта в шагах (t = 0..horizon)
-    var contacts=[],visits=[],apps=[],issues=[],revenue=[],cost=[],profit=[],cumProfit=[],cumInvest=[],cfClients=[],cfRevenue=[],ppc=[],scales=[],costScales=[];
+    var finalCost=(trafficCost0*(1+costGrowth*horizon))+(inp.fotMonthly+inp.devMonthly);
+    var targetProfit=Math.max(0,Number(inp.targetNetProfit)||0);
+    var targetRevenue=(targetProfit+finalCost)/(1-taxRate);
+    var startRevenue=Math.max(0,Number(inp.startRevenue)||0);
+    var revPerContact=blendedRevPerContact+cfShare*avgConv*inp.cfPayout;
+    var contacts=[],visits=[],apps=[],issues=[],revenue=[],cost=[],tax=[],profit=[],cumProfit=[],cumInvest=[],cfClients=[],cfRevenue=[],ppc=[],scales=[],costScales=[];
     // Помесячные ряды по сегментам (для раскрывающейся таблицы «Помесячный план»).
     // segMonthly[i] хранит месяц-за-месяцем контакты/заявки/выдачи/выручку/маркет-расход/CAC/прибыль сегмента.
     // CAC_i(t) = mediaCost_i(t) / issues_i(t), где mediaCost_i(t) — часть медиа-бюджета,
@@ -1390,10 +1399,12 @@
       var costScale=1+costGrowth*t;
       scales.push(revenueScale);
       costScales.push(costScale);
-      var totalScaledContacts=sources.items.reduce(function(sum,it){
+      var sourceScaledContacts=sources.items.reduce(function(sum,it){
         return sum+it.contacts*finSourceResponseScale(it,revenueScale,paidShare);
       },0);
       var mediaTotal=trafficCost0*costScale;
+      var revPlan=startRevenue>0?startRevenue*revenueScale:(targetRevenue*Math.pow(horizon>0?t/horizon:1,power));
+      var totalScaledContacts=revPerContact>0?revPlan/revPerContact:sourceScaledContacts;
       // Аггрегация по сегментам: контакты дробятся по долям, каждый сегмент даёт
       // свой поток заявок/выдач/выручки и свой объём визитов.
       var totalApps=0,totalIss=0,totalRev=0,totalVis=0;
@@ -1419,14 +1430,16 @@
       var cfRev=cfCl*inp.cfPayout;
       var rev=totalRev+cfRev;
       var c=mediaTotal+fixedMonthly;
-      var p=rev-c;
+      var revenueTax=rev*taxRate;
+      var p=rev-c-revenueTax;
       // Разносим фиксированные расходы по сегментам пропорционально долям (для отображения прибыли сегмента).
       // Прибыль сегмента = выручка − медиа-аллокация − доля фикс-косты. CF-выручка добавляется в общий итог,
       // а не в отдельный сегмент, поэтому сумма Σ segProfit_i может отличаться от общего profit_t на cfRev.
       for(var k=0;k<FIN_SEG_META.length;k++){
         var sc=segCache[k];
         var segFixed=fixedMonthly*shares[k];
-        var segProfit=sc.revenue-sc.mediaCost-segFixed;
+        var segTax=revenueTax*shares[k];
+        var segProfit=sc.revenue-sc.mediaCost-segFixed-segTax;
         segMonthly[k].contacts.push(sc.contacts);
         segMonthly[k].apps.push(sc.apps);
         segMonthly[k].issues.push(sc.issues);
@@ -1440,15 +1453,14 @@
       if(runProfit<0)peakNeed=Math.max(peakNeed,-runProfit);
       if(paybackIdx<0&&runProfit>=0&&t>0)paybackIdx=t;
       contacts.push(totalScaledContacts);visits.push(totalVis);apps.push(totalApps);issues.push(totalIss);
-      revenue.push(rev);cost.push(c);profit.push(p);
+      revenue.push(rev);cost.push(c);tax.push(revenueTax);profit.push(p);
       cumProfit.push(runProfit);cumInvest.push(runInvest);cfClients.push(cfCl);cfRevenue.push(cfRev);
       ppc.push(totalIss>0?p/totalIss:0);
     }
-    var lastRev=revenue[n-1],target=inp.targetRevenue;
-    var revPerContact=blendedRevPerContact+cfShare*avgConv*inp.cfPayout;
+    var lastRev=revenue[n-1],target=targetProfit;
     var neededGrowth=null;
     if(revPerContact>0&&contacts0>0&&n>1){
-      var neededEndContacts=target/revPerContact;
+      var neededEndContacts=targetRevenue/revPerContact;
       if(horizon>0){
         var seoBase=0,paidBase=0;
         sources.items.forEach(function(it){
@@ -1483,14 +1495,14 @@
       blendedPayout:blendedPayout,
       blendedRevPerContact:blendedRevPerContact,visitsPerContact:visitsPerContact,
       revPerContact:revPerContact,sources:sources,scales:scales,costScales:costScales,growthPower:power,postMayGrowthFactor:postMayGrowthFactor,
-      contacts:contacts,visits:visits,apps:apps,issues:issues,revenue:revenue,cost:cost,profit:profit,
+      contacts:contacts,visits:visits,apps:apps,issues:issues,revenue:revenue,cost:cost,tax:tax,profit:profit,
       cumProfit:cumProfit,cumInvest:cumInvest,cfClients:cfClients,cfRevenue:cfRevenue,ppc:ppc,
       segIssuesLast:segIssuesLast,segRevenueLast:segRevenueLast,segCacLast:segCacLast,
       segMonthly:segMonthly,fixedMonthly:fixedMonthly,
       blendedCac:blendedCac,blendedCacLast:blendedCacLast,
       lastRevenue:lastRev,lastProfit:profit[n-1],lastCumProfit:cumProfit[n-1],totalInvest:cumInvest[n-1],
-      lastPpc:ppc[n-1],peakNeed:peakNeed,paybackIdx:paybackIdx,target:target,
-      targetHit:lastRev>=target,neededGrowth:neededGrowth
+      lastPpc:ppc[n-1],peakNeed:peakNeed,paybackIdx:paybackIdx,target:target,targetRevenue:targetRevenue,
+      targetHit:profit[n-1]>=target,neededGrowth:neededGrowth
     };
   }
 
@@ -2584,6 +2596,7 @@
       {key:'srcOtherCpl',label:'Прочие источники · CPL (цена номера)',suffix:'₽',step:'10',min:0,max:1000000}
     ],
     finInputsFunnel:[
+      {key:'startRevenue',label:'Стартовая выручка',suffix:'₽',step:'50000',min:0,max:1000000000},
       {key:'monthlyGrowth',label:'Темп роста в месяц (база экспоненты)',suffix:'%',step:'0.5',min:-50,max:200},
       {key:'growthPower',label:'Степень роста выручки — форма траектории',suffix:'',step:'0.05',min:0.1,max:5},
       {key:'postMayGrowthFactor',label:'Скорость роста после мая 2027',suffix:'%',step:'1',min:0,max:100},
@@ -2627,9 +2640,10 @@
     finInputsBudget:[
       {key:'fotMonthly',label:'ФОТ в месяц',suffix:'₽',step:'5000',min:0,max:100000000},
       {key:'devMonthly',label:'Разработка в месяц',suffix:'₽',step:'5000',min:0,max:100000000},
+      {key:'taxRate',label:'Налог от общей выручки',suffix:'%',step:'0.1',min:0,max:99.9},
       {key:'cfApprovalShare',label:'Доля выдач в Центрофинанс',suffix:'%',step:'1',min:0,max:100},
       {key:'cfPayout',label:'Выплата Центрофинанс за клиента',suffix:'₽',step:'50',min:0,max:1000000},
-      {key:'targetRevenue',label:'Цель выручки в месяц',suffix:'₽',step:'100000',min:0,max:1000000000}
+      {key:'targetNetProfit',label:'Цель прибыли · декабрь 2027',suffix:'₽',step:'100000',min:0,max:1000000000}
     ]
   };
 
@@ -2742,7 +2756,7 @@
     var ppcTone=res.lastPpc>=0?'green':'red';
     var kpis=[
       {tone:'orange',label:'Нужно вложить',value:millions(res.peakNeed),sub:'Пиковый кассовый разрыв за горизонт'},
-      {tone:'blue',label:'Выручка · декабрь 2027',value:millions(res.lastRevenue),sub:'Цель '+millions(res.target)+' в месяц'},
+      {tone:'blue',label:'Выручка · декабрь 2027',value:millions(res.lastRevenue),sub:'Общая выручка, от неё считается налог'},
       {tone:res.lastProfit>=0?'green':'red',label:'Прибыль · декабрь 2027',value:millions(res.lastProfit),sub:'Чистыми в месяц на конец горизонта'},
       {tone:'violet',label:'CAC · декабрь 2027',value:rub(res.blendedCacLast),sub:'Медиа-бюджет / выдачи · зависит от 4 конверсий'},
       {tone:ppcTone,label:'Прибыль / 1 чел',value:rub(res.lastPpc),sub:'На одну выдачу на конец горизонта'},
@@ -2757,18 +2771,19 @@
       '</div>';
     }).join('');
     // Target strip
-    var progress=res.target>0?clamp(res.lastRevenue/res.target*100,0,100):0;
-    var gap=res.target-res.lastRevenue;
+    var progress=res.target>0?clamp(res.lastProfit/res.target*100,0,100):0;
+    var gap=res.target-res.lastProfit;
     var strip=$('finTargetStrip');
     if(strip){
       var statusItem=res.targetHit
-        ?'<div class="fin-target-item is-hit"><span class="fin-target-num">Цель достигнута</span><span class="fin-target-cap">Выручка ≥ цели</span></div>'
+        ?'<div class="fin-target-item is-hit"><span class="fin-target-num">Цель достигнута</span><span class="fin-target-cap">Прибыль ≥ цели</span></div>'
         :'<div class="fin-target-item is-gap"><span class="fin-target-num">'+esc(millions(gap))+'</span><span class="fin-target-cap">Осталось до цели</span></div>';
       strip.innerHTML=
+        '<div class="fin-target-item"><span class="fin-target-num">'+esc(millions(inp.startRevenue))+'</span><span class="fin-target-cap">Стартовая выручка</span></div>'+
         '<div class="fin-target-item"><span class="fin-target-num">'+esc(millions(res.lastRevenue))+'</span><span class="fin-target-cap">Выручка на конец</span></div>'+
-        '<div class="fin-target-item"><span class="fin-target-num">'+esc(millions(res.target))+'</span><span class="fin-target-cap">Цель · декабрь 2027</span></div>'+
+        '<div class="fin-target-item"><span class="fin-target-num">'+esc(millions(res.target))+'</span><span class="fin-target-cap">Цель прибыли · декабрь 2027</span></div>'+
         statusItem+
-        '<div class="fin-target-item"><span class="fin-target-num">'+esc(pct(inp.costGrowthMonthly,1))+'</span><span class="fin-target-cap">Расходы: линейный прирост в месяц</span></div>'+
+        '<div class="fin-target-item"><span class="fin-target-num">'+esc(pct(inp.taxRate,1))+'</span><span class="fin-target-cap">Налог от общей выручки</span></div>'+
         '<div class="fin-progress"><span style="width:'+progress.toFixed(1)+'%"></span></div>';
     }
     // Источники трафика — таблица (контакты, доли, бюджет, CPL).
@@ -2869,7 +2884,7 @@
     // из массивов res.segMonthly[i], т.е. работают ДЛЯ ЛЮБОГО МЕСЯЦА (не только последнего).
     var tbl=$('finTable');
     if(tbl){
-      var head='<thead><tr><th style="width:28px"></th><th>Месяц</th><th>Трафик, визиты</th><th>Контакты</th><th>Заявки</th><th>Выдачи</th><th>Выручка</th><th>Расходы</th><th>CAC</th><th>Прибыль</th><th>Прибыль / 1 чел</th><th>Накопл. прибыль</th></tr></thead>';
+      var head='<thead><tr><th style="width:28px"></th><th>Месяц</th><th>Трафик, визиты</th><th>Контакты</th><th>Заявки</th><th>Выдачи</th><th>Выручка</th><th>Расходы</th><th>Налог от выручки</th><th>CAC</th><th>Прибыль</th><th>Прибыль / 1 чел</th><th>Накопл. прибыль</th></tr></thead>';
       var rows='';
       for(var t=0;t<n;t++){
         var pc=res.profit[t]>=0?'fin-pos':'fin-neg';
@@ -2886,6 +2901,7 @@
           '<td>'+esc(fmt(res.issues[t]))+'</td>'+
           '<td>'+esc(rub(res.revenue[t]))+'</td>'+
           '<td>'+esc(rub(res.cost[t]))+'</td>'+
+          '<td>'+esc(rub(res.tax[t]))+'</td>'+
           '<td>'+esc(rub(cacT))+'</td>'+
           '<td class="'+pc+'">'+esc(rub(res.profit[t]))+'</td>'+
           '<td class="'+ppcCls+'">'+esc(rub(res.ppc[t]))+'</td>'+
@@ -2907,6 +2923,7 @@
             '<td>'+esc(fmt(sm.issues[t]))+'</td>'+
             '<td>'+esc(rub(sm.revenue[t]))+'</td>'+
             '<td>'+esc(rub(sm.mediaCost[t]))+' · медиа</td>'+
+            '<td>'+esc(rub(res.tax[t]*res.shares[si]))+'</td>'+
             '<td>'+esc(rub(sm.cac[t]))+'</td>'+
             '<td class="'+sProfitCls+'">'+esc(rub(sProfit))+'</td>'+
             '<td class="'+sPpcCls+'">'+esc(rub(sPpc))+'</td>'+
@@ -2943,11 +2960,12 @@
     drawChart('finChartTrajectory',{type:'line',data:{labels:labels,datasets:[
       {label:'Выручка, млн ₽',data:res.revenue.map(toM),borderColor:cBlue,backgroundColor:cBlue+'22',fill:true,borderWidth:2.5,pointRadius:2},
       {label:'Расходы, млн ₽',data:res.cost.map(toM),borderColor:cRed,borderWidth:2},
-      {label:'Цель, млн ₽',data:res.revenue.map(function(){return toM(res.target);}),borderColor:cViolet,borderWidth:1.5}
+      {label:'Выручка для цели прибыли, млн ₽',data:res.revenue.map(function(){return toM(res.targetRevenue);}),borderColor:cViolet,borderWidth:1.5}
     ]}});
     drawChart('finChartPnl',{type:'bar',data:{labels:labels,datasets:[
       {label:'Выручка, млн ₽',data:res.revenue.map(toM),backgroundColor:cGreen+'cc'},
       {label:'Расходы, млн ₽',data:res.cost.map(toM),backgroundColor:cRed+'99'},
+      {label:'Налог, млн ₽',data:res.tax.map(toM),backgroundColor:cYellow+'99'},
       {label:'Прибыль, млн ₽',type:'line',data:res.profit.map(toM),borderColor:cBlue,borderWidth:2.5,pointRadius:2}
     ]}});
     drawChart('finChartPayback',{type:'line',data:{labels:labels,datasets:[

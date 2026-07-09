@@ -89,7 +89,7 @@
     {key:'riskShare', label:'Резерв на риски', suffix:'% от выручки', min:0, max:10,
       hint:'Буфер на регуляторные и рыночные колебания.'},
     {key:'taxRate', label:'Налог от выручки', suffix:'% от выручки', min:0, max:50,
-      hint:'Начисляется каждый месяц от выручки, независимо от EBITDA и накопленного результата.'},
+      hint:'Начисляется каждый месяц от общей выручки, независимо от накопленного результата.'},
     {key:'startRevenue', label:'Стартовая выручка', suffix:'₽ в месяц', min:0, max:1000000000,
       hint:'База траектории роста. Требуемый темп выводится из соотношения цель / старт. При 0 используется значение по умолчанию.'},
     {key:'startMarketing', label:'Стартовый маркетинг', suffix:'₽ в месяц', min:0, max:100000000,
@@ -280,9 +280,8 @@
   //   G&A_end       = выручка_end × доля_G&A/100
   //   резерв_end    = выручка_end × доля_резерва/100
   //   OPEX_end      = маркетинг + ФОТ + dev + G&A + резерв
-  //   EBITDA_end    = валовая − OPEX
   //   налог_end     = выручка_end × ставка_налога/100 (от выручки)
-  //   NP_end        = EBITDA − налог
+  //   NP_end        = валовая − OPEX − налог
   // Помесячная траектория: экспоненциальный рост выручки от startRevenue до
   // выручка_end за horizonMonths, темп g = (выручка_end/старт)^(1/H) − 1.
   // Стартовая выручка 0 вырождает экспоненту, поэтому трактуется как «не задано»
@@ -418,19 +417,18 @@
       var hc  = Math.max(0,Math.round(fot/avgFotAtT));
       var dev = budgetCurve(startDev,devEnd,t,H);
       var targetNp=targetNetForMonth(t);
-      var rev = Math.max(0,(targetNp+marketing+fot+dev)/marginFactor);
+      var rev = t===0?start:Math.max(0,(targetNp+marketing+fot+dev)/marginFactor);
       var gross = rev*inp.grossMargin/100;
       var ga  = rev*inp.gaShare/100;
       var risk= rev*inp.riskShare/100;
       var opex= marketing+fot+dev+ga+risk;
-      var ebitda= gross-opex;
       var revenueTax=rev*inp.taxRate/100;
-      var np  = ebitda-revenueTax;
+      var np  = gross-opex-revenueTax;
       cumProfit += np;
       if(cumProfit<minCum)minCum=cumProfit;
       if(breakEvenIdx<0&&cumProfit>=0&&t>0)breakEvenIdx=t;
       if(targetIdx<0&&np>=inp.targetNetProfit)targetIdx=t;
-      var row={t:t,label:monthLabel(inp,t),key:monthKeys[t],rev:rev,gross:gross,marketing:marketing,fot:fot,dev:dev,ga:ga,risk:risk,opex:opex,ebitda:ebitda,tax:revenueTax,np:np,cum:cumProfit,headcount:hc,bridgeProfit:bridgeMap[monthKeys[t]]!=null};
+      var row={t:t,label:monthLabel(inp,t),key:monthKeys[t],rev:rev,gross:gross,marketing:marketing,fot:fot,dev:dev,ga:ga,risk:risk,opex:opex,tax:revenueTax,np:np,cum:cumProfit,headcount:hc,bridgeProfit:bridgeMap[monthKeys[t]]!=null};
       if(funnel){
         // Объёмы воронки, выведенные из выручки месяца через конверсии сегментов.
         row.approvals=rev*funnel.apprPerRuble;
@@ -442,14 +440,13 @@
       rows.push(row);
     }
 
-    var endRow=rows[rows.length-1]||{rev:0,gross:0,marketing:0,fot:0,dev:0,ga:0,risk:0,opex:0,ebitda:0,tax:0,np:0,headcount:0};
+    var endRow=rows[rows.length-1]||{rev:0,gross:0,marketing:0,fot:0,dev:0,ga:0,risk:0,opex:0,tax:0,np:0,headcount:0};
     revEnd=endRow.rev;
     var grossEnd=endRow.gross;
     var headcount=endRow.headcount;
     var gaEnd=endRow.ga;
     var riskEnd=endRow.risk;
     var opexEnd=endRow.opex;
-    var ebitdaEnd=endRow.ebitda;
     var revenueTaxEnd=endRow.tax;
     var npEnd=endRow.np;
     var dec2027Profit=dec2027Idx>=0&&rows[dec2027Idx]?rows[dec2027Idx].np:null;
@@ -477,7 +474,7 @@
       inp:inp,
       revEnd:revEnd, grossEnd:grossEnd, marketingEnd:marketingEnd, fotEnd:fotEnd,
       headcount:headcount, devEnd:devEnd, gaEnd:gaEnd, riskEnd:riskEnd,
-      opexEnd:opexEnd, ebitdaEnd:ebitdaEnd, taxEnd:revenueTaxEnd, npEnd:npEnd,
+      opexEnd:opexEnd, taxEnd:revenueTaxEnd, npEnd:npEnd,
       startEff:start, startMktEff:startMkt, startFotEff:startFot, startDevEff:startDev,
       monthlyGrowth:g, horizon:H, rows:rows, funnel:funnelEnd,
       breakEvenIdx:breakEvenIdx, targetIdx:targetIdx, peakInvest:-minCum,
@@ -684,14 +681,14 @@
         'Декабрь 2028 закреплён на уровне '+millions(res.dec2028Target)+' чистыми в месяц, финальная цель — '+millions(res.inp.targetNetProfit)+'. '+
         'Стартовые бюджеты: маркетинг '+millions(res.startMktEff)+', ФОТ '+millions(res.startFotEff)+', разработка '+millions(res.startDevEff)+' в месяц; дальше они растут к целевым долям масштаба на конце горизонта. '+
         'Штат считается от бюджета ФОТ месяца и среднего ФОТ с индексацией окладов ('+pct(res.inp.fotIndex,0)+' в год). '+
-        'Внутренний масштаб месяца решается формулой: чистая прибыль = маржинальность после выплат − OPEX − налог. ' +
-        (res.funnel?' Объёмы воронки (трафик, контакты, клики по офферам, заявки, выдачи) выведены из внутреннего масштаба через средние конверсии сегментов.':'')+
-        (res.ebitdaEnd<0?' Внимание: при заданной структуре OPEX операционный результат отрицателен даже на конце горизонта; увеличьте маржинальность или сократите доли расходов.':'');
+        'Общая выручка выводится в таблике, а налог каждый месяц считается от этой суммы: чистая прибыль = выручка × маржинальность после выплат − OPEX − налог от выручки. ' +
+        (res.funnel?' Объёмы воронки (трафик, контакты, клики по офферам, заявки, выдачи) выведены из общей выручки через средние конверсии сегментов.':'');
     }
     var hasFunnel=!!res.funnel;
     var head='<thead><tr>'+
       '<th>Месяц</th>'+
       (hasFunnel?'<th>Трафик</th><th>Контакты</th><th>Клики</th><th>Заявки</th><th>Выдачи</th>':'')+
+      '<th>Выручка</th>'+
       '<th>Маркетинг</th>'+
       '<th>ФОТ</th>'+
       '<th>Штат</th>'+
@@ -699,7 +696,6 @@
       '<th>G&amp;A</th>'+
       '<th>Резерв</th>'+
       '<th>OPEX</th>'+
-      '<th>EBITDA</th>'+
       '<th>Налог от выручки</th>'+
       '<th>Чистая прибыль</th>'+
       '<th>Накоплено</th>'+
@@ -714,7 +710,7 @@
       return '<tr'+(cls.length?' class="'+cls.join(' ')+'"':'')+'>'+
         '<td>'+esc(r.label)+'</td>'+
         (hasFunnel?tdq(r.traffic)+tdq(r.contacts)+tdq(r.clicks)+tdq(r.applications)+tdq(r.approvals):'')+
-        td(r.marketing)+td(r.fot)+'<td>'+esc(fmt(r.headcount))+'</td>'+td(r.dev)+td(r.ga)+td(r.risk)+td(r.opex)+td(r.ebitda)+td(r.tax)+td(r.np)+td(r.cum)+
+        td(r.rev)+td(r.marketing)+td(r.fot)+'<td>'+esc(fmt(r.headcount))+'</td>'+td(r.dev)+td(r.ga)+td(r.risk)+td(r.opex)+td(r.tax)+td(r.np)+td(r.cum)+
       '</tr>';
     }).join('')+'</tbody>';
     host.innerHTML=head+body;
