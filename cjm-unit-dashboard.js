@@ -31,6 +31,7 @@
   // Горизонт совпадает с baseline PNL: июль 2026 → декабрь 2027 (18 месяцев).
   var FIN_MONTHS=['Июль 2026','Август 2026','Сентябрь 2026','Октябрь 2026','Ноябрь 2026','Декабрь 2026','Январь 2027','Февраль 2027','Март 2027','Апрель 2027','Май 2027','Июнь 2027','Июль 2027','Август 2027','Сентябрь 2027','Октябрь 2027','Ноябрь 2027','Декабрь 2027'];
   var FIN_MONTHS_SHORT=['Июл26','Авг26','Сен26','Окт26','Ноя26','Дек26','Янв27','Фев27','Мар27','Апр27','Май27','Июн27','Июл27','Авг27','Сен27','Окт27','Ноя27','Дек27'];
+  var FIN_MONTH_KEYS=['2026-07','2026-08','2026-09','2026-10','2026-11','2026-12','2027-01','2027-02','2027-03','2027-04','2027-05','2027-06','2027-07','2027-08','2027-09','2027-10','2027-11','2027-12'];
   // Модель драйвится не визитами/CPC, а бюджетами по источникам трафика и
   // «стоимостью оставленного номера» (CPL): бюджет_i / CPL_i = контакты_i.
   // Контакты → Заявки → Выдачи. Доли и CPA — по 5 сегментам, редактируются вручную.
@@ -1183,10 +1184,36 @@
     if(!isFinite(mediaLast)||!isFinite(revLast)||revLast<=0)return null;
     return clamp(mediaLast/revLast*100,0,100);
   }
+  function finMonthKeyAt(index){
+    if(FIN_MONTH_KEYS[index])return FIN_MONTH_KEYS[index];
+    var monthIndex=6+index; // июль 2026 = 6 при 0-based месяце
+    var year=2026+Math.floor(monthIndex/12);
+    var month=(monthIndex%12)+1;
+    return year+'-'+String(month).padStart(2,'0');
+  }
+  function finPlanForBridge(){
+    var res=computeFinance();
+    return {
+      months:res.months.map(function(label,i){
+        return {
+          key:finMonthKeyAt(i),
+          label:label,
+          netProfit:res.profit[i],
+          revenue:res.revenue[i],
+          cost:res.cost[i],
+          traffic:res.visits[i],
+          contacts:res.contacts[i],
+          applications:res.apps[i],
+          approvals:res.issues[i]
+        };
+      })
+    };
+  }
   if(typeof window!=='undefined'){
     window.CjmSegmentsBridge=window.CjmSegmentsBridge||{};
     window.CjmSegmentsBridge.getFunnel=finSegmentFunnel;
     window.CjmSegmentsBridge.getMarketingSharePct=finMarketingSharePct;
+    window.CjmSegmentsBridge.getFinancePlan=finPlanForBridge;
   }
 
   // Считает контакты (оставленные телефоны) по каждому источнику для стартового месяца.
