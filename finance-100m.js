@@ -89,7 +89,7 @@
     {key:'riskShare', label:'Резерв на риски', suffix:'% от выручки', min:0, max:10,
       hint:'Буфер на регуляторные и рыночные колебания.'},
     {key:'taxRate', label:'Налог от выручки', suffix:'% от выручки', min:0, max:50,
-      hint:'Начисляется каждый месяц от общей выручки, независимо от накопленного результата.'},
+      hint:'Начисляется каждый месяц от общей выручки и вычитается при расчёте чистой прибыли.'},
     {key:'startRevenue', label:'Стартовая выручка', suffix:'₽ в месяц', min:0, max:1000000000,
       hint:'База траектории роста. Требуемый темп выводится из соотношения цель / старт. При 0 используется значение по умолчанию.'},
     {key:'startMarketing', label:'Стартовый маркетинг', suffix:'₽ в месяц', min:0, max:100000000,
@@ -417,6 +417,8 @@
       var hc  = Math.max(0,Math.round(fot/avgFotAtT));
       var dev = budgetCurve(startDev,devEnd,t,H);
       var targetNp=targetNetForMonth(t);
+      // Первый месяц фиксируем на стартовой выручке; дальше выручка выводится
+      // из целевой чистой прибыли месяца, расходов и налога от общей выручки.
       var rev = t===0?start:Math.max(0,(targetNp+marketing+fot+dev)/marginFactor);
       var gross = rev*inp.grossMargin/100;
       var ga  = rev*inp.gaShare/100;
