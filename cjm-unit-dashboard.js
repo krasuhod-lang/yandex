@@ -678,10 +678,21 @@
     return persistSharedStateNow();
   }
   var SAVE_OK_MESSAGE='Показатели сохранены — ссылка откроется с текущими данными';
-  var SAVE_ERROR_MESSAGE='Не удалось сохранить в базу — показатели остались только локально';
+  var SAVE_LOCAL_MESSAGE='Показатели сохранены локально и записаны в ссылку — база недоступна';
   var SAVE_FEEDBACK_MS=1800;
   function showSaveResult(ok){
-    showToast(ok?SAVE_OK_MESSAGE:SAVE_ERROR_MESSAGE);
+    showToast(ok?SAVE_OK_MESSAGE:SAVE_LOCAL_MESSAGE);
+  }
+  // Полное сохранение по кнопке «Сохранить»: все установленные показатели и
+  // расчёты пишутся в localStorage/память, отправляются в /api/cjm-state
+  // (если доступен) и фиксируются в URL (#z=…), чтобы перезагрузка страницы
+  // или закладка открылись ровно с теми же данными. Даже без backend данные
+  // сохраняются локально и в адресной строке — сохранение всегда успешно.
+  function saveAllState(){
+    return saveCurrentSharedState().then(function(ok){
+      try{history.replaceState(null,'',buildShareUrl());}catch(e){}
+      return ok;
+    });
   }
   function buildShareUrl(){
     var payload=collectShareState();
@@ -760,9 +771,9 @@
     var save=$('cjmSaveState');
     if(save)save.addEventListener('click',function(){
       var prev=save.textContent;save.disabled=true;save.textContent='Сохраняем…';
-      saveCurrentSharedState().then(function(ok){
+      saveAllState().then(function(ok){
         showSaveResult(ok);
-        save.textContent=ok?'Сохранено':'Ошибка';
+        save.textContent='Сохранено';
         setTimeout(function(){save.textContent=prev;save.disabled=false;},SAVE_FEEDBACK_MS);
       });
     });
@@ -808,9 +819,9 @@
     var save=$('finSaveState');
     if(save)save.addEventListener('click',function(){
       var prev=save.textContent;save.disabled=true;save.textContent='Сохраняем…';
-      saveCurrentSharedState().then(function(ok){
+      saveAllState().then(function(ok){
         showSaveResult(ok);
-        save.textContent=ok?'Сохранено':'Ошибка';
+        save.textContent='Сохранено';
         setTimeout(function(){save.textContent=prev;save.disabled=false;},SAVE_FEEDBACK_MS);
       });
     });
@@ -849,6 +860,12 @@
   // Импортируем состояние из #s=... до первого рендера, чтобы сторонний
   // пользователь, открывший ссылку, увидел ровно те же данные.
   var urlStateApplied=applyStateFromUrl();
+  // После применения состояние уже записано в localStorage/память, поэтому hash
+  // убираем: иначе устаревший #z= при каждой перезагрузке перетирал бы
+  // показатели, сохранённые пользователем позже кнопкой «Сохранить».
+  if(urlStateApplied){
+    try{history.replaceState(null,'',location.origin+location.pathname+location.search);}catch(e){}
+  }
 
   function fmt(v){return Math.round(Number(v)||0).toLocaleString('ru-RU');}
   function rub(v){return fmt(v)+' ₽';}
