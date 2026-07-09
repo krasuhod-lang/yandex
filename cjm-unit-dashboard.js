@@ -26,7 +26,10 @@
   // по каждому сегменту. Все входные параметры редактируются пользователем,
   // сохраняются локально и синхронизируются с same-origin API /api/cjm-state при наличии.
   var FINANCE_KEY='cjm_finance_inputs_v2';
-  var SHARED_STATE_KEYS=[STORAGE_KEY,MANUAL_KEY,GLOBAL_KEY,SHARES_KEY,DESC_KEY,FINANCE_KEY];
+  // Входы финмодели «100 млн ₽» (finance-100m.js): включены в общее состояние,
+  // чтобы правки сохранялись в базу и попадали в ссылку «Поделиться».
+  var FIN100_KEY='fin100_inputs_v1';
+  var SHARED_STATE_KEYS=[STORAGE_KEY,MANUAL_KEY,GLOBAL_KEY,SHARES_KEY,DESC_KEY,FINANCE_KEY,FIN100_KEY];
   var FINANCE_LEGACY_KEYS=['cjm_finance_inputs_v1'];
   // Горизонт совпадает с baseline PNL: июль 2026 → декабрь 2027 (18 месяцев).
   var FIN_MONTHS=['Июль 2026','Август 2026','Сентябрь 2026','Октябрь 2026','Ноябрь 2026','Декабрь 2026','Январь 2027','Февраль 2027','Март 2027','Апрель 2027','Май 2027','Июнь 2027','Июль 2027','Август 2027','Сентябрь 2027','Октябрь 2027','Ноябрь 2027','Декабрь 2027'];
@@ -460,6 +463,9 @@
     catch(e){/* in-memory copy already kept */}
     scheduleSharedStateWrite(key,value);
   }
+  // Мост для сторонних модулей (finance-100m.js): позволяет им отправлять свои
+  // ключи состояния в /api/cjm-state тем же батчем, что и правки CJM-вкладок.
+  if(typeof window!=='undefined')window.CjmSharedState={scheduleWrite:scheduleSharedStateWrite};
 
   // ---- Share-by-link (URL hash) --------------------------------------------
   // Позволяет скопировать текущее состояние дашборда в ссылку: все правки,
@@ -656,7 +662,8 @@
       [GLOBAL_KEY]:read(GLOBAL_KEY,{})||{},
       [SHARES_KEY]:read(SHARES_KEY,{})||{},
       [DESC_KEY]:read(DESC_KEY,{})||{},
-      [FINANCE_KEY]:read(FINANCE_KEY,{})||{}
+      [FINANCE_KEY]:read(FINANCE_KEY,{})||{},
+      [FIN100_KEY]:read(FIN100_KEY,{})||{}
     };
   }
   function saveCurrentSharedState(){

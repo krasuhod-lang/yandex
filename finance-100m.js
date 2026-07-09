@@ -44,6 +44,9 @@
     avgFot: 250000,
     startHeadcount: 3,
     targetHeadcount: 26,
+    // Эластичность влияния стартового штата на темп роста выручки:
+    // скорость роста = (стартовый штат / базовый штат)^hcGrowthElasticity.
+    hcGrowthElasticity: 0.35,
     devShare: 4,
     gaShare: 2,
     riskShare: 1,
@@ -92,7 +95,9 @@
     {key:'avgFot', label:'Средний ФОТ на сотрудника', suffix:'₽ в месяц, с налогами', min:30000, max:2000000,
       hint:'ФОТ месяца = штат месяца × средний ФОТ с индексацией окладов.'},
     {key:'startHeadcount', label:'Стартовый штат', suffix:'чел', min:1, max:1000,
-      hint:'Численность команды на старте (t=0). Штат растёт к целевому синхронно с темпом роста выручки.'},
+      hint:'Численность команды на старте (t=0). Чем больше сотрудников на старте, тем быстрее растёт выручка (см. коэффициент влияния штата).'},
+    {key:'hcGrowthElasticity', label:'Коэффициент влияния штата на рост', suffix:'0–1', min:0, max:1,
+      hint:'Эластичность роста от стартового штата: скорость роста = (стартовый штат / '+DEFAULTS.startHeadcount+')^коэффициент. При 0 штат не влияет; чем ближе к 1, тем сильнее больший штат на старте ускоряет выручку.'},
     {key:'targetHeadcount', label:'Целевой штат', suffix:'чел', min:1, max:10000,
       hint:'Численность команды при выходе на целевую выручку.'},
     {key:'devShare', label:'Разработка и продукт', suffix:'% от выручки', min:0, max:20,
@@ -162,6 +167,14 @@
   function write(obj){
     mem[STORAGE_KEY]=obj;
     try{localStorage.setItem(STORAGE_KEY,JSON.stringify(obj));}catch(e){}
+    // Синхронизация с общим состоянием дашборда (/api/cjm-state + ссылка
+    // «Поделиться»): правки финмодели 100 млн сохраняются и шарятся так же,
+    // как правки остальных вкладок.
+    try{
+      if(typeof window!=='undefined'&&window.CjmSharedState&&typeof window.CjmSharedState.scheduleWrite==='function'){
+        window.CjmSharedState.scheduleWrite(STORAGE_KEY,obj);
+      }
+    }catch(e){}
   }
   // «% на маркетинг» из обычной финмодели («Финмодель до декабря 2027»).
   // Если основной модуль отдал корректное значение, оно используется вместо
@@ -400,10 +413,20 @@
     var devEnd=revEnd*inp.devShare/100;
     var startHc=Math.max(1,Math.round(inp.startHeadcount));
     var targetHc=Math.max(startHc,Math.round(inp.targetHeadcount));
+    // Зависимость «штат → рост»: чем больше сотрудников на старте относительно
+    // базового штата, тем быстрее растёт выручка. Скорость роста — степенная
+    // функция от отношения штатов; коэффициент задаёт эластичность (0 — нет
+    // влияния, 1 — пропорционально штату). Ограничена диапазоном ×0.5…×3,
+    // чтобы экстремальный штат не ломал модель.
+    var teamSpeed=clamp(Math.pow(startHc/Math.max(1,DEFAULTS.startHeadcount),clamp(inp.hcGrowthElasticity,0,1)),0.5,3);
 
     function revenueAt(t){
       if(t===0)return start;
-      return start*Math.pow(revEnd/start,easedProgress(t,targetIdx));
+      // teamSpeed «сжимает» время: при коэффициенте >1 выручка проходит ту же
+      // кривую быстрее и на целевой дате превышает revEnd — solver в ответ
+      // подбирает меньший revEnd, так что прибыль на целевой дате всё равно
+      // сходится ровно в цель, а рост в ранних месяцах становится быстрее.
+      return start*Math.pow(revEnd/start,easedProgress(t*teamSpeed,targetIdx));
     }
     // Штат растёт синхронно с темпом роста выручки (не линейно по времени):
     // прогресс = (rev[t] − старт) / (revEnd − старт), обрезанный к [0..1].
@@ -437,7 +460,7 @@
       rows.push({t:t,rev:rev,gross:gross,marketing:marketing,fot:fot,dev:dev,ga:ga,risk:risk,
         opex:opex,tax:revenueTax,np:np,ebitda:ebitda,headcount:headcountAt(t)});
     }
-    return {rows:rows,revEnd:revEnd,marketingEnd:marketingEnd,devEnd:devEnd};
+    return {rows:rows,revEnd:revEnd,marketingEnd:marketingEnd,devEnd:devEnd,teamSpeed:teamSpeed};
   }
 
   // Solver: бисекция по revEnd, чтобы np[targetIdx] === targetNetProfit.
@@ -565,7 +588,7 @@
       avgCrAi:funnel.avgCrAi
     }:null;
 
-    var g=targetIdx>0&&start>0?Math.pow(revEnd/start,1/targetIdx)-1:0;
+    var g=targetIdx>0&&start>0?Math.pow(rows[targetIdx].rev/start,1/targetIdx)-1:0;
 
     return {
       inp:inp, seasonality:season, alpha:alpha, kChannel:kChannel,
@@ -573,9 +596,9 @@
       headcount:endRow.headcount, devEnd:endRow.dev, gaEnd:endRow.ga, riskEnd:endRow.risk,
       opexEnd:endRow.opex, taxEnd:endRow.tax, npEnd:endRow.np,
       startEff:start, startMktEff:startMkt, startFotEff:rows[0].fot, startDevEff:startDev,
-      monthlyGrowth:g, horizon:H, rows:rows, funnel:funnelEnd,
+      monthlyGrowth:g, horizon:H, rows:rows, funnel:funnelEnd, teamSpeed:series.teamSpeed,
       breakEvenIdx:breakEvenIdx, targetIdx:targetIdx, hitIdx:hitIdx, peakInvest:-minCum,
-      targetRow:targetRow, solvedRevEnd:revEnd, marginFactor:marginFactor
+      targetRow:targetRow, solvedRevEnd:targetRow.rev, marginFactor:marginFactor
     };
   }
 
@@ -754,7 +777,7 @@
       {tone:'orange',label:'ФОТ с налогами',value:millions(res.fotEnd),sub:'Штат × средний ФОТ с индексацией'},
       {tone:'blue',label:'Доля ФОТ в выручке',value:pct(endRow.fotShare,1),sub:'Справочный KPI: ФОТ / выручка, не входной параметр'},
       {tone:'blue',label:'Темп роста выручки',value:pct(res.monthlyGrowth*100,1)+' в месяц',sub:'Между стартом и целевой датой'},
-      {tone:'blue',label:'EBITDA на конце',value:millions(endRow.ebitda),sub:'Выручка − (маркетинг + ФОТ + разработка + G&A + резерв)'},
+      {tone:'violet',label:'Ускорение роста от штата',value:'×'+res.teamSpeed.toLocaleString('ru-RU',{maximumFractionDigits:2}),sub:'(стартовый штат / '+fmt(DEFAULTS.startHeadcount)+')^эластичность («Коэффициент влияния штата на рост») — больше людей на старте, быстрее рост выручки'},
       {tone:burning?'red':'green',label:'Burn Rate (текущий)',value:burning?millions(burnRow.burn)+' в мес':'устойчиво',sub:'Касса[t−1] − Касса[t] на инвестиционной фазе'},
       {tone:burning?'orange':'green',label:'Runway',value:burning?(isFinite(burnRow.runway)?fmt(burnRow.runway)+' мес':'∞'):'∞ / устойчиво',sub:'Кассовый резерв / месячный burn при burn > 0'},
       {tone:res.peakInvest>0?'red':'green',label:'Пиковый кассовый разрыв',value:millions(res.peakInvest),sub:'Максимум накопленного убытка на инвестиционной фазе'},
@@ -816,10 +839,8 @@
       '<th>Резерв</th>'+
       '<th>OPEX</th>'+
       '<th>Налог от выручки</th>'+
-      '<th>EBITDA</th>'+
       '<th>Чистая прибыль</th>'+
       '<th>Накоплено</th>'+
-      '<th>Касса</th>'+
     '</tr></thead>';
     function td(v){var neg=v<0?' class="neg"':'';return '<td'+neg+'>'+esc(millions(v))+'</td>';}
     function tdq(v){return '<td>'+esc(qty(v))+'</td>';}
@@ -832,7 +853,7 @@
         (hasFunnel?tdq(r.traffic)+tdq(r.contacts)+tdq(r.clicks)+tdq(r.applications)+tdq(r.approvals):'')+
         td(r.rev)+td(r.marketing)+td(r.fot)+'<td>'+esc(fmt(r.headcount))+'</td>'+
         '<td>'+esc(pct(r.fotShare,1))+'</td>'+
-        td(r.dev)+td(r.ga)+td(r.risk)+td(r.opex)+td(r.tax)+td(r.ebitda)+td(r.np)+td(r.cum)+td(r.cash)+
+        td(r.dev)+td(r.ga)+td(r.risk)+td(r.opex)+td(r.tax)+td(r.np)+td(r.cum)+
       '</tr>';
     }).join('')+'</tbody>';
     host.innerHTML=head+body;
