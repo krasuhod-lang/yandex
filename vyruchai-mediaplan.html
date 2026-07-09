@@ -1694,7 +1694,8 @@ button:active:not(:disabled){transform:translateY(0) scale(.97)}
         <div><div class="brand-title">CJM & Юнит-экономика Выручай.ру</div><div class="brand-sub">Единый SPA-дашборд: путь клиента, Smart Safe Router, CAC/LTV/ROMI и калькулятор микса трафика</div></div>
       </div>
       <div class="filters" aria-label="Глобальные фильтры CJM">
-        <button class="theme" id="cjmShareLink" type="button" title="Скопировать ссылку с текущим состоянием дашборда">Скопировать ссылку</button>
+        <button class="theme" id="cjmSaveState" type="button" title="Сохранить все текущие показатели для общей ссылки">Сохранить</button>
+        <button class="theme" id="cjmShareLink" type="button" title="Сохранить и скопировать ссылку с текущим состоянием дашборда">Скопировать ссылку</button>
         <button class="theme" id="cjmThemeToggle" type="button" aria-label="Сменить тему">Тема</button>
       </div>
     </div>
@@ -1743,7 +1744,7 @@ button:active:not(:disabled){transform:translateY(0) scale(.97)}
 
     <!-- Finance model panel: Бюджет → Прогноз продаж → Ожидаемая прибыль -->
     <section id="cjm-tab-finance" class="cjm-panel">
-      <div class="cjm-section-head"><div><h2>Финмодель до декабря 2027</h2></div><div class="cjm-head-actions"><span class="cjm-shared-state" id="cjmSharedStateStatus">Локально</span><button type="button" class="fin-math-btn" id="finMathBtn" title="Вся математика модели — как считается каждая цифра" aria-label="Описание математики модели">!</button><button type="button" class="cjm-reset-btn" id="finShareLink" title="Скопировать ссылку со всеми показателями — откроется с теми же цифрами на любом ПК">Поделиться ссылкой</button><button type="button" class="cjm-reset-btn" id="finExport" title="Скачать все показатели в JSON-файл, чтобы передать другому пользователю">Экспорт в файл</button><button type="button" class="cjm-reset-btn" id="finImport" title="Загрузить показатели из файла, полученного от другого пользователя">Импорт из файла</button><input type="file" id="finImportFile" accept=".json,application/json" hidden><button type="button" class="cjm-reset-btn" id="finReset" title="Сбросить все параметры к значениям по умолчанию">Сбросить к дефолтам</button></div></div>
+      <div class="cjm-section-head"><div><h2>Финмодель до декабря 2027</h2></div><div class="cjm-head-actions"><span class="cjm-shared-state" id="cjmSharedStateStatus">Локально</span><button type="button" class="fin-math-btn" id="finMathBtn" title="Вся математика модели — как считается каждая цифра" aria-label="Описание математики модели">!</button><button type="button" class="cjm-reset-btn" id="finSaveState" title="Сохранить все текущие показатели в общую базу">Сохранить</button><button type="button" class="cjm-reset-btn" id="finShareLink" title="Сохранить и скопировать ссылку со всеми показателями — откроется с теми же цифрами на любом ПК">Поделиться ссылкой</button><button type="button" class="cjm-reset-btn" id="finExport" title="Скачать все показатели в JSON-файл, чтобы передать другому пользователю">Экспорт в файл</button><button type="button" class="cjm-reset-btn" id="finImport" title="Загрузить показатели из файла, полученного от другого пользователя">Импорт из файла</button><input type="file" id="finImportFile" accept=".json,application/json" hidden><button type="button" class="cjm-reset-btn" id="finReset" title="Сбросить все параметры к значениям по умолчанию">Сбросить к дефолтам</button></div></div>
 
       <div class="fin-kpis" id="finKpis"></div>
 

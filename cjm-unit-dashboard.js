@@ -384,12 +384,12 @@
   }
   function persistSharedStateNow(){
     var endpoint=sharedStateEndpoint();
-    if(!endpoint||typeof fetch!=='function')return;
+    if(!endpoint||typeof fetch!=='function'){updateSharedStatus();return Promise.resolve(false);}
     var values=sharedState.pending;
     sharedState.pending={};
-    if(!Object.keys(values).length)return;
+    if(!Object.keys(values).length){updateSharedStatus();return Promise.resolve(false);}
     sharedState.saving=true;sharedState.error=false;updateSharedStatus();
-    fetch(endpoint,{
+    return fetch(endpoint,{
       method:'PUT',
       headers:{'Content-Type':'application/json'},
       credentials:'same-origin',
@@ -397,9 +397,11 @@
     }).then(function(r){
       if(!r.ok)throw new Error('shared-state '+r.status);
       sharedState.available=true;sharedState.error=false;
+      return true;
     }).catch(function(){
       sharedState.available=false;sharedState.error=true;
       Object.keys(values).forEach(function(k){sharedState.pending[k]=values[k];});
+      return false;
     }).finally(function(){sharedState.saving=false;updateSharedStatus();});
   }
   function scheduleSharedStateWrite(key,value){
@@ -641,6 +643,20 @@
       [FINANCE_KEY]:read(FINANCE_KEY,{})||{}
     };
   }
+  function saveCurrentSharedState(){
+    var payload=collectShareState();
+    SHARED_STATE_KEYS.forEach(function(key){
+      var value=payload[key];
+      memStore[key]=value;
+      try{localStorage.setItem(key,JSON.stringify(value));}catch(e){}
+      sharedState.pending[key]=value;
+    });
+    if(sharedState.timer){clearTimeout(sharedState.timer);sharedState.timer=null;}
+    return persistSharedStateNow();
+  }
+  function showSaveResult(ok){
+    showToast(ok?'Показатели сохранены — ссылка откроется с текущими данными':'База недоступна, показатели сохранены локально');
+  }
   function buildShareUrl(){
     var payload=collectShareState();
     var json=JSON.stringify(payload);
@@ -700,15 +716,28 @@
   function initShareLink(){
     var btn=$('cjmShareLink');if(!btn)return;
     btn.addEventListener('click',function(){
-      var url=buildShareUrl();
-      try{history.replaceState(null,'',url);}catch(e){}
-      copyToClipboard(url).then(function(){
-        btn.classList.add('copied');
-        var prev=btn.textContent;btn.textContent='Ссылка скопирована';
-        showToast('Ссылка скопирована — отправьте её любому пользователю');
-        setTimeout(function(){btn.classList.remove('copied');btn.textContent=prev;},1800);
-      }).catch(function(){
-        showToast('Скопируйте ссылку из адресной строки');
+      var prev=btn.textContent;btn.disabled=true;btn.textContent='Сохраняем…';
+      saveCurrentSharedState().then(function(){
+        var url=buildShareUrl();
+        try{history.replaceState(null,'',url);}catch(e){}
+        return copyToClipboard(url).then(function(){
+          btn.classList.add('copied');
+          btn.textContent='Ссылка скопирована';
+          showToast('Ссылка скопирована — отправьте её любому пользователю');
+          setTimeout(function(){btn.classList.remove('copied');btn.textContent=prev;btn.disabled=false;},1800);
+        }).catch(function(){
+          btn.textContent=prev;btn.disabled=false;
+          showToast('Скопируйте ссылку из адресной строки');
+        });
+      });
+    });
+    var save=$('cjmSaveState');
+    if(save)save.addEventListener('click',function(){
+      var prev=save.textContent;save.disabled=true;save.textContent='Сохраняем…';
+      saveCurrentSharedState().then(function(ok){
+        showSaveResult(ok);
+        save.textContent=ok?'Сохранено':'Сохранить';
+        setTimeout(function(){save.textContent=prev;save.disabled=false;},1400);
       });
     });
   }
@@ -739,12 +768,24 @@
   function initFinShareTools(){
     var share=$('finShareLink');
     if(share)share.addEventListener('click',function(){
-      var url=buildShareUrl();
-      try{history.replaceState(null,'',url);}catch(e){}
-      copyToClipboard(url).then(function(){
-        showToast('Ссылка скопирована — откройте её на любом ПК, показатели подтянутся');
-      }).catch(function(){
-        showToast('Скопируйте ссылку из адресной строки');
+      var prev=share.textContent;share.disabled=true;share.textContent='Сохраняем…';
+      saveCurrentSharedState().then(function(){
+        var url=buildShareUrl();
+        try{history.replaceState(null,'',url);}catch(e){}
+        return copyToClipboard(url).then(function(){
+          showToast('Ссылка скопирована — откройте её на любом ПК, показатели подтянутся');
+        }).catch(function(){
+          showToast('Скопируйте ссылку из адресной строки');
+        }).finally(function(){share.textContent=prev;share.disabled=false;});
+      });
+    });
+    var save=$('finSaveState');
+    if(save)save.addEventListener('click',function(){
+      var prev=save.textContent;save.disabled=true;save.textContent='Сохраняем…';
+      saveCurrentSharedState().then(function(ok){
+        showSaveResult(ok);
+        save.textContent=ok?'Сохранено':'Сохранить';
+        setTimeout(function(){save.textContent=prev;save.disabled=false;},1400);
       });
     });
     var exp=$('finExport');
