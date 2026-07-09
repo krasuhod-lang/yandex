@@ -256,6 +256,8 @@ function approx(a,b,relTol){
   var mom=[];for(var i=1;i<rows.length;i++)mom.push(rows[i].rev/rows[i-1].rev-1);
   var peak=-Infinity,peakIdx=0;
   for(var j=0;j<mom.length;j++){if(mom[j]>peak){peak=mom[j];peakIdx=j;}}
+  // Пик темпа должен быть не у самых краёв (запас 3 мес.): у начала это значило
+  // бы отсутствие разгона, у конца — отсутствие замедления, т.е. не S-кривую.
   assert(peakIdx>3&&peakIdx<mom.length-3,'пик месячного темпа лежит внутри горизонта (t='+(peakIdx+1)+')');
   var lateIdx=Math.min(mom.length-1,ti-3);
   assert(mom[lateIdx]<peak,'месячный темп у целевой даты ниже пикового (замедление)');

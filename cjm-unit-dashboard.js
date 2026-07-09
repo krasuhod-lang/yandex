@@ -3079,6 +3079,8 @@
     window.addEventListener('hashchange',function(){
       if(!/[#&](?:z|s)=/.test(String(location.hash||'')))return;
       if(!applyStateFromUrl())return;
+      // replaceState может бросить в средах без History API; данные уже записаны
+      // в хранилище, поэтому неудачную очистку hash безопасно игнорируем.
       try{history.replaceState(null,'',location.origin+location.pathname+location.search);}catch(e){}
       applyStoredShares();
       renderAll();
