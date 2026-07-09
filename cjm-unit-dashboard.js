@@ -663,6 +663,7 @@
   }
   var SAVE_OK_MESSAGE='Показатели сохранены — ссылка откроется с текущими данными';
   var SAVE_ERROR_MESSAGE='Не удалось сохранить в базу — показатели остались только локально';
+  var SAVE_FEEDBACK_MS=1800;
   function showSaveResult(ok){
     showToast(ok?SAVE_OK_MESSAGE:SAVE_ERROR_MESSAGE);
   }
@@ -733,7 +734,7 @@
           btn.classList.add('copied');
           btn.textContent='Ссылка скопирована';
           showToast('Ссылка скопирована — отправьте её любому пользователю');
-          setTimeout(function(){btn.classList.remove('copied');btn.textContent=prev;btn.disabled=false;},1800);
+          setTimeout(function(){btn.classList.remove('copied');btn.textContent=prev;btn.disabled=false;},SAVE_FEEDBACK_MS);
         }).catch(function(){
           btn.textContent=prev;btn.disabled=false;
           showToast('Скопируйте ссылку из адресной строки');
@@ -746,7 +747,7 @@
       saveCurrentSharedState().then(function(ok){
         showSaveResult(ok);
         save.textContent=ok?'Сохранено':'Ошибка';
-        setTimeout(function(){save.textContent=prev;save.disabled=false;},1400);
+        setTimeout(function(){save.textContent=prev;save.disabled=false;},SAVE_FEEDBACK_MS);
       });
     });
   }
@@ -794,7 +795,7 @@
       saveCurrentSharedState().then(function(ok){
         showSaveResult(ok);
         save.textContent=ok?'Сохранено':'Ошибка';
-        setTimeout(function(){save.textContent=prev;save.disabled=false;},1400);
+        setTimeout(function(){save.textContent=prev;save.disabled=false;},SAVE_FEEDBACK_MS);
       });
     });
     var exp=$('finExport');
