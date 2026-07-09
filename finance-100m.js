@@ -19,6 +19,8 @@
   var HTML_ESCAPE_MAP={'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;','/':'&#x2F;','`':'&#96;'};
   var MONTH_NAMES_RU=['янв','фев','мар','апр','май','июн','июл','авг','сен','окт','ноя','дек'];
   var DEC_2028_MIN_NET_PROFIT=50000000;
+  var NET_PROFIT_EASING_EXPONENT=1.28;
+  var DEFAULT_PROFIT_GROWTH_STEPS=12;
 
   // --- Дефолты. Отражают устойчивую конфигурацию высококонкурентного
   //     лидогенерационного бизнеса с фокусом на чистую прибыль. Период старта
@@ -277,6 +279,8 @@
     if(!(m0>=1&&m0<=12)||!(y0>=1900&&y0<=9999))return '';
     var idx=(m0-1)+t;
     var year=y0+Math.floor(idx/12);
+    // t в модели всегда неотрицательный, но формула безопасно нормализует месяц
+    // и для отрицательного idx при ручных экспериментах со стартовой датой.
     var month=((idx%12)+12)%12+1;
     return year+'-'+String(month).padStart(2,'0');
   }
@@ -313,10 +317,10 @@
     if(toT<=fromT)return to;
     var p=(t-fromT)/(toT-fromT);
     p=Math.max(0,Math.min(1,p));
-    // Back-loaded рост: показатель 1.28 оставляет кривую близкой к линейной,
+    // Back-loaded рост: NET_PROFIT_EASING_EXPONENT оставляет кривую близкой к линейной,
     // но сдвигает примерно 10–15% прироста из первых месяцев в последние,
     // что правдоподобно для накопительного SEO/бренд-эффекта без резкого скачка.
-    p=Math.pow(p,1.28);
+    p=Math.pow(p,NET_PROFIT_EASING_EXPONENT);
     return from+(to-from)*p;
   }
 
@@ -328,11 +332,15 @@
     var devEnd = revEnd*inp.devShare/100;
 
     var H=Math.max(1,Math.round(inp.horizonMonths));
+    var monthKeys=[];
+    for(var kt=0;kt<=H;kt++)monthKeys.push(monthKey(inp,kt));
     var start=inp.startRevenue>0?inp.startRevenue:DEFAULTS.startRevenue;
     var startMkt=inp.startMarketing>0?inp.startMarketing:DEFAULTS.startMarketing;
     var startFot=inp.startFot>0?inp.startFot:DEFAULTS.startFot;
     var startDev=inp.startDev>0?inp.startDev:DEFAULTS.startDev;
     var mktG=(marketingEnd>0&&startMkt>0)?Math.pow(marketingEnd/startMkt,1/H)-1:0;
+    // Доля внутреннего масштаба, из которой после переменных G&A/резерва/налога
+    // покрываются маркетинг, ФОТ, разработка и целевая чистая прибыль.
     var marginFactor=(inp.grossMargin-inp.gaShare-inp.riskShare-inp.taxRate)/100;
     marginFactor=Math.max(0.01,marginFactor);
 
@@ -343,14 +351,14 @@
     var dec2028Target=Math.max(Number(inp.minNetProfitDec2028)||0,DEC_2028_MIN_NET_PROFIT);
     var lastBridgeIdx=-1,lastBridgeProfit=null;
     for(var bt=0;bt<=H;bt++){
-      var bk=monthKey(inp,bt);
+      var bk=monthKeys[bt];
       if(bridgeMap[bk]!=null){lastBridgeIdx=bt;lastBridgeProfit=bridgeMap[bk];}
     }
     var startNetApprox=start*marginFactor-startMkt-startFot-startDev;
     var anchorIdx=lastBridgeIdx>=0?lastBridgeIdx:0;
     var anchorProfit=lastBridgeProfit!=null?lastBridgeProfit:startNetApprox;
     function targetNetForMonth(t){
-      var key=monthKey(inp,t);
+      var key=monthKeys[t];
       if(bridgeMap[key]!=null)return bridgeMap[key];
       if(t<=anchorIdx)return anchorProfit;
       if(dec2028Idx>=0&&t<=dec2028Idx){
@@ -386,7 +394,7 @@
       if(cumProfit<minCum)minCum=cumProfit;
       if(breakEvenIdx<0&&cumProfit>=0&&t>0)breakEvenIdx=t;
       if(targetIdx<0&&np>=inp.targetNetProfit)targetIdx=t;
-      var row={t:t,label:monthLabel(inp,t),key:monthKey(inp,t),rev:rev,gross:gross,marketing:marketing,fot:fot,dev:dev,ga:ga,risk:risk,opex:opex,ebitda:ebitda,tax:revenueTax,np:np,cum:cumProfit,headcount:hc,bridgeProfit:bridgeMap[monthKey(inp,t)]!=null};
+      var row={t:t,label:monthLabel(inp,t),key:monthKeys[t],rev:rev,gross:gross,marketing:marketing,fot:fot,dev:dev,ga:ga,risk:risk,opex:opex,ebitda:ebitda,tax:revenueTax,np:np,cum:cumProfit,headcount:hc,bridgeProfit:bridgeMap[monthKeys[t]]!=null};
       if(funnel){
         // Объёмы воронки, выведенные из выручки месяца через конверсии сегментов.
         row.approvals=rev*funnel.apprPerRuble;
@@ -411,7 +419,9 @@
     var dec2027Profit=dec2027Idx>=0&&rows[dec2027Idx]?rows[dec2027Idx].np:null;
     var dec2028Profit=dec2028Idx>=0&&rows[dec2028Idx]?rows[dec2028Idx].np:null;
     var growthBase=(dec2027Profit!=null&&dec2027Profit>0)?dec2027Profit:Math.max(1,anchorProfit);
-    var growthSteps=(dec2028Idx>=0&&dec2027Idx>=0&&dec2028Idx>dec2027Idx)?(dec2028Idx-dec2027Idx):12;
+    // Если пользователь убрал одну из контрольных дат за горизонт, считаем темп
+    // на стандартном годовом окне планирования.
+    var growthSteps=(dec2028Idx>=0&&dec2027Idx>=0&&dec2028Idx>dec2027Idx)?(dec2028Idx-dec2027Idx):DEFAULT_PROFIT_GROWTH_STEPS;
     var g = growthBase>0?Math.pow(Math.max(dec2028Target,growthBase)/growthBase,1/Math.max(1,growthSteps))-1:0;
 
     var funnelEnd=funnel?{

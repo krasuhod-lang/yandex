@@ -1184,12 +1184,19 @@
     if(!isFinite(mediaLast)||!isFinite(revLast)||revLast<=0)return null;
     return clamp(mediaLast/revLast*100,0,100);
   }
+  function finMonthKeyAt(index){
+    if(FIN_MONTH_KEYS[index])return FIN_MONTH_KEYS[index];
+    var monthIndex=6+index; // июль 2026 = 6 при 0-based месяце
+    var year=2026+Math.floor(monthIndex/12);
+    var month=(monthIndex%12)+1;
+    return year+'-'+String(month).padStart(2,'0');
+  }
   function finPlanForBridge(){
     var res=computeFinance();
     return {
       months:res.months.map(function(label,i){
         return {
-          key:FIN_MONTH_KEYS[i]||'',
+          key:finMonthKeyAt(i),
           label:label,
           netProfit:res.profit[i],
           revenue:res.revenue[i],
