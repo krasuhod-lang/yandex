@@ -736,7 +736,7 @@
       var prev=save.textContent;save.disabled=true;save.textContent='Сохраняем…';
       saveCurrentSharedState().then(function(ok){
         showSaveResult(ok);
-        save.textContent=ok?'Сохранено':'Сохранить';
+        save.textContent=ok?'Сохранено':'Локально';
         setTimeout(function(){save.textContent=prev;save.disabled=false;},1400);
       });
     });
@@ -784,7 +784,7 @@
       var prev=save.textContent;save.disabled=true;save.textContent='Сохраняем…';
       saveCurrentSharedState().then(function(ok){
         showSaveResult(ok);
-        save.textContent=ok?'Сохранено':'Сохранить';
+        save.textContent=ok?'Сохранено':'Локально';
         setTimeout(function(){save.textContent=prev;save.disabled=false;},1400);
       });
     });
