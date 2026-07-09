@@ -1633,9 +1633,10 @@ button:active:not(:disabled){transform:translateY(0) scale(.97)}
 .fin-inputs-details .fin-inputs-grid{padding:0 20px}
 @media(max-width:600px){.fin-inputs-details .fin-inputs-grid{padding:0 12px}.fin-inputs-summary{padding:14px 12px}}
 .fin-table th,.fin-table td{white-space:nowrap;font-variant-numeric:tabular-nums}
-/* Липкая шапка и закреплённый месяц помесячного плана:
+/* Липкая шапка и закреплённая колонка месяца помесячного плана:
    таблица скроллится внутри карточки, а колонка месяца остаётся видимой при горизонтальном скролле. */
-.fin-table-card .ue2-table-wrap{max-height:70vh;overflow:auto;--fin-sticky-toggle-width:52px;--fin-row-hover-bg:color-mix(in srgb,var(--blue) 6%,var(--surface));--fin-row-target-bg:color-mix(in srgb,var(--green) 12%,var(--surface))}
+.fin-table-card{--fin-sticky-toggle-width:52px;--fin-row-hover-bg:color-mix(in srgb,var(--blue) 6%,var(--surface));--fin-row-target-bg:color-mix(in srgb,var(--green) 12%,var(--surface))}
+.fin-table-card .ue2-table-wrap{max-height:70vh;overflow:auto}
 .fin-table-card .ue2-scn-table{border-collapse:separate;border-spacing:0}
 .fin-table-card .ue2-scn-table thead th{box-shadow:0 1px 0 var(--line)}
 .fin-table-card .fin-table th:first-child,
